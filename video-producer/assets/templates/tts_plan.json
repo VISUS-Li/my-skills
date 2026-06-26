@@ -1,0 +1,12 @@
+{
+  "version": "v001",
+  "provider": "manual_or_unspecified",
+  "fallback_provider": "edge-tts_or_piper",
+  "language": "zh-CN",
+  "voice": null,
+  "model": null,
+  "format": "wav",
+  "sample_rate_hz": 48000,
+  "ai_voice_disclosure_required": true,
+  "segments": []
+}

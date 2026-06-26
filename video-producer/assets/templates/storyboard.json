@@ -1,0 +1,237 @@
+{
+  "version": "v002",
+  "video_title": "Untitled Video",
+  "total_duration_sec": 180,
+  "narrative_arc": {
+    "act1": "hook and stakes",
+    "act2": "proof and contrast",
+    "act3": "synthesis and CTA"
+  },
+  "visual_system": {
+    "style_recipe": "tech-premium default",
+    "color_ratio": "60/30/10",
+    "anti_ppt_rule": "each major segment must include layered assets, camera motion, and at least one non-text visual"
+  },
+  "segments": [
+    {
+      "id": "001_hook",
+      "title": "Hook",
+      "duration_sec": 12,
+      "type": "talking_head_with_overlay",
+      "engine": "video-use+hyperframes",
+      "segment_role": "attention + promise",
+      "emotional_beat": "curiosity and urgency",
+      "voiceover": "",
+      "on_screen_text": [],
+      "visual_metaphor": "a production line assembling idea, research, script, shots, and final video",
+      "screen_ratio_allocation": {
+        "subject": "45%",
+        "motion_graphics": "40%",
+        "negative_space": "15%"
+      },
+      "visuals": [
+        "talking head plate",
+        "animated pipeline nodes",
+        "floating keywords",
+        "subtle texture and light sweep"
+      ],
+      "assets": [
+        "talking_head_clip",
+        "pipeline_icons",
+        "grain_texture",
+        "whoosh_sfx"
+      ],
+      "shots": [
+        {
+          "id": "001A",
+          "duration_sec": 4,
+          "shot_size": "medium close-up",
+          "camera_move": "slow_push_in",
+          "composition": "rule_of_thirds subject with right-side kinetic overlay",
+          "layers": [
+            "talking head",
+            "glass overlay",
+            "background texture"
+          ],
+          "edit_intent": "human entry point"
+        },
+        {
+          "id": "001B",
+          "duration_sec": 5,
+          "shot_size": "graphic close-up",
+          "camera_move": "parallax_pan",
+          "composition": "diagonal pipeline from lower-left to upper-right",
+          "layers": [
+            "nodes",
+            "icons",
+            "connector lines",
+            "particle accents"
+          ],
+          "edit_intent": "show system complexity"
+        },
+        {
+          "id": "001C",
+          "duration_sec": 3,
+          "shot_size": "wide motion graphic",
+          "camera_move": "snap_zoom_out",
+          "composition": "full process appears as compact map",
+          "layers": [
+            "map",
+            "headline",
+            "accent glow"
+          ],
+          "edit_intent": "promise the payoff"
+        }
+      ],
+      "transition_in": "cut",
+      "transition_out": "blur_crossfade",
+      "status": "draft"
+    },
+    {
+      "id": "002_explainer",
+      "title": "Core Explanation",
+      "duration_sec": 35,
+      "type": "motion_graphics",
+      "engine": "hyperframes",
+      "segment_role": "clarify model",
+      "emotional_beat": "aha and structure",
+      "voiceover": "",
+      "on_screen_text": [],
+      "visual_metaphor": "stacked control room with research, script, design, segment, and assembly layers",
+      "screen_ratio_allocation": {
+        "diagram": "55%",
+        "text": "25%",
+        "texture_depth": "20%"
+      },
+      "visuals": [
+        "3D-ish layer stack",
+        "icons for each stage",
+        "small screenshot placeholders",
+        "animated connector lines",
+        "data marks"
+      ],
+      "assets": [
+        "stage_icons",
+        "screenshot_placeholders",
+        "grid_texture",
+        "click_sfx"
+      ],
+      "shots": [
+        {
+          "id": "002A",
+          "duration_sec": 9,
+          "shot_size": "establishing graphic",
+          "camera_move": "dolly_in_on_stack",
+          "composition": "center stack with foreground UI fragments",
+          "layers": [
+            "background grid",
+            "stage stack",
+            "foreground labels"
+          ],
+          "edit_intent": "establish architecture"
+        },
+        {
+          "id": "002B",
+          "duration_sec": 14,
+          "shot_size": "insert sequence",
+          "camera_move": "match_move_between_layers",
+          "composition": "each layer takes 65% hero zone, labels below",
+          "layers": [
+            "current layer",
+            "ghosted previous layer",
+            "accent pointer"
+          ],
+          "edit_intent": "explain stage by stage"
+        },
+        {
+          "id": "002C",
+          "duration_sec": 12,
+          "shot_size": "wide comparison",
+          "camera_move": "orbit_parallax",
+          "composition": "bad one-click pipeline left vs controlled workflow right",
+          "layers": [
+            "left flat stack",
+            "right rich workflow",
+            "contrast beam"
+          ],
+          "edit_intent": "make the contrast memorable"
+        }
+      ],
+      "transition_in": "blur_crossfade",
+      "transition_out": "data_morph",
+      "status": "draft"
+    },
+    {
+      "id": "003_summary",
+      "title": "Summary and CTA",
+      "duration_sec": 15,
+      "type": "kinetic_typography",
+      "engine": "hyperframes",
+      "segment_role": "synthesis + action",
+      "emotional_beat": "confidence",
+      "voiceover": "",
+      "on_screen_text": [],
+      "visual_metaphor": "final video package locking into place",
+      "screen_ratio_allocation": {
+        "headline": "35%",
+        "proof_items": "45%",
+        "cta": "20%"
+      },
+      "visuals": [
+        "final export card",
+        "three proof badges",
+        "CTA lower third",
+        "ambient particles"
+      ],
+      "assets": [
+        "export_icon",
+        "badge_icons",
+        "soft_riser_sfx"
+      ],
+      "shots": [
+        {
+          "id": "003A",
+          "duration_sec": 6,
+          "shot_size": "wide title card",
+          "camera_move": "slow_push_in",
+          "composition": "large title top third, export card center",
+          "layers": [
+            "title",
+            "card",
+            "particles"
+          ],
+          "edit_intent": "summarize"
+        },
+        {
+          "id": "003B",
+          "duration_sec": 6,
+          "shot_size": "three insert beats",
+          "camera_move": "rhythmic_pop",
+          "composition": "three badges reveal left-center-right",
+          "layers": [
+            "badges",
+            "micro labels",
+            "glow trail"
+          ],
+          "edit_intent": "make benefits concrete"
+        },
+        {
+          "id": "003C",
+          "duration_sec": 3,
+          "shot_size": "close CTA",
+          "camera_move": "gentle_settle",
+          "composition": "CTA centered in lower safe area",
+          "layers": [
+            "CTA",
+            "logo placeholder",
+            "subtle texture"
+          ],
+          "edit_intent": "close cleanly"
+        }
+      ],
+      "transition_in": "data_morph",
+      "transition_out": "fade_to_black",
+      "status": "draft"
+    }
+  ]
+}

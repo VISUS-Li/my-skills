@@ -1,0 +1,25 @@
+{
+  "title": "Untitled Video",
+  "slug": "untitled-video",
+  "input_type": "idea",
+  "ratio": "9:16",
+  "duration_sec": 180,
+  "fps": 30,
+  "resolution": "1080x1920",
+  "platforms": [
+    "douyin",
+    "bilibili",
+    "youtube"
+  ],
+  "style_keywords": [],
+  "aesthetic_goals": {
+    "richness": "layered, cinematic, non-PPT",
+    "target_aesthetic_score": 72,
+    "review_required": true
+  },
+  "recipe": "generic",
+  "text_policy": {
+    "exact_chinese_text_layers_only": false,
+    "forbid_generated_raster_chinese": false
+  }
+}

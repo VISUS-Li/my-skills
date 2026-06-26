@@ -1,0 +1,14 @@
+{
+  "version": "v001",
+  "motion_tokens": {
+    "ui_tap": {"duration_sec": 0.12, "easing": "entrance productive", "sfx": "short click"},
+    "card_snap_in": {"duration_sec": 0.32, "easing": "standard productive", "sfx": "paper/card snap"},
+    "stamp_hit": {"duration_sec": 0.18, "easing": "exit expressive", "sfx": "rubber stamp thud"},
+    "arrow_pulse": {"duration_sec": 0.42, "easing": "standard productive", "sfx": "soft data tick"},
+    "line_draw": {"duration_sec": 0.55, "easing": "entrance productive", "sfx": "fine pen draw"},
+    "gauge_fill": {"duration_sec": 0.9, "easing": "standard productive", "sfx": "rising ticks"},
+    "success_badge": {"duration_sec": 0.28, "easing": "entrance expressive", "sfx": "light chime"},
+    "scene_whip": {"duration_sec": 0.45, "easing": "standard expressive", "sfx": "controlled whoosh"},
+    "camera_push": {"duration_sec": 0.8, "easing": "standard productive", "sfx": "subtle airy move"}
+  }
+}

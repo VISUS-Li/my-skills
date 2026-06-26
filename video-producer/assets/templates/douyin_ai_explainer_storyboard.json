@@ -1,0 +1,93 @@
+{
+  "version": "douyin-ai-explainer-v001",
+  "video_title": "中文 AI 科普解释器",
+  "ratio": "16:9",
+  "fps": 30,
+  "total_duration_sec": 180,
+  "visual_system": {
+    "style_recipe": "douyin light-grid chinese ai explainer",
+    "background": "warm off-white grid with subtle paper texture",
+    "text_policy": "all exact Chinese is programmatic text from text_manifest.json",
+    "recurring_primitives": [
+      "ai_machine",
+      "card_stack",
+      "arrow_pipeline",
+      "red_error_stamp",
+      "green_success_badge",
+      "clip_bridge",
+      "glyph_module",
+      "neural_network",
+      "small_robot_mascot"
+    ]
+  },
+  "segments": [
+    {
+      "id": "001_hook_failure",
+      "title": "反差钩子：为什么中文像鬼画符",
+      "duration_sec": 8,
+      "engine": "remotion_or_motion_canvas",
+      "segment_role": "curiosity + pain point",
+      "voiceover": "",
+      "on_screen_text_ids": ["caption_001"],
+      "visual_metaphor": "AI 机器吐出几张乱码中文卡片，被红色错误章连续盖掉",
+      "visual_primitives": ["machine", "card", "arrow", "stamp", "badge", "grid"],
+      "motion_grammar": ["card_slide", "stamp_hit", "camera_push", "rhythm_break"],
+      "audio_sync": ["stamp hit on each failed example", "short silence before thesis"]
+    },
+    {
+      "id": "002_diffusion_core",
+      "title": "底层原理：不是在写字，是在去噪画图",
+      "duration_sec": 18,
+      "engine": "remotion_or_motion_canvas",
+      "segment_role": "core mechanism",
+      "visual_metaphor": "噪声云逐步经过扩散模型机器，变成图像；文字只是图像纹理的一部分",
+      "visual_primitives": ["machine", "noise", "arrow", "card", "label", "progress"],
+      "motion_grammar": ["machine_process", "arrow_pulse", "diagram_morph", "line_draw"],
+      "audio_sync": ["soft machine loop", "progress ticks"]
+    },
+    {
+      "id": "003_clip_bridge",
+      "title": "CLIP/文本编码：中文语义能懂，字形未必能写",
+      "duration_sec": 22,
+      "engine": "remotion_or_motion_canvas",
+      "segment_role": "semantic vs glyph distinction",
+      "visual_metaphor": "左侧输入提示词，经过 CLIP 桥进入图像空间，语义灯亮但字形模块闪红",
+      "visual_primitives": ["clip", "bridge", "network", "glyph", "badge", "arrow"],
+      "motion_grammar": ["line_draw", "arrow_pulse", "before_after_flip", "stamp_hit"],
+      "audio_sync": ["bridge whoosh", "error beep for glyph miss"]
+    },
+    {
+      "id": "004_chinese_vs_english",
+      "title": "为什么中文更难：字符密度、训练比例、排版结构",
+      "duration_sec": 26,
+      "engine": "remotion_or_motion_canvas",
+      "segment_role": "contrast proof",
+      "visual_metaphor": "中文字符像复杂积木，英文像低复杂度字母块；训练数据天平向英文倾斜",
+      "visual_primitives": ["comparison", "scale", "glyph", "card", "arrow", "badge"],
+      "motion_grammar": ["comparison_split", "card_slide", "scale_tip", "camera_push"],
+      "audio_sync": ["scale creak", "small ticks on each reason"]
+    },
+    {
+      "id": "005_solution_stack",
+      "title": "解决方向：OCR/字形约束/原生多模态/后期文本层",
+      "duration_sec": 28,
+      "engine": "remotion_or_motion_canvas",
+      "segment_role": "solution synthesis",
+      "visual_metaphor": "四个模块插进 AI 机器，输出从红叉逐步变成绿勾",
+      "visual_primitives": ["machine", "module", "glyph", "ocr", "badge", "robot", "arrow"],
+      "motion_grammar": ["module_snap", "machine_process", "status_badge_flip", "diagram_morph"],
+      "audio_sync": ["module snap", "success chime"]
+    },
+    {
+      "id": "006_takeaway_cta",
+      "title": "结论：让模型画图，让代码写字",
+      "duration_sec": 10,
+      "engine": "remotion_or_motion_canvas",
+      "segment_role": "memorable rule + CTA",
+      "visual_metaphor": "左边图像生成器输出无文字画面，右边程序化文本层精准覆盖，最后合成为成片",
+      "visual_primitives": ["pipeline", "image_plate", "text_layer", "check_badge", "card", "arrow"],
+      "motion_grammar": ["layer_stack", "camera_push", "green_check", "end_tag"],
+      "audio_sync": ["final lock click", "soft sonic logo"]
+    }
+  ]
+}

@@ -1,0 +1,2 @@
+beat_id,segment_id,start_sec,end_sec,narration,claim_ids,semantic_action,emotion,retention_role,visual_response_required,text_ids,sfx_intent,source_visual
+B001,S01,0.00,0.70,示例旁白短句,C001,展示/对比/证明/转折,curiosity,hook,新元素出现并吸引注意,caption_001,SFX_B001 or deliberate_silence,source_card or none

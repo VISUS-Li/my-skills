@@ -1,0 +1,38 @@
+{
+  "version": "v002",
+  "timebase": "seconds",
+  "policy": {
+    "max_unchanged_hold_sec": 1.5,
+    "normal_beat_spacing_sec": [0.3, 1.2],
+    "every_narration_phrase_requires_visual_response": true,
+    "sfx_must_have_visible_or_semantic_anchor": true,
+    "programmatic_text_only": true,
+    "claim_ids_required_for_factual_beats": true
+  },
+  "beats": [
+    {
+      "beat_id": "B001_E01",
+      "segment_id": "S01",
+      "start_sec": 0.0,
+      "end_sec": 0.35,
+      "narration": "示例旁白短句",
+      "claim_ids": [],
+      "intent": "hook / explain / prove / transition / correction",
+      "beat_type": "new_asset / transform / proof / error / success / camera / rhythm_break",
+      "visual_action": "标题卡片从网格中弹出，红色限定词被高亮框扫过",
+      "assets": ["title_card", "highlight_box"],
+      "text_ids": ["caption_001"],
+      "layout_zone": "center",
+      "camera": "micro_push_in",
+      "motion": {
+        "entrance": "0.22s scale 0.92 to 1.0 with overshoot",
+        "main": "highlight box scans left to right",
+        "exit": "none",
+        "easing": "easeOutBack then linear scan"
+      },
+      "sfx_cue_ids": ["SFX_B001_E01_POP"],
+      "density_note": "background grid, hero text card, foreground highlight all active",
+      "why_not_ppt": "the claim qualifier is physically highlighted instead of shown as a static bullet"
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "version": "v001",
+  "language": "zh-CN",
+  "policy": {
+    "exact_text_layers_only": true,
+    "forbid_generated_raster_chinese": true,
+    "allowed_renderers": ["html", "svg", "canvas", "remotion", "motion-canvas", "hyperframes", "manim"],
+    "proofread_required": true
+  },
+  "font_stack": "Noto Sans SC, Source Han Sans SC, PingFang SC, Microsoft YaHei, sans-serif",
+  "items": [
+    {
+      "id": "caption_001",
+      "text": "这里填写逐字校对后的中文字幕",
+      "role": "bottom_caption",
+      "segment_id": "001_hook",
+      "start_sec": 0,
+      "end_sec": 2.4,
+      "renderer": "html",
+      "font_weight": 800,
+      "status": "draft",
+      "proofread_by": null,
+      "notes": "Do not bake this text into generated imagery."
+    }
+  ]
+}

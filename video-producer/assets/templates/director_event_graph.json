@@ -1,0 +1,28 @@
+{
+  "version": "v001",
+  "timebase": "seconds",
+  "policy": {
+    "graph_required_for_dense_explainers": true,
+    "edges_explain_attention_causality_proof_audio_or_style": true
+  },
+  "nodes": [
+    {
+      "event_id": "E001",
+      "beat_id": "B001",
+      "segment_id": "S01",
+      "time_range": [0.0, 0.35],
+      "event_type": "attention_shift",
+      "description": "title card snaps in while background grid drifts",
+      "primary_asset": "title_card",
+      "claim_ids": []
+    }
+  ],
+  "edges": [
+    {
+      "from": "E001",
+      "to": "E002",
+      "edge_type": "attention_edge",
+      "reason": "viewer follows title into first proof card"
+    }
+  ]
+}

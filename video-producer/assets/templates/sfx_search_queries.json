@@ -1,0 +1,13 @@
+{
+  "version": "v001",
+  "sources_to_try": [
+    "YouTube Audio Library",
+    "Pixabay Sound Effects",
+    "Mixkit Sound Effects",
+    "Freesound CC0/CC-BY only",
+    "Adobe Audition Sound Effects",
+    "licensed paid library if available",
+    "generated SFX if rights are acceptable"
+  ],
+  "queries": []
+}

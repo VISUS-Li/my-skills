@@ -1,0 +1,8 @@
+---
+description: Video Producer workflow for controllable, director-level video creation
+alwaysApply: false
+---
+
+When the task is about complete video production, scripts, storyboards, art direction, shot design, HyperFrames segments, timeline assembly, video QC, visual richness, or publishing packs, read `skills/video-producer/SKILL.md` and follow the staged workflow.
+
+Preserve intermediate artifacts, update `.video/state.json`, and do not overwrite approved or locked outputs. Require `design/art_direction.md`, `script/shotlist.json`, `assets/asset_manifest.csv`, and `edit/aesthetic_report.md` before final render.

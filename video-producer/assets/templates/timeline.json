@@ -1,0 +1,30 @@
+{
+  "version": "v002",
+  "ratio": "9:16",
+  "fps": 30,
+  "resolution": "1080x1920",
+  "duration_sec": 0,
+  "tracks": [
+    {
+      "type": "video",
+      "items": []
+    },
+    {
+      "type": "overlay",
+      "items": []
+    },
+    {
+      "type": "audio",
+      "items": []
+    },
+    {
+      "type": "subtitle",
+      "items": []
+    }
+  ],
+  "edit_rhythm": {
+    "average_shot_sec": 2.5,
+    "rhythm_pattern": "hook fast, proof medium, summary clean"
+  },
+  "missing_segment_files": []
+}

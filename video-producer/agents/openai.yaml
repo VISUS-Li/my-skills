@@ -1,0 +1,5 @@
+interface:
+  display_name: "Video Producer"
+  short_description: "Fact-locked director compiler for source-grounded scripts, 小白debug-style animation, asset choreography, audio cues, and anti-PPT video QC."
+  icon: "🎬"
+  color: "#7C5CFF"

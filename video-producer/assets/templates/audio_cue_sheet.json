@@ -1,0 +1,11 @@
+{
+  "version": "v001",
+  "timebase": "seconds",
+  "policy": {
+    "voice_first": true,
+    "do_not_use_unlicensed_assets": true,
+    "avoid_sfx_on_every_cut": true,
+    "final_loudness_check_required": true
+  },
+  "cues": []
+}

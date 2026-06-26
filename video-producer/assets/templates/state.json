@@ -1,0 +1,84 @@
+{
+  "version": "0.3.0",
+  "current_stage": "plan",
+  "stages": {
+    "plan": {
+      "status": "draft",
+      "artifacts": []
+    },
+    "ingest": {
+      "status": "draft",
+      "artifacts": []
+    },
+    "reference-analysis": {
+      "status": "draft",
+      "artifacts": []
+    },
+    "style-match": {
+      "status": "draft",
+      "artifacts": []
+    },
+    "research": {
+      "status": "draft",
+      "artifacts": []
+    },
+    "script": {
+      "status": "draft",
+      "artifacts": []
+    },
+    "art-direction": {
+      "status": "draft",
+      "artifacts": []
+    },
+    "storyboard": {
+      "status": "draft",
+      "artifacts": []
+    },
+    "shot-design": {
+      "status": "draft",
+      "artifacts": []
+    },
+    "sound-design": {
+      "status": "draft",
+      "artifacts": []
+    },
+    "design": {
+      "status": "draft",
+      "artifacts": []
+    },
+    "assets": {
+      "status": "draft",
+      "artifacts": []
+    },
+    "audio-assets": {
+      "status": "draft",
+      "artifacts": []
+    },
+    "segments": {
+      "status": "draft",
+      "artifacts": []
+    },
+    "audio-mix": {
+      "status": "draft",
+      "artifacts": []
+    },
+    "assemble": {
+      "status": "draft",
+      "artifacts": []
+    },
+    "aesthetic-review": {
+      "status": "draft",
+      "artifacts": []
+    },
+    "qc": {
+      "status": "draft",
+      "artifacts": []
+    },
+    "publish": {
+      "status": "draft",
+      "artifacts": []
+    }
+  },
+  "locked_artifacts": [],
+  "notes": []
+}

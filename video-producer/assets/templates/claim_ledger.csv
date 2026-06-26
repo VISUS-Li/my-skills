@@ -1,0 +1,2 @@
+claim_id,claim,claim_type,source_ids,source_urls,supporting_quote,source_context,interpretation_guardrail,script_sentence,reference_link_text,video_location,risk,verification_status,needs_manual_check,misread_check,notes
+C001,示例事实主张,fact,S001,https://example.com,source text or exact paraphrase,who/what/when/where,do not generalize beyond source scope,口播里对应的句子 [C001],Source title or short link text,S01 00:00-00:05,medium,needs_manual_check,true,check whether qualifiers were preserved,

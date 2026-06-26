@@ -1,0 +1,18 @@
+{
+  "version": "v001",
+  "sample_rate_hz": 48000,
+  "channels": 2,
+  "target_loudness": {
+    "integrated_lufs": -16,
+    "true_peak_db": -1.0,
+    "lra": 11
+  },
+  "tracks": [
+    {"name": "voice", "priority": 1, "default_gain_db": 0, "duck_others": true},
+    {"name": "music", "priority": 4, "default_gain_db": -18, "duck_under_voice_db": -8},
+    {"name": "sfx", "priority": 2, "default_gain_db": -10},
+    {"name": "ambience", "priority": 5, "default_gain_db": -26}
+  ],
+  "automation": [],
+  "notes": []
+}

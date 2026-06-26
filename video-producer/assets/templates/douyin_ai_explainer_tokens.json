@@ -1,0 +1,95 @@
+{
+  "version": "douyin-ai-explainer-v001",
+  "palette": {
+    "background": "#F7F1E6",
+    "gridLine": "rgba(31, 41, 55, 0.08)",
+    "surface": "#FFFDF7",
+    "surfaceWarm": "#FBE7C6",
+    "ink": "#1F2937",
+    "mutedInk": "#6B7280",
+    "primary": "#2563EB",
+    "secondary": "#F59E0B",
+    "accent": "#22C55E",
+    "danger": "#EF4444",
+    "stroke": "#263238",
+    "shadow": "rgba(31, 41, 55, 0.14)"
+  },
+  "colorRatio": {
+    "background_grid": "60-70% warm off-white / grid canvas",
+    "illustration_surfaces": "20-30% cards, machines, panels",
+    "accents": "8-14% blue/yellow/green/red functional accents"
+  },
+  "typography": {
+    "display": {
+      "family": "Noto Sans SC, Source Han Sans SC, PingFang SC, Microsoft YaHei, sans-serif",
+      "weight": 800,
+      "size_16_9": "50-70px",
+      "size_9_16": "48-64px",
+      "lineHeight": 1.08,
+      "maxLines": 2
+    },
+    "caption": {
+      "family": "Noto Sans SC, Source Han Sans SC, PingFang SC, Microsoft YaHei, sans-serif",
+      "weight": 700,
+      "size_16_9": "30-40px",
+      "size_9_16": "34-46px",
+      "lineHeight": 1.18,
+      "background": "rgba(255,255,255,0.72) or subtle stroke/shadow"
+    },
+    "label": {
+      "family": "Noto Sans SC, Source Han Sans SC, PingFang SC, Microsoft YaHei, sans-serif",
+      "weight": 650,
+      "size_16_9": "18-28px",
+      "lineHeight": 1.2,
+      "maxLines": 1
+    }
+  },
+  "layout": {
+    "safeArea": {"top": "6%", "right": "6%", "bottom": "10%", "left": "6%"},
+    "grid": {"spacing": 40, "opacity": 0.08, "strokeWidth": 1},
+    "defaultZones": {
+      "hero_diagram": "center 58%",
+      "support_cards": "left/right 24%",
+      "caption": "bottom 18%"
+    },
+    "density": {
+      "minVisualPrimitivesPerMajorSegment": 4,
+      "maxReadableTextAreaPercent": 35,
+      "minDepthLayers": 3
+    }
+  },
+  "shapeLanguage": {
+    "strokeWidth": "2-4px",
+    "cornerRadius": "14-24px cards, 8-12px badges",
+    "shadow": "soft 0 8 24px rgba(31,41,55,.10)",
+    "lineCap": "round",
+    "lineJoin": "round"
+  },
+  "motion": {
+    "fps": 30,
+    "microBeatSec": 0.28,
+    "revealSec": 0.7,
+    "scenePhraseSec": "3-7",
+    "easing": {
+      "enter": "cubic-bezier(.2,.8,.2,1)",
+      "stamp": "back.out / overshoot 1.15",
+      "camera": "smoothstep"
+    },
+    "defaultPrimitives": [
+      "line_draw",
+      "card_slide",
+      "arrow_pulse",
+      "stamp_hit",
+      "machine_process",
+      "before_after_flip",
+      "camera_push",
+      "parallax_pan",
+      "diagram_morph"
+    ]
+  },
+  "textPolicy": {
+    "exactChinese": "render as HTML/SVG/Canvas/Remotion/Motion Canvas/HyperFrames text layers only",
+    "imageGeneration": "no readable Chinese or logos inside raster images; use blank plates and overlay text later",
+    "manifest": "use assets/templates/text_manifest.json as the single source of truth"
+  }
+}

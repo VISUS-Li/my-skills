@@ -1,0 +1,12 @@
+{
+  "version": "v001",
+  "platform": "douyin/bilibili/youtube",
+  "beats": [
+    {"time_sec": 0, "retention_role": "hook", "viewer_question": "Why should I care now?", "emotion": "curiosity"},
+    {"time_sec": 8, "retention_role": "stakes", "viewer_question": "What is at risk or misunderstood?", "emotion": "tension"},
+    {"time_sec": 20, "retention_role": "proof", "viewer_question": "How do we know?", "emotion": "trust"},
+    {"time_sec": 45, "retention_role": "mechanism", "viewer_question": "What is actually happening?", "emotion": "clarity"},
+    {"time_sec": 75, "retention_role": "twist", "viewer_question": "What did I miss?", "emotion": "surprise"},
+    {"time_sec": 110, "retention_role": "takeaway", "viewer_question": "What should I remember?", "emotion": "relief"}
+  ]
+}

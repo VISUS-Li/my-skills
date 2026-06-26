@@ -1,0 +1,2 @@
+asset_id,type,description,source_or_prompt,rights_status,layer,first_on_sec,last_on_sec,entrance,main_motion,exit,states,reused_in_segments,sfx_affordance,implementation_notes
+ai_machine,svg_component,cartoon AI processing machine with input slot and output tray,drawn_svg,safe,midground,0.8,8.4,scale 0.92 to 1 with shadow pop,status lights blink and conveyor moves,slide to left,idle|processing|success,S01;S03,machine hum; card snap,render as grouped SVG with no baked text

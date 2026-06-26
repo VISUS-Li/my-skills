@@ -1,0 +1,27 @@
+{
+  "version": "v002",
+  "notes": "Generated or refined from storyboard. Each shot must have a reason to exist.",
+  "shots": [
+    {
+      "shot_id": "001A",
+      "segment_id": "001_hook",
+      "duration_sec": 4,
+      "shot_size": "medium close-up",
+      "camera_angle": "eye-level",
+      "camera_move": "slow_push_in",
+      "composition": "rule_of_thirds",
+      "foreground": "caption/edge overlay",
+      "midground": "subject or main graphic",
+      "background": "texture/gradient",
+      "depth_cues": [
+        "parallax",
+        "shadow",
+        "blur"
+      ],
+      "focal_element": "speaker/claim",
+      "text_area_percent": 20,
+      "asset_ids": [],
+      "edit_intent": "human anchor"
+    }
+  ]
+}

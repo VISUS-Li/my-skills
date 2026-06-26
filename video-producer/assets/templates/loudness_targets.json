@@ -1,0 +1,10 @@
+{
+  "version": "v001",
+  "default_profile": "web_social_voiceover",
+  "profiles": {
+    "web_social_voiceover": {"integrated_lufs": -16, "true_peak_db": -1.0, "lra": 11},
+    "youtube_general": {"integrated_lufs": -14, "true_peak_db": -1.0, "lra": 11},
+    "broadcast_ebu_r128": {"integrated_lufs": -23, "true_peak_db": -1.0, "lra": 7},
+    "podcast_voice": {"integrated_lufs": -16, "true_peak_db": -1.0, "lra": 11}
+  }
+}

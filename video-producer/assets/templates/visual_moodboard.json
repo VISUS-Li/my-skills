@@ -1,0 +1,51 @@
+{
+  "version": "v002",
+  "style_keywords": [],
+  "reference_targets": [
+    {
+      "type": "frame_reference",
+      "query": "premium tech motion graphics dark glass data visualization",
+      "purpose": "palette and material inspiration",
+      "status": "to_collect"
+    },
+    {
+      "type": "icon_reference",
+      "query": "consistent outline icon set topic-specific",
+      "purpose": "asset coherence",
+      "status": "to_collect"
+    }
+  ],
+  "palette": {
+    "dominant": [],
+    "support": [],
+    "accent": [],
+    "forbidden": []
+  },
+  "materials": [
+    "soft gradient",
+    "subtle grain",
+    "glass card",
+    "thin strokes",
+    "data particles"
+  ],
+  "image_style": {
+    "photos": "high contrast, cropped, purposeful",
+    "illustrations": "minimal vector or AI-generated plates with unified palette",
+    "screenshots": "device/mockup frame with annotations"
+  },
+  "icon_style": {
+    "stroke_width": "2px",
+    "corner_radius": "rounded",
+    "fill": "minimal accent fill only"
+  },
+  "do": [
+    "use depth and parallax",
+    "collect concrete images/icons before segment render",
+    "keep palette consistent"
+  ],
+  "do_not": [
+    "mix random icon styles",
+    "use decorative images without narrative role",
+    "center every card"
+  ]
+}
