@@ -2,14 +2,24 @@
 
 Use this when building a video where every sentence should have a corresponding visual and sound cue.
 
+## Chinese pacing rule
+
+- **Planning target:** ~**5 Chinese characters per second** (one short clause ≈ 1s).
+- **Authority after TTS:** `segments/<id>/vo_timing.json` from `measure_segment_vo.py` — never equal shot splits.
+- **Acceptable band:** 4–6 cps per beat; lint flags outside 3.5–7.5.
+- Segment composition duration = sum of measured beat WAV durations (±0.05s).
+
+Load `references/vo-sync-timing-protocol.md` for the full measurement pipeline.
+
 ## Timing method
 
-1. Create or obtain narration timestamps.
-2. Split voiceover into phrase beats, not just paragraphs.
-3. For each phrase, mark the semantic verb: show, compare, enter, transform, reject, reveal, prove, summarize.
-4. Create a visual response for that verb.
-5. Create an SFX decision for the visual response: hit, click, tick, whoosh, stamp, chime, silence, or no cue.
-6. Render with a programmatic timeline so timestamps can be adjusted without rewriting the whole scene.
+1. Generate TTS beats → measure with ffprobe → write `vo_timing.json`.
+2. Scale `beat_timeline.json` micro-events → `micro_timing.json`.
+3. Split voiceover into phrase beats, not just paragraphs.
+4. For each phrase, mark the semantic verb: show, compare, enter, transform, reject, reveal, prove, summarize.
+5. Create a visual response for that verb **on ≥3 layers** with motion at micro-event times.
+6. Create an SFX decision for the visual response: hit, click, tick, whoosh, stamp, chime, silence, or no cue.
+7. Render with a programmatic timeline (GSAP labels + absolute `t`) so timestamps track VO without rewriting scenes.
 
 ## Cue timing defaults
 

@@ -147,10 +147,12 @@ def main() -> int:
         "assets/sfx",
         "audio",
         "audio/candidates",
+        "audio/refs",
         "audio/voice",
         "audio/music",
         "audio/sfx",
         "audio/stems",
+        "audio/stems/voice/beats",
         "edit",
         "exports",
         "analysis/reference_video",
@@ -227,6 +229,7 @@ def main() -> int:
     copy_template("music_brief.md", root / "audio" / "music_brief.md", force=args.force)
     copy_template("voice_profile.md", root / "audio" / "voice_profile.md", force=args.force)
     copy_template("tts_plan.json", root / "audio" / "tts_plan.json", force=args.force)
+    copy_template("indextts2_config.json", root / "audio" / "indextts2_config.json", force=args.force)
     copy_template("sfx_search_queries.json", root / "audio" / "sfx_search_queries.json", force=args.force)
     copy_template("audio_mix_plan.json", root / "audio" / "audio_mix_plan.json", force=args.force)
     copy_template("loudness_targets.json", root / "audio" / "loudness_targets.json", force=args.force)

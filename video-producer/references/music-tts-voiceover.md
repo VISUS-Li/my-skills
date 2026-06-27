@@ -6,11 +6,26 @@ Use this for narration, TTS, BGM, and music selection.
 1. Lock or draft `script/voiceover.md`.
 2. Create `audio/voice_profile.md` with persona, language, pace, pronunciation, and provider.
 3. Create `audio/tts_plan.json` with line or paragraph chunks.
-4. Generate or record voice.
-5. Align captions and storyboard timings to the actual voice duration.
-6. Add music and SFX only after voice timing is known.
+4. **IndexTTS2 (preferred for Chinese explainers):** configure `audio/indextts2_config.json`, place reference WAV in `audio/refs/`, run `scripts/indextts2_generate.py`.
+5. Generate or record voice → `audio/stems/voice/beats/B*.wav`.
+6. **Measure actual timing:** `scripts/measure_segment_vo.py <project> S001` → `segments/S001/vo_timing.json`.
+7. Re-scale micro-events: `scripts/build_micro_timing.py <project> S001`.
+8. Align captions, storyboard, and segment HTML to **measured** duration (target **5 汉字/秒**, band 4–6).
+9. Add music and SFX only after voice timing is known.
+
+## IndexTTS2 (voice clone + TTS)
+
+Load `references/indextts2-voice-protocol.md` for full API details.
+
+- **WebUI:** Gradio at user-provided URL (e.g. `http://host:37191/`).
+- **API:** `/gen_single` via `gradio_client`.
+- **Reference:** 5–10s clean clip → `audio/refs/narrator_ref.wav`.
+- **Batch:** `python scripts/indextts2_generate.py . --segment S001 --concat`.
+- **Emotion:** segment vectors in `indextts2_config.json`; default calm explainer.
+- **Post-batch:** always run `measure_segment_vo.py` before segment render.
 
 ## TTS provider routing
+- **IndexTTS2:** preferred for Chinese AI explainers with reference voice clone; local/self-hosted WebUI.
 - Human voice: best for brand-critical videos, nuanced emotion, and personal channels.
 - OpenAI TTS: strong general option; useful when promptable style, tone, speed, intonation, or multilingual narration matters.
 - ElevenLabs: use for premium narration, voice cloning where consent and policy are clear, music/SFX integration.

@@ -7,22 +7,29 @@ Use this when converting director plans into HyperFrames/GSAP/HTML/CSS animation
 Before coding a segment, read:
 
 - `script/beat_timeline.json`
+- `segments/<id>/vo_timing.json` — **authoritative clip durations**
+- `segments/<id>/micro_timing.json` — scaled micro-events at absolute `t`
 - `script/text_manifest.json`
 - `assets/asset_choreography_manifest.csv`
 - `audio/audio_cue_sheet.json`
 - `design/tokens.json`
 - `design/design.md`
-- `script/shotlist.json`
+- `script/shotlist.json` — intent only; **not** duration source after VO exists
 
 ## Build order
 
-1. Build final styleframe first: all layers, final layout, no animation.
-2. Map every asset ID to a DOM/SVG/Canvas element.
-3. Write named timeline labels from `beat_timeline.json`: `tl.addLabel('B012', 12.4)`.
-4. Implement beat actions using labels, not arbitrary delays.
-5. Attach captions and text from `text_manifest.json`, never baked into image plates.
-6. Add SFX placeholders or cue markers using cue IDs.
-7. Run lint/preview/render checks.
+1. Run `measure_segment_vo.py` and `build_micro_timing.py` for the segment.
+2. Generate layered assets in `segments/<id>/assets/` (SVG icons, PNG plates — see `visual-asset-generation.md`).
+3. Build final styleframe first: all layers (ambient / midground / foreground / HUD), final layout, overlap and z-index, no animation.
+4. Map every asset ID to a DOM/SVG/Canvas element with explicit `z-index` and layer class.
+5. Write named timeline labels from `vo_timing.json` beat starts: `tl.addLabel('B001', 0)`.
+6. Schedule micro-events from `micro_timing.json` at absolute `t`.
+7. Implement beat actions using labels + relative offsets (`"B002+=0.2"`), not arbitrary delays or equal shot splits.
+8. Set root `data-duration` to `vo_timing.total_sec`; embed segment VO WAV.
+9. Attach captions and text from `text_manifest.json`, never baked into image plates.
+10. Add continuous ambient motion (grid, orbs, scan line, camera push) per `motion-life-playbook.md`.
+11. Add SFX placeholders or cue markers using cue IDs.
+12. Run `segment_timing_lint.py`, then lint/preview/render checks.
 
 ## Expanded prompt must include a timestamp table
 
@@ -34,12 +41,14 @@ For each segment, the prompt must contain rows like:
 
 ## Implementation patterns
 
+- **Layer stack:** `#layer-ambient` (z:0), `#layer-mid` (z:10), `#layer-fg` (z:20), `#layer-hud` (z:30) — overlapping elements, parallax, drop shadows.
 - Use SVG for icons, arrows, machines, labels, connectors, glyph outlines.
 - Use CSS variables from `tokens.json` for all colors and spacing.
 - Use transforms, masks, clip paths, stroke-dasharray, filters, and parallax layers.
 - Use Canvas particles only for subtle accent effects; never for exact text.
 - Use device mockups as reusable components with a `screenSlot` child.
 - Use one timeline per segment, plus nested timelines for repeated cards/modules.
+- **Motion-life:** vary entrances per beat; stagger cascades; speed lines at boundaries; mini mascot bob loops (see `motion-life-playbook.md`).
 
 ## Anti-PPT code rules
 

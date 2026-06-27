@@ -1,0 +1,28 @@
+{
+  "segment_id": "S001",
+  "style_refs": ["design/art_direction.md", "design/tokens.json", "design/visual_moodboard.json"],
+  "research_refs": ["research/research_brief.md"],
+  "min_assets": {
+    "svg_icons": 6,
+    "decorative_png": 2,
+    "motion_actors": 8
+  },
+  "layers": {
+    "ambient": ["grid", "orbs", "hero_plate"],
+    "midground": ["comparison_panel", "source_card", "doc_card"],
+    "foreground": ["stamps", "icons", "arrows"],
+    "hud": ["caption_pill", "disclaimer"]
+  },
+  "assets": [
+    {
+      "id": "icon_example",
+      "type": "svg",
+      "prompt": "128x128 SVG, 2-4px stroke, topic icon, no text",
+      "path": "segments/S001/assets/icon_example.svg",
+      "layer": "foreground",
+      "motion": "stamp_hit",
+      "rights_status": "cleared"
+    }
+  ],
+  "image_gen_notes": "No readable Chinese in raster images; use programmatic text layers"
+}
