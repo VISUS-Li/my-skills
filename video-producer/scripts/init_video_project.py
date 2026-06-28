@@ -10,8 +10,13 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
 
 
 STAGES = [
@@ -238,6 +243,13 @@ def main() -> int:
     copy_template("aesthetic_report.md", root / "edit" / "aesthetic_report.md", force=args.force)
     copy_template("publish_pack.md", root / "exports" / "publish_pack.md", force=args.force)
     copy_template("agents.md", root / "AGENTS.md", force=args.force)
+
+    from review_core import init_review_files
+
+    init_review_files(root, force=args.force)
+    stage_manifest_src = skill_root() / "assets" / "templates" / "stage_manifest.json"
+    if stage_manifest_src.exists():
+        copy_template("stage_manifest.json", root / ".video" / "stage_manifest.json", force=args.force)
 
     cursor_rule = root / ".cursor" / "rules" / "video-factory.mdc"
     cursor_rule.parent.mkdir(parents=True, exist_ok=True)

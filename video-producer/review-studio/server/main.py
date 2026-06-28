@@ -1,0 +1,999 @@
+#!/usr/bin/env python3
+"""Review Studio API — local web console for video-producer human gates."""
+from __future__ import annotations
+
+import argparse
+import asyncio
+import csv
+import json
+import sys
+from pathlib import Path
+from typing import Any
+
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field
+
+ROOT = Path(__file__).resolve().parents[2]
+SCRIPTS = ROOT / "scripts"
+if str(SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS))
+
+from review_core import (  # noqa: E402
+    append_history,
+    append_job_log,
+    append_registry,
+    check_render_allowed,
+    content_hash,
+    load_regen_queue,
+    load_stage_manifest,
+    load_state,
+    propagate_stale,
+    read_registry_lines,
+    registry_index,
+    resolve_safe_path,
+    save_regen_queue,
+    save_state,
+    utc_now,
+    validate_stage_dependencies,
+)
+from jobs import JobRunner  # noqa: E402
+from workspace import is_video_project, workspace_mgr  # noqa: E402
+from artifacts import find_voiceover_path, list_stage_artifacts, read_artifact, write_artifact  # noqa: E402
+from timing import audio_summary, patch_beat_timing, patch_micro_event  # noqa: E402
+
+SKILL_ROOT = ROOT
+WEB_ROOT = Path(__file__).resolve().parents[1] / "web"
+
+
+def _root() -> Path:
+    try:
+        return workspace_mgr.require_project()
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+app = FastAPI(title="Video Producer Review Studio", version="0.1.0")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+event_clients: set[WebSocket] = set()
+job_runner = JobRunner()
+
+
+async def broadcast_event(payload: dict[str, Any]) -> None:
+    dead: list[WebSocket] = []
+    for ws in list(event_clients):
+        try:
+            await ws.send_json(payload)
+        except Exception:  # noqa: BLE001
+            dead.append(ws)
+    for ws in dead:
+        event_clients.discard(ws)
+
+
+def sync_broadcast(payload: dict[str, Any]) -> None:
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            asyncio.create_task(broadcast_event(payload))
+    except RuntimeError:
+        pass
+
+
+job_runner._on_event = sync_broadcast  # type: ignore[method-assign]
+
+
+class StageStatusBody(BaseModel):
+    status: str
+    note: str = ""
+
+
+class AssetReviewBody(BaseModel):
+    status: str
+    note: str = ""
+
+
+class BeatPatchBody(BaseModel):
+    narration: str | None = None
+    semantic_action: str | None = None
+
+
+class RegenQueueBody(BaseModel):
+    target_artifact_id: str
+    action: str = "custom"
+    reason: str = ""
+    context: dict[str, Any] = Field(default_factory=dict)
+    commands_suggested: list[str] = Field(default_factory=list)
+    assigned_to: str = "cursor-agent"
+    priority: int = 1
+
+
+class RegenPatchBody(BaseModel):
+    status: str
+    note: str = ""
+
+
+class JobRunBody(BaseModel):
+    script: str
+    args: list[str] = Field(default_factory=list)
+    cwd: str | None = None
+
+
+class WorkspaceRootBody(BaseModel):
+    path: str
+    scan_depth: int | None = None
+
+
+class ProjectSwitchBody(BaseModel):
+    path: str
+
+
+class ArtifactWriteBody(BaseModel):
+    content: str
+    note: str = ""
+
+
+class TimingBeatPatchBody(BaseModel):
+    duration_sec: float | None = None
+    locked: bool | None = None
+
+
+class MicroEventPatchBody(BaseModel):
+    t: float
+
+
+class VoiceoverWriteBody(BaseModel):
+    content: str
+    note: str = ""
+
+
+def _default_segment() -> str:
+    segments_dir = _root() / "segments"
+    if segments_dir.exists():
+        candidates = sorted(
+            p.name for p in segments_dir.iterdir()
+            if p.is_dir() and (p / "index.html").exists()
+        )
+        if candidates:
+            return candidates[0]
+    beats_path = _root() / "script" / "narration_beats.csv"
+    if beats_path.exists():
+        counts: dict[str, int] = {}
+        with beats_path.open(newline="", encoding="utf-8-sig") as handle:
+            for row in csv.DictReader(handle):
+                seg = row.get("segment_id")
+                if seg:
+                    counts[seg] = counts.get(seg, 0) + 1
+        if counts:
+            return max(counts, key=counts.get)
+    storyboard = _root() / "script" / "storyboard.json"
+    if storyboard.exists():
+        data = json.loads(storyboard.read_text(encoding="utf-8-sig"))
+        segments = data.get("segments") or []
+        if segments and isinstance(segments[0], dict):
+            return str(segments[0].get("id") or "S001")
+    return "S001"
+
+
+def _list_segments() -> list[str]:
+    segments_dir = _root() / "segments"
+    if not segments_dir.exists():
+        return [_default_segment()]
+    ids = sorted(p.name for p in segments_dir.iterdir() if p.is_dir())
+    return ids or [_default_segment()]
+
+
+def _read_beats(segment: str) -> list[dict[str, Any]]:
+    path = _root() / "script" / "narration_beats.csv"
+    if not path.exists():
+        return []
+    vo_path = _root() / "segments" / segment / "vo_timing.json"
+    vo_beats: dict[str, dict[str, Any]] = {}
+    if vo_path.exists():
+        vo_data = json.loads(vo_path.read_text(encoding="utf-8-sig"))
+        for beat in vo_data.get("beats", []):
+            if isinstance(beat, dict) and beat.get("beat_id"):
+                vo_beats[str(beat["beat_id"])] = beat
+    rows: list[dict[str, Any]] = []
+    with path.open(newline="", encoding="utf-8-sig") as handle:
+        for row in csv.DictReader(handle):
+            if row.get("segment_id") and row["segment_id"] != segment:
+                continue
+            beat_id = row.get("beat_id", "")
+            merged = dict(row)
+            merged["vo"] = vo_beats.get(beat_id, {})
+            vo = merged["vo"]
+            planned = float(row.get("duration_sec") or vo.get("planned_sec") or 0)
+            actual = float(vo.get("duration_sec") or 0)
+            merged["planned_sec"] = planned
+            merged["actual_sec"] = actual if actual else None
+            merged["drift_sec"] = round(actual - planned, 3) if actual and planned else None
+            cps = float(vo.get("cps") or 0)
+            if not cps and row.get("char_count") and actual:
+                cps = float(row["char_count"]) / actual
+            merged["cps_band"] = _cps_band(cps) if cps else "unknown"
+            wav = _root() / "audio" / "stems" / "voice" / "beats" / f"{beat_id}.wav"
+            merged["vo_wav"] = wav.relative_to(_root()).as_posix() if wav.exists() else None
+            reg = registry_index(read_registry_lines(_root())).get(f"beat:{beat_id}", {})
+            merged["review_status"] = reg.get("status", "review")
+            rows.append(merged)
+    return rows
+
+
+def _cps_band(cps: float) -> str:
+    if cps < 3.5 or cps > 7.5:
+        return "fail"
+    if cps < 4.0 or cps > 6.5:
+        return "warn"
+    return "ok"
+
+
+def _tts_health(root: Path) -> dict[str, Any]:
+    cfg_path = root / "audio" / "indextts2_config.json"
+    if not cfg_path.exists():
+        return {"available": False, "reason": "indextts2_config.json missing"}
+    cfg = json.loads(cfg_path.read_text(encoding="utf-8-sig"))
+    base_url = str(cfg.get("base_url", "")).rstrip("/") + "/"
+    try:
+        import urllib.request
+
+        req = urllib.request.Request(f"{base_url}config", method="GET")
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            if resp.status == 200:
+                return {"available": True, "base_url": base_url, "status": "online"}
+    except Exception as exc:  # noqa: BLE001
+        return {"available": False, "base_url": base_url, "reason": str(exc)}
+    return {"available": False, "base_url": base_url, "reason": "unknown"}
+
+
+def _create_job(script: str, args: list[str], cwd: Path, *, label: str = "") -> dict[str, Any]:
+    job = job_runner.create(script, args, cwd, label=label)
+    try:
+        append_job_log(_root(), {
+            "type": "job_started",
+            "job_id": job.id,
+            "label": label,
+            "script": script,
+            "args": args,
+        })
+    except Exception:  # noqa: BLE001
+        pass
+    return job_runner.to_dict(job)
+
+
+def _job_presets(seg: str, beats: list[str] | None = None) -> dict[str, tuple[str, list[str], Path, str]]:
+    root = _root()
+    beat_args = ["--beats", *(beats or [])] if beats else []
+    presets: dict[str, tuple[str, list[str], Path, str]] = {
+        "segment_timing_lint": (
+            sys.executable,
+            [str(SCRIPTS / "segment_timing_lint.py"), str(root), seg],
+            root,
+            "Segment timing lint",
+        ),
+        "measure_vo": (
+            sys.executable,
+            [str(SCRIPTS / "measure_segment_vo.py"), str(root), seg],
+            root,
+            "Measure VO durations",
+        ),
+        "build_micro_timing": (
+            sys.executable,
+            [str(SCRIPTS / "build_micro_timing.py"), str(root), seg],
+            root,
+            "Build micro timing",
+        ),
+        "indextts_segment": (
+            sys.executable,
+            [str(SCRIPTS / "indextts2_generate.py"), str(root), "--segment", seg, "--concat"],
+            root,
+            "IndexTTS2 full segment",
+        ),
+        "indextts_beats": (
+            sys.executable,
+            [str(SCRIPTS / "indextts2_generate.py"), str(root), "--segment", seg, *beat_args, "--concat", "--force"],
+            root,
+            "IndexTTS2 selected beats",
+        ),
+        "audio_chain": (
+            sys.executable,
+            [str(SCRIPTS / "audio_chain.py"), str(root), seg, "--skip-tts"],
+            root,
+            "Audio chain (measure→micro→lint)",
+        ),
+        "audio_chain_tts": (
+            sys.executable,
+            [str(SCRIPTS / "audio_chain.py"), str(root), seg],
+            root,
+            "Audio chain (TTS→measure→micro→lint)",
+        ),
+        "audio_chain_build": (
+            sys.executable,
+            [str(SCRIPTS / "audio_chain.py"), str(root), seg, "--skip-tts", "--build"],
+            root,
+            "Audio chain + build composition",
+        ),
+        "build_composition": (
+            sys.executable,
+            [str(root / "scripts" / f"build_{seg.lower()}_composition.py")],
+            root,
+            "Build composition HTML",
+        ),
+        "validate_gates": (
+            sys.executable,
+            [str(SCRIPTS / "validate_gates.py"), str(root)],
+            root,
+            "Validate stage gates",
+        ),
+        "review_sync": (
+            sys.executable,
+            [str(SCRIPTS / "review_sync.py"), str(root)],
+            root,
+            "Review sync registry",
+        ),
+        "render_draft": (
+            "npx",
+            ["hyperframes", "render", "--quality", "draft", "--output", "render.mp4", "--fps", "30"],
+            root / "segments" / seg,
+            "HyperFrames draft render",
+        ),
+    }
+    return presets
+
+
+def _stage_gate(stage_id: str, status: str, note: str) -> dict[str, Any]:
+    dep_errors = validate_stage_dependencies(_root(), stage_id, target_status=status)
+    if dep_errors and status in {"review", "approved", "locked", "rendered"}:
+        raise HTTPException(status_code=409, detail=dep_errors)
+    state = load_state(_root())
+    stages = state.setdefault("stages", {})
+    stage = stages.setdefault(stage_id, {"status": "draft", "artifacts": []})
+    previous = stage.get("status", "draft")
+    if previous == "locked" and status != "locked":
+        raise HTTPException(status_code=409, detail=f"stage {stage_id} is locked")
+    stage["status"] = status
+    stage["updated_at"] = utc_now()
+    state["current_stage"] = stage_id
+    save_state(_root(), state)
+    append_history(_root(), {
+        "type": "stage_gate",
+        "stage": stage_id,
+        "from": previous,
+        "to": status,
+        "note": note,
+    })
+    sync_broadcast({"type": "state_updated", "stage": stage_id, "status": status})
+    return {"stage": stage_id, "from": previous, "to": status}
+
+
+def _render_blocked_reason() -> str | None:
+    errors = check_render_allowed(_root(), "segments")
+    if errors:
+        return errors[0]
+    registry = registry_index(read_registry_lines(_root()))
+    for row in registry.values():
+        if row.get("status") in {"rejected", "stale"} and row.get("path", "").endswith((".svg", ".html", ".mp4")):
+            return f"blocked by artifact {row.get('artifact_id')} ({row.get('status')})"
+    return None
+
+
+@app.get("/api/workspace")
+def get_workspace() -> dict[str, Any]:
+    return workspace_mgr.snapshot()
+
+
+@app.put("/api/workspace/root")
+def put_workspace_root(body: WorkspaceRootBody) -> dict[str, Any]:
+    try:
+        snapshot = workspace_mgr.set_workspace(Path(body.path), scan_depth=body.scan_depth)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    sync_broadcast({"type": "workspace_updated", "workspace_root": snapshot.get("workspace_root")})
+    if snapshot.get("current_project"):
+        sync_broadcast({"type": "project_switched", "project": snapshot["current_project"]})
+    return snapshot
+
+
+@app.post("/api/workspace/scan")
+def post_workspace_scan() -> dict[str, Any]:
+    try:
+        snapshot = workspace_mgr.scan()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    sync_broadcast({"type": "workspace_updated"})
+    return snapshot
+
+
+@app.post("/api/dialog/pick-directory")
+def post_pick_directory(title: str = "选择文件夹") -> dict[str, Any]:
+    """Open native folder picker (local server only)."""
+    from pick_directory import pick_directory
+
+    selected = pick_directory(title=title)
+    if not selected:
+        return {"cancelled": True, "path": None}
+    return {"cancelled": False, "path": str(Path(selected).resolve())}
+
+
+@app.post("/api/project/switch")
+def post_project_switch(body: ProjectSwitchBody) -> dict[str, Any]:
+    try:
+        result = workspace_mgr.switch_project(Path(body.path))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    sync_broadcast({"type": "project_switched", "project": result["current_project"]})
+    return {**workspace_mgr.snapshot(), **result}
+
+
+@app.get("/api/project")
+def get_project() -> dict[str, Any]:
+    snapshot = workspace_mgr.snapshot()
+    if workspace_mgr.current_project is None:
+        return {
+            "root": None,
+            "video": {},
+            "state": {},
+            "current_stage": None,
+            "render_blocked": None,
+            "workspace": snapshot,
+            "needs_project": True,
+        }
+    root = _root()
+    video_path = root / ".video" / "video.json"
+    state = load_state(root)
+    video = json.loads(video_path.read_text(encoding="utf-8-sig")) if video_path.exists() else {}
+    return {
+        "root": str(root),
+        "video": video,
+        "state": state,
+        "current_stage": state.get("current_stage"),
+        "render_blocked": _render_blocked_reason(),
+        "workspace": snapshot,
+        "needs_project": False,
+    }
+
+
+@app.get("/api/stages")
+def get_stages() -> dict[str, Any]:
+    manifest = load_stage_manifest(_root())
+    state = load_state(_root())
+    stages = state.get("stages", {})
+    items = []
+    for stage_id, meta in manifest.get("stages", {}).items():
+        current = stages.get(stage_id, {})
+        deps = meta.get("depends_on", [])
+        blocked = []
+        for dep in deps:
+            dep_status = stages.get(dep, {}).get("status", "draft")
+            if dep_status not in {"approved", "locked"}:
+                blocked.append({"stage": dep, "status": dep_status})
+        items.append({
+            "id": stage_id,
+            "label": meta.get("label", stage_id),
+            "depends_on": deps,
+            "downstream": meta.get("downstream", []),
+            "status": current.get("status", "draft"),
+            "artifacts": current.get("artifacts", []),
+            "blocked_by": blocked,
+            "required_count": len(meta.get("required_artifacts", [])),
+            "required_ready": sum(
+                1 for a in list_stage_artifacts(_root(), stage_id, _default_segment()) if a["exists"] and a["required"]
+            ),
+        })
+    return {"stages": items}
+
+
+@app.post("/api/stages/{stage_id}/status")
+def post_stage_status(stage_id: str, body: StageStatusBody) -> dict[str, Any]:
+    return _stage_gate(stage_id, body.status, body.note)
+
+
+@app.get("/api/beats")
+def get_beats(segment: str | None = None) -> dict[str, Any]:
+    seg = segment or _default_segment()
+    return {"segment_id": seg, "beats": _read_beats(seg)}
+
+
+@app.get("/api/beats/{beat_id}")
+def get_beat(beat_id: str, segment: str | None = None) -> dict[str, Any]:
+    seg = segment or _default_segment()
+    for beat in _read_beats(seg):
+        if beat.get("beat_id") == beat_id:
+            micro_path = _root() / "segments" / seg / "micro_timing.json"
+            micro_events: list[dict[str, Any]] = []
+            if micro_path.exists():
+                micro_raw = json.loads(micro_path.read_text(encoding="utf-8-sig"))
+                micro_list = micro_raw if isinstance(micro_raw, list) else micro_raw.get("events", [])
+                for event in micro_list:
+                    if not isinstance(event, dict):
+                        continue
+                    parent = str(event.get("parent") or event.get("beat_id") or "")
+                    if parent == beat_id:
+                        micro_events.append(event)
+            beat["micro_events"] = micro_events
+            wav = _root() / "audio" / "stems" / "voice" / "beats" / f"{beat_id}.wav"
+            beat["vo_wav"] = wav.relative_to(_root()).as_posix() if wav.exists() else None
+            return beat
+    raise HTTPException(status_code=404, detail=f"beat not found: {beat_id}")
+
+
+@app.patch("/api/beats/{beat_id}")
+def patch_beat(beat_id: str, body: BeatPatchBody, segment: str | None = None) -> dict[str, Any]:
+    seg = segment or _default_segment()
+    path = _root() / "script" / "narration_beats.csv"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="narration_beats.csv missing")
+    rows: list[dict[str, str]] = []
+    fieldnames: list[str] = []
+    found = False
+    with path.open(newline="", encoding="utf-8-sig") as handle:
+        reader = csv.DictReader(handle)
+        fieldnames = list(reader.fieldnames or [])
+        for row in reader:
+            if row.get("beat_id") == beat_id and row.get("segment_id") == seg:
+                if body.narration is not None:
+                    row["narration"] = body.narration
+                if body.semantic_action is not None:
+                    row["semantic_action"] = body.semantic_action
+                found = True
+            rows.append(dict(row))
+    if not found:
+        raise HTTPException(status_code=404, detail=f"beat not found: {beat_id}")
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+    stale = propagate_stale(_root(), "script/narration_beats.csv", note=f"beat {beat_id} edited", segment_id=seg)
+    append_registry(_root(), {
+        "artifact_id": f"beat:{beat_id}",
+        "artifact_type": "beat",
+        "path": "script/narration_beats.csv",
+        "stage": "script",
+        "segment_id": seg,
+        "beat_ids": [beat_id],
+        "status": "review",
+        "previous_status": "approved",
+        "reviewer": "human",
+        "reviewer_note": "narration edited via Review Studio",
+    })
+    sync_broadcast({"type": "registry_updated", "beat_id": beat_id})
+    return {"beat_id": beat_id, "stale": stale}
+
+
+@app.get("/api/assets")
+def get_assets(segment: str | None = None, status: str | None = None) -> dict[str, Any]:
+    path = _root() / "assets" / "asset_manifest.csv"
+    if not path.exists():
+        return {"assets": []}
+    registry = registry_index(read_registry_lines(_root()))
+    assets: list[dict[str, Any]] = []
+    with path.open(newline="", encoding="utf-8-sig") as handle:
+        for row in csv.DictReader(handle):
+            if segment and row.get("segment_id") not in {segment, segment.replace("S001", "S01")}:
+                continue
+            asset_id = row.get("asset_id", "")
+            reg = registry.get(f"asset:{asset_id}", {})
+            review_status = row.get("review_status") or reg.get("status", "review")
+            item = dict(row)
+            item["review_status"] = review_status
+            item["registry"] = reg
+            if status and review_status != status:
+                continue
+            assets.append(item)
+    return {"assets": assets}
+
+
+@app.post("/api/assets/{asset_id}/review")
+def post_asset_review(asset_id: str, body: AssetReviewBody) -> dict[str, Any]:
+    manifest_path = _root() / "assets" / "asset_manifest.csv"
+    asset_row: dict[str, str] | None = None
+    if manifest_path.exists():
+        with manifest_path.open(newline="", encoding="utf-8-sig") as handle:
+            for row in csv.DictReader(handle):
+                if row.get("asset_id") == asset_id:
+                    asset_row = dict(row)
+                    break
+    rel_path = (asset_row or {}).get("path_or_url") or f"segments/{_default_segment()}/assets/{asset_id}.svg"
+    resolved = resolve_safe_path(_root(), rel_path)
+    entry = append_registry(_root(), {
+        "artifact_id": f"asset:{asset_id}",
+        "artifact_type": (asset_row or {}).get("type", "svg"),
+        "path": rel_path,
+        "stage": "assets",
+        "segment_id": (asset_row or {}).get("segment_id") or _default_segment(),
+        "status": body.status,
+        "previous_status": registry_index(read_registry_lines(_root())).get(f"asset:{asset_id}", {}).get("status", "review"),
+        "reviewer": "human",
+        "reviewer_note": body.note,
+        "content_hash": content_hash(resolved) if resolved else "",
+        "invalidates": [
+            f"segments/{_default_segment()}/index.html",
+            f"segments/{_default_segment()}/render.mp4",
+        ],
+    })
+    if body.status == "rejected":
+        segment_id = (asset_row or {}).get("segment_id") or _default_segment()
+        propagate_stale(_root(), rel_path, note=body.note, segment_id=segment_id)
+        for invalidate_path in [
+            f"segments/{segment_id}/index.html",
+            f"segments/{segment_id}/render.mp4",
+        ]:
+            resolved = resolve_safe_path(_root(), invalidate_path)
+            if resolved and resolved.exists():
+                append_registry(_root(), {
+                    "artifact_id": f"file:{invalidate_path}",
+                    "artifact_type": resolved.suffix.lstrip(".") or "file",
+                    "path": invalidate_path,
+                    "stage": "segments",
+                    "segment_id": segment_id,
+                    "status": "stale",
+                    "previous_status": registry_index(read_registry_lines(_root())).get(f"file:{invalidate_path}", {}).get("status", "approved"),
+                    "reviewer": "system",
+                    "reviewer_note": f"invalidated by reject {asset_id}",
+                    "content_hash": content_hash(resolved),
+                })
+    if manifest_path.exists() and asset_row:
+        rows: list[dict[str, str]] = []
+        fieldnames: list[str] = []
+        with manifest_path.open(newline="", encoding="utf-8-sig") as handle:
+            reader = csv.DictReader(handle)
+            fieldnames = list(reader.fieldnames or [])
+            if "review_status" not in fieldnames:
+                fieldnames.append("review_status")
+            for row in reader:
+                if row.get("asset_id") == asset_id:
+                    row["review_status"] = body.status
+                rows.append(dict(row))
+        with manifest_path.open("w", newline="", encoding="utf-8") as handle:
+            writer = csv.DictWriter(handle, fieldnames=fieldnames, extrasaction="ignore")
+            writer.writeheader()
+            writer.writerows(rows)
+    sync_broadcast({"type": "registry_updated", "artifact_id": f"asset:{asset_id}", "status": body.status})
+    return {"entry": entry}
+
+
+@app.get("/api/registry")
+def get_registry() -> dict[str, Any]:
+    rows = list(registry_index(read_registry_lines(_root())).values())
+    return {"artifacts": rows}
+
+
+@app.get("/api/regen-queue")
+def get_regen_queue_api() -> dict[str, Any]:
+    return load_regen_queue(_root())
+
+
+@app.post("/api/regen-queue")
+def post_regen_queue(body: RegenQueueBody) -> dict[str, Any]:
+    queue = load_regen_queue(_root())
+    item = {
+        "id": f"rq-{utc_now()[:10].replace('-', '')}-{len(queue.get('items', [])) + 1:03d}",
+        "status": "pending",
+        "priority": body.priority,
+        "target_artifact_id": body.target_artifact_id,
+        "action": body.action,
+        "assigned_to": body.assigned_to,
+        "reason": body.reason,
+        "context": body.context,
+        "commands_suggested": body.commands_suggested,
+        "created_at": utc_now(),
+        "completed_at": None,
+    }
+    queue.setdefault("items", []).append(item)
+    save_regen_queue(_root(), queue)
+    sync_broadcast({"type": "regen_queue_updated", "item_id": item["id"]})
+    return {"item": item}
+
+
+@app.patch("/api/regen-queue/{item_id}")
+def patch_regen_queue(item_id: str, body: RegenPatchBody) -> dict[str, Any]:
+    queue = load_regen_queue(_root())
+    for item in queue.get("items", []):
+        if item.get("id") == item_id:
+            item["status"] = body.status
+            if body.status in {"completed", "failed"}:
+                item["completed_at"] = utc_now()
+            if body.note:
+                item["note"] = body.note
+            save_regen_queue(_root(), queue)
+            return {"item": item}
+    raise HTTPException(status_code=404, detail="queue item not found")
+
+
+@app.get("/api/segments")
+def get_segments_list() -> dict[str, Any]:
+    return {"segments": _list_segments(), "default": _default_segment()}
+
+
+@app.get("/api/publish")
+def get_publish() -> dict[str, Any]:
+    path = _root() / "exports" / "publish_pack.md"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="publish_pack.md missing")
+    return {"path": "exports/publish_pack.md", "content": path.read_text(encoding="utf-8-sig")}
+
+
+@app.post("/api/jobs/preset/{preset_name}")
+def post_job_preset(preset_name: str, segment: str | None = None, beats: str | None = None) -> dict[str, Any]:
+    seg = segment or _default_segment()
+    beat_list = [b.strip() for b in beats.split(",")] if beats else None
+    presets = _job_presets(seg, beat_list)
+    if preset_name not in presets:
+        raise HTTPException(status_code=404, detail=f"unknown preset: {preset_name}")
+    if preset_name in {"render_draft", "render_hq"}:
+        blocked = _render_blocked_reason()
+        if blocked:
+            raise HTTPException(status_code=409, detail=f"render blocked: {blocked}")
+    script, args, cwd, label = presets[preset_name]
+    if preset_name == "build_composition" and not Path(args[0]).exists():
+        raise HTTPException(status_code=404, detail=f"composition builder missing for {seg}")
+    if preset_name == "render_draft" and not cwd.exists():
+        raise HTTPException(status_code=404, detail=f"segment dir missing: {cwd}")
+    return {"job": _create_job(script, args, cwd, label=label)}
+
+
+@app.get("/api/timeline")
+def get_timeline(segment: str | None = None) -> dict[str, Any]:
+    seg = segment or _default_segment()
+    vo_path = _root() / "segments" / seg / "vo_timing.json"
+    micro_path = _root() / "segments" / seg / "micro_timing.json"
+    beats = _read_beats(seg)
+    vo = json.loads(vo_path.read_text(encoding="utf-8-sig")) if vo_path.exists() else {}
+    micro_raw = json.loads(micro_path.read_text(encoding="utf-8-sig")) if micro_path.exists() else []
+    micro_events = micro_raw if isinstance(micro_raw, list) else micro_raw.get("events", [])
+    return {"segment_id": seg, "total_sec": vo.get("total_sec"), "beats": beats, "micro_events": micro_events}
+
+
+@app.post("/api/jobs/run")
+def post_job_run(body: JobRunBody) -> dict[str, Any]:
+    if "render" in body.script.lower() or "hyperframes" in " ".join(body.args).lower():
+        blocked = _render_blocked_reason()
+        if blocked:
+            raise HTTPException(status_code=409, detail=f"render blocked: {blocked}")
+    cwd = Path(body.cwd) if body.cwd else _root()
+    if not cwd.is_absolute():
+        cwd = (_root() / cwd).resolve()
+    job = job_runner.create(body.script, body.args, cwd)
+    return {"job": job_runner.to_dict(job)}
+
+
+@app.get("/api/jobs")
+def get_jobs(limit: int = 30) -> dict[str, Any]:
+    return {"jobs": [job_runner.to_dict(j) for j in job_runner.list_jobs(limit)]}
+
+
+@app.get("/api/tts/health")
+def get_tts_health() -> dict[str, Any]:
+    return _tts_health(_root())
+
+
+@app.get("/api/tts/config")
+def get_tts_config() -> dict[str, Any]:
+    path = _root() / "audio" / "indextts2_config.json"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="indextts2_config.json missing")
+    return {"path": "audio/indextts2_config.json", "config": json.loads(path.read_text(encoding="utf-8-sig"))}
+
+
+@app.get("/api/audio/summary")
+def get_audio_summary(segment: str | None = None) -> dict[str, Any]:
+    seg = segment or _default_segment()
+    summary = audio_summary(_root(), seg)
+    summary["tts"] = _tts_health(_root())
+    return summary
+
+
+@app.patch("/api/timing/beats/{beat_id}")
+def patch_timing_beat(beat_id: str, body: TimingBeatPatchBody, segment: str | None = None) -> dict[str, Any]:
+    seg = segment or _default_segment()
+    try:
+        result = patch_beat_timing(
+            _root(), seg, beat_id,
+            duration_sec=body.duration_sec,
+            locked=body.locked,
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    sync_broadcast({"type": "registry_updated", "beat_id": beat_id})
+    return result
+
+
+@app.patch("/api/timing/micro/{event_id}")
+def patch_timing_micro(event_id: str, body: MicroEventPatchBody, segment: str | None = None) -> dict[str, Any]:
+    seg = segment or _default_segment()
+    try:
+        result = patch_micro_event(_root(), seg, event_id, body.t)
+    except (KeyError, FileNotFoundError) as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    sync_broadcast({"type": "registry_updated", "event_id": event_id})
+    return result
+
+
+@app.get("/api/stages/{stage_id}/artifacts")
+def get_stage_artifacts(stage_id: str, segment: str | None = None) -> dict[str, Any]:
+    seg = segment or _default_segment()
+    manifest = load_stage_manifest(_root())
+    if stage_id not in manifest.get("stages", {}):
+        raise HTTPException(status_code=404, detail=f"unknown stage: {stage_id}")
+    return {"stage_id": stage_id, "segment_id": seg, "artifacts": list_stage_artifacts(_root(), stage_id, seg)}
+
+
+@app.get("/api/artifacts/{file_path:path}")
+def get_artifact(file_path: str) -> dict[str, Any]:
+    try:
+        return read_artifact(_root(), file_path)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.put("/api/artifacts/{file_path:path}")
+def put_artifact(file_path: str, body: ArtifactWriteBody, segment: str | None = None) -> dict[str, Any]:
+    seg = segment or _default_segment()
+    try:
+        result = write_artifact(_root(), file_path, body.content, note=body.note, segment_id=seg)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    sync_broadcast({"type": "registry_updated", "path": file_path})
+    return result
+
+
+@app.get("/api/script/voiceover")
+def get_voiceover() -> dict[str, Any]:
+    path = find_voiceover_path(_root())
+    if not path:
+        raise HTTPException(status_code=404, detail="voiceover not found")
+    rel = path.relative_to(_root()).as_posix()
+    return {"path": rel, "content": path.read_text(encoding="utf-8-sig")}
+
+
+@app.put("/api/script/voiceover")
+def put_voiceover(body: VoiceoverWriteBody) -> dict[str, Any]:
+    path = find_voiceover_path(_root()) or (_root() / "script" / "voiceover.md")
+    rel = path.relative_to(_root()).as_posix()
+    result = write_artifact(_root(), rel, body.content, note=body.note or "voiceover edited")
+    sync_broadcast({"type": "registry_updated", "path": rel})
+    return result
+
+
+@app.post("/api/stages/{stage_id}/validate")
+def post_stage_validate(stage_id: str, segment: str | None = None) -> dict[str, Any]:
+    seg = segment or _default_segment()
+    manifest = load_stage_manifest(_root())
+    meta = manifest.get("stages", {}).get(stage_id, {})
+    scripts = meta.get("validation_scripts", [])
+    if not scripts:
+        return {"stage_id": stage_id, "skipped": True, "reason": "no validation_scripts"}
+    results = []
+    for template in scripts:
+        parts = template.split()
+        script_name = parts[0].replace("{project}", str(_root())).replace("{segment}", seg)
+        script_path = SCRIPTS / script_name if not Path(script_name).is_absolute() else Path(script_name)
+        args = [str(script_path), str(_root())]
+        for part in parts[1:]:
+            args.append(part.replace("{project}", str(_root())).replace("{segment}", seg))
+        job = _create_job(sys.executable, args, _root(), label=f"validate {stage_id}")
+        results.append(job)
+    return {"stage_id": stage_id, "jobs": results}
+
+
+@app.get("/api/jobs/{job_id}")
+def get_job(job_id: str) -> dict[str, Any]:
+    job = job_runner.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="job not found")
+    return {"job": job_runner.to_dict(job)}
+
+
+@app.get("/api/history")
+def get_history(limit: int = 100) -> dict[str, Any]:
+    path = _root() / ".video" / "history.jsonl"
+    if not path.exists():
+        return {"events": []}
+    lines = [line for line in path.read_text(encoding="utf-8-sig").splitlines() if line.strip()]
+    events = [json.loads(line) for line in lines[-limit:]]
+    return {"events": events}
+
+
+@app.get("/api/dependency")
+def get_dependency(changed: str) -> dict[str, Any]:
+    from dependency_report import report_json
+
+    report = report_json([changed])
+    seg = _default_segment()
+    artifact_paths = []
+    rel = changed.replace("\\", "/")
+    if "narration_beats.csv" in rel:
+        artifact_paths = [
+            f"segments/{seg}/vo_timing.json",
+            f"segments/{seg}/micro_timing.json",
+            f"segments/{seg}/index.html",
+            f"segments/{seg}/render.mp4",
+        ]
+    elif rel.endswith(".svg"):
+        artifact_paths = [f"segments/{seg}/index.html", f"segments/{seg}/render.mp4"]
+    report["stale_artifacts"] = artifact_paths
+    return report
+
+
+@app.get("/api/media/{file_path:path}")
+def get_media(file_path: str) -> FileResponse:
+    resolved = resolve_safe_path(_root(), file_path)
+    if not resolved or not resolved.exists() or not resolved.is_file():
+        raise HTTPException(status_code=404, detail="file not found")
+    import mimetypes
+
+    ext = resolved.suffix.lower()
+    mime_overrides = {
+        ".svg": "image/svg+xml",
+        ".webp": "image/webp",
+        ".wav": "audio/wav",
+        ".mp4": "video/mp4",
+        ".json": "application/json",
+        ".jsonl": "application/x-ndjson",
+        ".md": "text/markdown; charset=utf-8",
+        ".csv": "text/csv; charset=utf-8",
+        ".html": "text/html; charset=utf-8",
+        ".htm": "text/html; charset=utf-8",
+    }
+    media_type = mime_overrides.get(ext) or mimetypes.guess_type(resolved.name)[0] or "application/octet-stream"
+    return FileResponse(resolved, media_type=media_type, headers={"Content-Disposition": "inline"})
+
+
+@app.websocket("/api/events")
+async def events_ws(websocket: WebSocket) -> None:
+    await websocket.accept()
+    event_clients.add(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        event_clients.discard(websocket)
+
+
+if WEB_ROOT.exists():
+    app.mount("/", StaticFiles(directory=str(WEB_ROOT), html=True), name="web")
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Run Review Studio server.")
+    parser.add_argument(
+        "--workspace",
+        default=None,
+        help="Root folder to scan for video projects (subdirs with .video/state.json)",
+    )
+    parser.add_argument("--project", default=None, help="Initial video project (optional)")
+    parser.add_argument("--scan-depth", type=int, default=2, help="Workspace scan depth (1-5)")
+    parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument("--port", type=int, default=8787)
+    args = parser.parse_args()
+
+    workspace = Path(args.workspace).resolve() if args.workspace else None
+    project = Path(args.project).resolve() if args.project else None
+    if project and not is_video_project(project):
+        raise SystemExit(f"not a video project: {project / '.video/state.json'}")
+    workspace_mgr.bootstrap(
+        workspace=workspace,
+        project=project,
+        scan_depth=max(1, min(args.scan_depth, 5)),
+    )
+    if workspace_mgr.current_project:
+        print(f"Review Studio project: {workspace_mgr.current_project}")
+    elif workspace_mgr.workspace_root:
+        print(f"Review Studio workspace: {workspace_mgr.workspace_root} (pick a project in UI)")
+    else:
+        print("Review Studio started — set workspace root in the web UI")
+
+    import uvicorn
+
+    uvicorn.run(app, host=args.host, port=args.port, log_level="info")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

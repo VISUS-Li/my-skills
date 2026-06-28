@@ -1,4 +1,4 @@
-asset_id,type,source,path_or_url,segment_id,role,rights_status,status,notes
+asset_id,type,source,path_or_url,segment_id,role,rights_status,status,review_status,beat_ids,actor_id,version,last_regen_at,notes
 icon_pipeline,icon,generated_or_icon_set,assets/icons/pipeline.svg,001_hook,stage icon,self-created,needed,keep icon style consistent
 texture_grain,texture,generated,assets/textures/grain.png,all,subtle depth,self-created,needed,low opacity
 sfx_whoosh,audio,licensed_or_generated,assets/sfx/whoosh.wav,transitions,transition energy,needs-check,needed,record license before final

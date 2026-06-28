@@ -6,6 +6,7 @@ This repository uses the Video Producer workflow. Treat intermediate artifacts a
 
 ## Core Rules
 
+- **Project root:** all artifacts live in this directory (`PROJECT_DIR`). Paths below are relative to here — not the agent workspace root.
 - Do not jump from an idea directly to video rendering unless explicitly asked.
 - Keep `.video/state.json` updated after every stage.
 - Do not overwrite approved or locked outputs; create versioned drafts.

@@ -101,6 +101,7 @@ def main() -> int:
     parser.add_argument("--segment", default=None, help="Only beats in segment e.g. S001")
     parser.add_argument("--beats", nargs="*", help="Only these beat_ids")
     parser.add_argument("--concat", action="store_true")
+    parser.add_argument("--force", action="store_true", help="Regenerate even if WAV exists")
     parser.add_argument("--sleep", type=float, default=0.3)
     args = parser.parse_args()
 
@@ -129,7 +130,7 @@ def main() -> int:
         for row in beats:
             bid = row["beat_id"]
             out = out_dir / f"{bid}.wav"
-            if out.exists() and out.stat().st_size > 1000:
+            if not args.force and out.exists() and out.stat().st_size > 1000:
                 print(f"skip {bid}")
                 generated.append(out)
                 continue

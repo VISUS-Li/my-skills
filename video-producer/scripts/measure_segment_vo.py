@@ -28,6 +28,14 @@ def main() -> int:
     beats_dir = root / args.beats_dir
     seg = args.segment_id.upper()
 
+    vo_path = root / "segments" / seg / "vo_timing.json"
+    locked: dict[str, dict] = {}
+    if vo_path.exists():
+        existing = json.loads(vo_path.read_text(encoding="utf-8"))
+        for b in existing.get("beats", []):
+            if b.get("locked"):
+                locked[b["beat_id"]] = b
+
     rows = []
     t = 0.0
     with (root / "script/narration_beats.csv").open(encoding="utf-8-sig", newline="") as f:
@@ -35,12 +43,19 @@ def main() -> int:
             if row["segment_id"].upper() != seg:
                 continue
             bid = row["beat_id"]
-            wav = beats_dir / f"{bid}.wav"
-            if not wav.exists():
-                print(f"missing: {wav}", file=sys.stderr)
-                return 1
-            dur = probe_dur(wav)
             chars = int(row["char_count"])
+            planned = float(row["duration_sec"])
+            if bid in locked:
+                lb = locked[bid]
+                dur = float(lb["duration_sec"])
+                source = "manual"
+            else:
+                wav = beats_dir / f"{bid}.wav"
+                if not wav.exists():
+                    print(f"missing: {wav}", file=sys.stderr)
+                    return 1
+                dur = probe_dur(wav)
+                source = "measured"
             rows.append({
                 "beat_id": bid,
                 "start_sec": round(t, 3),
@@ -48,7 +63,9 @@ def main() -> int:
                 "end_sec": round(t + dur, 3),
                 "char_count": chars,
                 "cps": round(chars / dur, 2) if dur else 0,
-                "planned_sec": float(row["duration_sec"]),
+                "planned_sec": planned,
+                "locked": bid in locked,
+                "source": source,
             })
             t += dur
 

@@ -1,0 +1,160 @@
+{
+  "version": "1",
+  "stages": {
+    "plan": {
+      "label": "项目规划",
+      "depends_on": [],
+      "required_artifacts": ["script/creative_brief.md"],
+      "downstream": ["ingest"]
+    },
+    "ingest": {
+      "label": "素材入库",
+      "depends_on": ["plan"],
+      "required_artifacts": ["research/input_inventory.md"],
+      "downstream": ["reference-analysis"]
+    },
+    "reference-analysis": {
+      "label": "参考视频分析",
+      "depends_on": ["ingest"],
+      "required_artifacts": ["analysis/reference_video/style_dna.md"],
+      "downstream": ["style-match"]
+    },
+    "style-match": {
+      "label": "风格匹配",
+      "depends_on": ["reference-analysis"],
+      "required_artifacts": ["design/art_direction.md"],
+      "downstream": ["research"]
+    },
+    "research": {
+      "label": "调研与来源",
+      "depends_on": ["style-match"],
+      "required_artifacts": ["research/source_cards.jsonl", "research/research_brief.md"],
+      "downstream": ["fact-lock"]
+    },
+    "fact-lock": {
+      "label": "事实锁定",
+      "depends_on": ["research"],
+      "required_artifacts": ["research/claim_ledger.csv", "research/factcheck_report.md"],
+      "validation_scripts": ["script_claim_lint.py {project} --fail-under 85"],
+      "downstream": ["script"]
+    },
+    "narrative-script": {
+      "label": "叙事脚本",
+      "depends_on": ["fact-lock"],
+      "required_artifacts": ["script/outline.md"],
+      "downstream": ["script"]
+    },
+    "script": {
+      "label": "口播与 beats",
+      "depends_on": ["fact-lock"],
+      "required_artifacts": ["script/voiceover.md", "script/narration_beats.csv", "script/text_manifest.json"],
+      "downstream": ["director-compiler", "beat-design"]
+    },
+    "beat-design": {
+      "label": "Beat 设计",
+      "depends_on": ["script"],
+      "required_artifacts": ["script/narration_beats.csv"],
+      "downstream": ["director-compiler"]
+    },
+    "director-compiler": {
+      "label": "导演编译",
+      "depends_on": ["script", "beat-design"],
+      "required_artifacts": [
+        "script/beat_timeline.json",
+        "script/director_event_graph.json",
+        "assets/asset_choreography_manifest.csv"
+      ],
+      "validation_scripts": ["beat_timeline_lint.py {project} --fail-under 80"],
+      "downstream": ["art-direction", "shot-design", "sound-design"]
+    },
+    "art-direction": {
+      "label": "美术方向",
+      "depends_on": ["director-compiler"],
+      "required_artifacts": ["design/art_direction.md", "design/tokens.json", "design/micro_animation_palette.json"],
+      "downstream": ["storyboard", "assets"]
+    },
+    "storyboard": {
+      "label": "分镜",
+      "depends_on": ["art-direction"],
+      "required_artifacts": ["script/storyboard.json", "script/retention_curve.json"],
+      "downstream": ["shot-design"]
+    },
+    "shot-design": {
+      "label": "镜头设计",
+      "depends_on": ["storyboard", "director-compiler"],
+      "required_artifacts": ["script/shotlist.json", "script/beat_director_notes.md"],
+      "downstream": ["sound-design", "segments"]
+    },
+    "sound-design": {
+      "label": "声音设计",
+      "depends_on": ["director-compiler", "shot-design"],
+      "required_artifacts": ["audio/tts_plan.json", "audio/audio_cue_sheet.json", "audio/audio_mix_plan.json"],
+      "downstream": ["audio-assets", "assets"]
+    },
+    "design": {
+      "label": "视觉设计",
+      "depends_on": ["art-direction"],
+      "required_artifacts": ["design/design.md", "design/visual_moodboard.json"],
+      "downstream": ["assets"]
+    },
+    "assets": {
+      "label": "视觉资产",
+      "depends_on": ["art-direction", "design", "sound-design"],
+      "required_artifacts": ["assets/asset_manifest.csv"],
+      "downstream": ["segments"]
+    },
+    "audio-assets": {
+      "label": "配音与实测时长",
+      "depends_on": ["script", "sound-design"],
+      "required_artifacts": [
+        "audio/voice/{segment}_vo.wav",
+        "segments/{segment}/vo_timing.json",
+        "segments/{segment}/micro_timing.json"
+      ],
+      "validation_scripts": ["segment_timing_lint.py {project} {segment}"],
+      "downstream": ["segments"]
+    },
+    "segments": {
+      "label": "段落合成与渲染",
+      "depends_on": ["audio-assets", "assets", "director-compiler"],
+      "required_artifacts": [
+        "segments/{segment}/index.html",
+        "segments/{segment}/timing_qc_report.md"
+      ],
+      "optional_artifacts": ["segments/{segment}/render.mp4"],
+      "downstream": ["assemble", "aesthetic-review"]
+    },
+    "audio-mix": {
+      "label": "音频混音",
+      "depends_on": ["audio-assets", "segments"],
+      "required_artifacts": ["edit/audio_mix_command.sh"],
+      "downstream": ["assemble"]
+    },
+    "assemble": {
+      "label": "总装",
+      "depends_on": ["segments", "audio-mix"],
+      "required_artifacts": ["edit/timeline.json", "edit/captions.srt"],
+      "downstream": ["aesthetic-review", "qc"]
+    },
+    "aesthetic-review": {
+      "label": "美学审核",
+      "depends_on": ["assemble", "segments"],
+      "required_artifacts": ["edit/aesthetic_report.md"],
+      "validation_scripts": ["aesthetic_score.py {project} --fail-under 72"],
+      "downstream": ["qc"]
+    },
+    "qc": {
+      "label": "质量检查",
+      "depends_on": ["assemble", "aesthetic-review"],
+      "required_artifacts": ["edit/qc_report.md", "edit/audio_qc_report.md"],
+      "validation_scripts": ["validate_project.py {project}"],
+      "downstream": ["publish"]
+    },
+    "publish": {
+      "label": "发布",
+      "depends_on": ["qc"],
+      "required_artifacts": ["exports/publish_pack.md"],
+      "downstream": []
+    }
+  }
+}

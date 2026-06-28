@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>审核工作室 · Review Studio</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body class="app-shell">
+  <header class="app-header">
+    <div class="header-top">
+      <div class="brand">
+        <span class="brand-icon" aria-hidden="true">🎬</span>
+        <div>
+          <h1 class="brand-title">审核工作室</h1>
+          <p id="project-meta" class="brand-subtitle">加载中…</p>
+        </div>
+      </div>
+      <button type="button" id="workspace-toggle" class="btn btn-secondary btn-compact workspace-toggle" aria-expanded="true">
+        <span class="toggle-icon">▼</span> 工作区
+      </button>
+    </div>
+
+    <section id="workspace-panel" class="workspace-panel">
+      <div class="ios-group workspace-group" aria-label="工作区">
+        <div class="group-caption">项目与工作区</div>
+        <div class="ios-group-body">
+          <div class="field-row field-row-stack">
+            <label class="field-label" for="workspace-input">工作区根目录</label>
+            <div class="field-inline">
+              <input id="workspace-input" class="ios-input" type="text" placeholder="例如 D:\videos" />
+              <button type="button" id="workspace-browse-btn" class="btn btn-secondary btn-compact">浏览</button>
+              <button type="button" id="workspace-scan-btn" class="btn btn-secondary btn-compact">扫描</button>
+            </div>
+          </div>
+          <div class="field-divider"></div>
+          <div class="field-row">
+            <label class="field-label" for="project-select">当前项目</label>
+            <select id="project-select" class="ios-select"></select>
+          </div>
+          <div class="field-divider"></div>
+          <div class="field-row">
+            <label class="field-label" for="segment-select">段落 Segment</label>
+            <select id="segment-select" class="ios-select"></select>
+          </div>
+          <div class="field-divider"></div>
+          <div class="field-row field-row-stack">
+            <label class="field-label" for="project-path-input">直接打开路径</label>
+            <div class="field-inline">
+              <input id="project-path-input" class="ios-input" type="text" placeholder="含 .video/state.json 的项目目录" />
+              <button type="button" id="project-browse-btn" class="btn btn-secondary btn-compact">浏览</button>
+              <button type="button" id="project-open-btn" class="btn btn-primary btn-compact">切换</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </header>
+
+  <div class="tab-bar-wrap">
+    <nav class="tab-bar" aria-label="主菜单">
+      <div class="tab-bar-scroll" id="tab-bar-scroll"></div>
+    </nav>
+  </div>
+
+  <main class="app-main">
+    <section id="pipeline" class="view active"></section>
+    <section id="script" class="view"></section>
+    <section id="beats" class="view"></section>
+    <section id="audio" class="view"></section>
+    <section id="assets" class="view"></section>
+    <section id="timeline" class="view"></section>
+    <section id="preview" class="view"></section>
+    <section id="stage" class="view"></section>
+    <section id="queue" class="view"></section>
+    <section id="jobs" class="view"></section>
+    <section id="qc" class="view"></section>
+    <section id="history" class="view"></section>
+  </main>
+
+  <aside id="beat-drawer" class="sheet hidden" role="dialog" aria-modal="true" aria-label="Beat 详情">
+    <div class="sheet-handle" aria-hidden="true"></div>
+    <header class="sheet-header">
+      <h2 id="beat-drawer-title" class="sheet-title">Beat</h2>
+      <button id="beat-drawer-close" class="btn btn-ghost btn-icon" aria-label="关闭">✕</button>
+    </header>
+    <div id="beat-drawer-body" class="sheet-body"></div>
+  </aside>
+  <div id="sheet-backdrop" class="sheet-backdrop hidden"></div>
+
+  <div id="asset-lightbox" class="lightbox hidden" role="dialog" aria-modal="true" aria-label="资产预览">
+    <div class="lightbox-chrome">
+      <span id="lightbox-title" class="lightbox-title">资产预览</span>
+      <div class="lightbox-actions">
+        <button type="button" id="lightbox-zoom-out" class="btn btn-secondary btn-icon" title="缩小">−</button>
+        <button type="button" id="lightbox-zoom-in" class="btn btn-secondary btn-icon" title="放大">+</button>
+        <button type="button" id="lightbox-fit" class="btn btn-secondary btn-compact">适应</button>
+        <button type="button" id="lightbox-fullscreen" class="btn btn-secondary btn-compact">全屏</button>
+        <button type="button" id="lightbox-close" class="btn btn-primary btn-compact">关闭</button>
+      </div>
+    </div>
+    <div class="lightbox-stage" id="lightbox-stage">
+      <div class="lightbox-content" id="lightbox-content"></div>
+    </div>
+  </div>
+  <div id="lightbox-backdrop" class="sheet-backdrop hidden"></div>
+
+  <div id="toast" class="toast" role="status"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/markdown/markdown.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+  <script src="/editor-pane.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

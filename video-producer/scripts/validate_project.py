@@ -190,12 +190,27 @@ def validate_asset_manifest(root: Path) -> list[str]:
         with path.open(newline="", encoding="utf-8") as f:
             reader = csv.DictReader(f)
             expected = {"asset_id", "type", "source", "path_or_url", "segment_id", "role", "rights_status", "status", "notes"}
+            optional = {"review_status", "beat_ids", "actor_id", "version", "last_regen_at"}
             missing = expected - set(reader.fieldnames or [])
             if missing:
                 errors.append(f"assets/asset_manifest.csv missing columns: {', '.join(sorted(missing))}")
     except Exception as exc:  # noqa: BLE001
         errors.append(f"invalid asset manifest: {exc}")
     return errors
+
+
+def _validate_gates(root: Path) -> list[str]:
+    scripts_dir = Path(__file__).resolve().parent
+    import sys
+
+    if str(scripts_dir) not in sys.path:
+        sys.path.insert(0, str(scripts_dir))
+    try:
+        from review_core import validate_gates
+
+        return validate_gates(root)
+    except Exception as exc:  # noqa: BLE001
+        return [f"gate validation error: {exc}"]
 
 
 def validate_narration_beats(root: Path) -> list[str]:
@@ -316,6 +331,14 @@ def main() -> int:
         for err in errors:
             print(f"- {err}")
         return 1
+
+    gate_errors = _validate_gates(root)
+    if gate_errors:
+        print("Gate validation failed:")
+        for err in gate_errors:
+            print(f"- {err}")
+        return 1
+
     print("Validation passed.")
     print("For quality gates, also run: scripts/script_claim_lint.py <project> --fail-under 85, scripts/beat_timeline_lint.py <project> --fail-under 80, scripts/aesthetic_score.py <project> --fail-under 72, and scripts/audio_score.py <project> --fail-under 72")
     return 0

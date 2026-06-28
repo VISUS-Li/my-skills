@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RegenQueue",
+  "type": "object",
+  "required": ["version", "items"],
+  "properties": {
+    "version": { "type": "string" },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "status", "target_artifact_id", "action"],
+        "properties": {
+          "id": { "type": "string" },
+          "status": { "enum": ["pending", "in_progress", "completed", "failed"] },
+          "target_artifact_id": { "type": "string" },
+          "action": { "type": "string" },
+          "commands_suggested": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  }
+}

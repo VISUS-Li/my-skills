@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 
 RULES = [
     ("research/", ["script", "storyboard", "shot-design", "sound-design", "assets", "audio-assets", "segments", "audio-mix", "assemble", "aesthetic-review", "qc", "publish"]),
@@ -50,10 +51,21 @@ def impacted(path: str) -> list[str]:
     return impacts
 
 
+def report_json(changed_paths: list[str]) -> dict:
+    items = []
+    for changed in changed_paths:
+        items.append({"changed": changed, "impacted_stages": impacted(changed)})
+    return {"changes": items}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Show downstream impact of changed video artifacts.")
     parser.add_argument("--changed", action="append", required=True, help="Changed path. Repeatable.")
+    parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
     args = parser.parse_args()
+    if args.json:
+        print(json.dumps(report_json(args.changed), ensure_ascii=False, indent=2))
+        return 0
     for changed in args.changed:
         print(f"Changed: {changed}")
         print("Impacted stages:")

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ReviewRegistryEntry",
+  "type": "object",
+  "required": ["artifact_id", "artifact_type", "path", "stage", "status", "updated_at"],
+  "properties": {
+    "artifact_id": { "type": "string" },
+    "artifact_type": { "type": "string" },
+    "path": { "type": "string" },
+    "stage": { "type": "string" },
+    "segment_id": { "type": "string" },
+    "beat_ids": { "type": "array", "items": { "type": "string" } },
+    "actor_ids": { "type": "array", "items": { "type": "string" } },
+    "status": {
+      "enum": ["draft", "review", "approved", "rejected", "stale", "locked"]
+    },
+    "reviewer": { "type": "string" },
+    "reviewer_note": { "type": "string" },
+    "content_hash": { "type": "string" },
+    "updated_at": { "type": "string" }
+  }
+}

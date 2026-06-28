@@ -28,11 +28,61 @@ Treat aesthetics, motion, sound, and source accuracy as required deliverables. A
 - **Rich segments:** each segment needs `segments/<id>/vo_timing.json`, `micro_timing.json`, ≥6 SVG/icon assets, layered composition (ambient + midground + foreground/HUD), and motion on ≥3 layers per beat. Reject static-card-only frames.
 - Every important visual action must choose an event-bound SFX cue, deliberate silence, or explicit no-cue decision.
 - Render exact Chinese text as programmatic text layers. Do not bake readable Chinese into generated raster images.
+- **Project root:** before writing any artifact, complete **Step 0**. All paths below are relative to `PROJECT_DIR`. Never scatter video artifacts in the agent workspace root or the skill repo root.
 - Do not copy a reference creator’s watermark, copyrighted assets, voice identity, exact phrasing, or branded opening/ending. Copy only structure, pacing, visual grammar, and quality bar.
+
+## Step 0 — Project bootstrap (ALWAYS first)
+
+**Before any other stage** — including `plan`, `research`, or a single-file edit — resolve `PROJECT_DIR` and ensure the scaffold exists. Do not hand-create individual template files when `init_video_project.py` can scaffold them.
+
+`SKILL_DIR` = absolute path to this skill root (the directory containing `scripts/` and `SKILL.md`).
+
+**Resolve `PROJECT_DIR`:**
+
+- User gave a path (e.g. `Use ./videos/my-explainer` or `D:\videos\opc-ai-douyin`) → use it.
+- Otherwise → `videos/<project-name>/` under the agent workspace root.
+- `<project-name>`: short kebab-case slug from the video title or topic. **Not** the workspace basename or a timestamp.
+
+**Initialize when `$PROJECT_DIR/.video/state.json` is absent:**
+
+```bash
+PROJECT_DIR="${PROJECT_DIR:-videos/<project-name>}"
+mkdir -p "$(dirname "$PROJECT_DIR")"
+
+python "$SKILL_DIR/scripts/init_video_project.py" \
+  --name "<title>" \
+  --root "$PROJECT_DIR" \
+  --input-type <idea|article|video|...> \
+  --ratio <9:16|16:9> \
+  --duration <seconds> \
+  [--recipe douyin-ai-explainer]
+
+python "$SKILL_DIR/scripts/validate_project.py" "$PROJECT_DIR"
+```
+
+Recipe selection:
+
+- Chinese AI explainer / 小白debug / Douyin-Bilibili explainer → `--recipe douyin-ai-explainer --ratio 16:9`
+- Generic short-form vertical → omit `--recipe`, use `--ratio 9:16`
+
+**When `$PROJECT_DIR/.video/state.json` already exists** (user pointed at an existing project, or `resume` mode): skip init; read state and continue from the next unapproved stage.
+
+**Constraints:**
+
+- Never write `research/`, `script/`, `segments/`, or other video artifacts outside `PROJECT_DIR`.
+- Never run `init_video_project.py` with `--root` set to the workspace root or skill repo root.
+- Every shell command that touches project files should run with `PROJECT_DIR` as cwd or pass `"$PROJECT_DIR"` as the `<project>` argument to bundled scripts — never assume `.` is the project unless cwd is already `PROJECT_DIR`.
+- After init, tell the user the absolute `PROJECT_DIR` path before proceeding.
+
+Validation (stop and report if this fails):
+
+```bash
+test -f "$PROJECT_DIR/.video/state.json" && test -f "$PROJECT_DIR/.video/video.json" && echo ok || echo missing
+```
 
 ## Required project contract
 
-At the start of a project, locate or create these artifacts. If missing, run or adapt `scripts/init_video_project.py`.
+After Step 0, these artifacts live under `PROJECT_DIR`. The init script scaffolds most of them; fill or refine per stage — do not recreate the tree by hand.
 
 Core state:
 
@@ -98,27 +148,15 @@ Select the smallest mode that satisfies the request:
 21. `qc` — run validation, fact, beat, style, audio, rights, accessibility, and caption checks.
 22. `publish` — create title options, cover text, description, hashtags, chapters, and cutdown ideas.
 23. `revise` — modify the smallest upstream artifact and list downstream rebuild impact.
-24. `resume` — inspect `.video/state.json` and continue from the next unapproved stage.
+24. `resume` — set `PROJECT_DIR` to the existing project (Step 0 skip-init path); inspect `.video/state.json` and continue from the next unapproved stage.
 
-## Initialization
+All workflow modes assume Step 0 is complete. Pass `"$PROJECT_DIR"` wherever a command shows `<project>`.
 
-For a clean Chinese AI explainer / 小白debug-like project:
-
-```bash
-scripts/init_video_project.py --name "<title>" --recipe douyin-ai-explainer --ratio 16:9 --duration <seconds>
-```
-
-For generic video projects:
+Post-init validators (run when the relevant stage starts, not only at the end):
 
 ```bash
-scripts/init_video_project.py --name "<title>" --ratio 9:16 --duration <seconds>
-```
-
-After initialization, run:
-
-```bash
-scripts/validate_project.py <project>
-scripts/script_claim_lint.py <project> --fail-under 85
+python "$SKILL_DIR/scripts/validate_project.py" "$PROJECT_DIR"
+python "$SKILL_DIR/scripts/script_claim_lint.py" "$PROJECT_DIR" --fail-under 85
 ```
 
 ## Fact-linked script protocol
@@ -292,8 +330,44 @@ python scripts/segment_timing_lint.py <project> S001             # per segment b
 
 If a score fails, revise the earliest upstream artifact instead of patching the final render. Use `scripts/dependency_report.py <changed_path>` to list downstream impact.
 
+## Review Studio & human gates
+
+Load `references/review-studio-plan.md` when the user wants per-stage or per-asset approval before continuing, a local web UI to review beats/assets/renders, or a rejected-asset → agent regen workflow.
+
+**Architecture:** one Review Studio codebase in the skill repo serves **all** video projects. Each project only stores data under `.video/`, `script/`, `segments/`, etc. Do **not** copy `review-studio/` into project directories.
+
+**Quick start:**
+
+```bash
+pip install -r review-studio/requirements.txt
+
+# Multi-project: set workspace, switch projects in the browser (no restart)
+python review-studio/server/main.py --workspace D:\videos --port 8787
+
+# Workspace + default project
+python review-studio/server/main.py --workspace C:\Users\11839 --project c:\Users\11839\opc-ai-douyin-3min
+
+# Windows helper
+.\review-studio\start.ps1 -Workspace D:\videos
+```
+
+Open http://127.0.0.1:8787 — use **浏览…** to pick workspace/project folders, **扫描** to discover projects, dropdown to switch.
+
+User guide: `review-studio/README.md`
+
+**CLI gates (any project path):**
+
+```bash
+python scripts/validate_gates.py <project>
+python scripts/review_sync.py <project>
+python scripts/regen_dispatch.py <project> --dry-run
+python scripts/test_review_studio.py
+```
+
+**Review Studio extended tabs:** Script Lab, Audio Lab (IndexTTS + alignment chain), Stage Detail (artifact editor), Timeline Editor (manual timing), Jobs panel. See `review-studio/README.md`.
+
 ## Checkpoint behavior
 
-Default to checkpoint mode: create or update one stage, write artifacts, run the applicable validators, summarize changes, and ask for review. Use autopilot only when the user explicitly asks to continue through all stages.
+Default to checkpoint mode: complete Step 0 first, then create or update one stage under `PROJECT_DIR`, write artifacts, run the applicable validators, summarize changes, and ask for review. Use autopilot only when the user explicitly asks to continue through all stages.
 
 Never overwrite `approved` or `locked` artifacts. Create a versioned sibling such as `voiceover.v002.md` and update state only after approval.
