@@ -197,14 +197,25 @@ def score_assets(rows: list[dict[str, str]], segment_count: int) -> tuple[int, l
     usable = [r for r in rows if r.get("asset_id")]
     types = {r.get("type", "").strip().lower() for r in usable if r.get("type")}
     rights_unknown = [r.get("asset_id", "unknown") for r in usable if (r.get("rights_status", "").lower() in {"", "unknown", "needs-check"})]
-    if len(usable) >= max(3, segment_count * 2):
+    proof_types = {"photo", "screenshot", "broll", "video_clip", "image", "document"}
+    proof_count = sum(1 for r in usable if r.get("type", "").strip().lower() in proof_types)
+    if proof_count >= max(3, segment_count * 2):
+        score += 6
+    else:
+        tips.append(
+            f"Add web-sourced proof media: aim for at least {max(3, segment_count * 2)} "
+            f"photo/screenshot/broll rows in asset_manifest (currently {proof_count}). "
+            "See references/web-sourced-visual-assets.md."
+        )
+    min_planned = max(12, segment_count * 4)
+    if len(usable) >= min_planned:
         score += 8
     else:
-        tips.append(f"Asset manifest is sparse: aim for at least {max(3, segment_count * 2)} planned assets for {segment_count} segments.")
-    if len(types) >= 3:
+        tips.append(f"Asset manifest is sparse: aim for at least {min_planned} planned assets for {segment_count} segments.")
+    if len(types) >= 4:
         score += 5
     else:
-        tips.append("Use at least three asset types: icons, textures, screenshots/images, B-roll, SFX, charts, etc.")
+        tips.append("Use at least four asset types: icons, textures, screenshots/images, B-roll, SFX, charts, device frames, etc.")
     if usable:
         score += 3
     else:

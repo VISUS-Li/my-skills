@@ -8,6 +8,8 @@ import json
 import sys
 from pathlib import Path
 
+from beat_csv_utils import planned_duration_sec  # noqa: E402
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Build micro_timing.json from VO + beat_timeline.")
@@ -32,7 +34,7 @@ def main() -> int:
             if row["segment_id"].upper() == seg:
                 planned_rows[row["beat_id"]] = {
                     "start": float(row["start_sec"]),
-                    "dur": float(row["duration_sec"]),
+                    "dur": planned_duration_sec(row),
                 }
 
     micro = []

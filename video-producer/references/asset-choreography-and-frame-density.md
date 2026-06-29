@@ -17,12 +17,13 @@ Do not start by writing one large prompt. Start by planning assets:
 
 For 16:9 social explainers:
 
-- Meaningful visual content: target 35-70% of frame.
-- Readable text: normally under 35% of frame.
-- Negative space: intentional zones for movement, captions, or reveals; never accidental emptiness.
-- Layer count: 3-5 layers in most active shots.
-- Every scene should have at least one object larger than 18% of frame width.
-- Every diagram scene should include at least 4 small supporting assets or nodes unless it is a title drop.
+- Meaningful visual content: target **50–80%** of frame (raise from sparse layouts).
+- Readable text: normally under 30% of frame.
+- Negative space: intentional zones for movement, captions, or reveals; **never accidental emptiness** — fill with ambient grid, orbs, texture, or supporting icons.
+- Layer count: **4–6 layers** in most active shots.
+- Every scene should have at least one object larger than 18% of frame width **plus** ≥4 smaller supporting assets.
+- Every diagram scene should include at least **6–8** small supporting assets or nodes unless it is a deliberate title drop.
+- **Animation fill:** every 0.5–1.0s at least one asset changes state (enter/move/pulse/morph/exit); ambient layer never fully static >0.8s.
 
 ## Asset choreography manifest
 
@@ -32,10 +33,12 @@ For 16:9 social explainers:
 asset_id,type,description,source_or_prompt,rights_status,layer,first_on_sec,last_on_sec,entrance,main_motion,exit,states,reused_in_segments,sfx_affordance,implementation_notes
 ```
 
+**`description` 与 `source_or_prompt` 默认用中文**（英文 UI/代码素材可在 subject 中保留英文片段）。
+
 Example:
 
 ```csv
-clip_module,svg_component,vertical CLIP bridge module with status LEDs,drawn SVG,safe,midground,186.2,202.5,slide from right + overshoot,LED blink + vector pipe pulse,scale down into pipeline,"idle|processing|success",S05;S09,"soft machine hum; data tick",render as SVG group not raster text
+clip_module,svg_component,竖向 CLIP 桥接模块，带状态指示灯,手绘 SVG：圆角模块+向量管道，科技科普配色,safe,midground,186.2,202.5,从右侧滑入+ overshoot,LED 闪烁+管道脉冲,缩小汇入流水线,"idle|processing|success",S05;S09,"soft machine hum; data tick",SVG group 渲染，中文标签走 text layer
 ```
 
 ## Anti-empty fixes

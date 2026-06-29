@@ -36,18 +36,27 @@
       "depends_on": ["research"],
       "required_artifacts": ["research/claim_ledger.csv", "research/factcheck_report.md"],
       "validation_scripts": ["script_claim_lint.py {project} --fail-under 85"],
-      "downstream": ["script"]
+      "downstream": ["narrative-script"]
     },
     "narrative-script": {
-      "label": "叙事脚本",
+      "label": "深度叙事与口播稿",
       "depends_on": ["fact-lock"],
-      "required_artifacts": ["script/outline.md"],
-      "downstream": ["script"]
+      "required_artifacts": [
+        "research/thread_ledger.csv",
+        "script/narrative_thread_map.json",
+        "script/outline.md",
+        "script/voiceover.md"
+      ],
+      "validation_scripts": [
+        "thread_depth_lint.py {project} --fail-under 80",
+        "script_claim_lint.py {project} --fail-under 85"
+      ],
+      "downstream": ["script", "beat-design"]
     },
     "script": {
-      "label": "口播与 beats",
-      "depends_on": ["fact-lock"],
-      "required_artifacts": ["script/voiceover.md", "script/narration_beats.csv", "script/text_manifest.json"],
+      "label": "beats 与字幕 manifest",
+      "depends_on": ["narrative-script"],
+      "required_artifacts": ["script/narration_beats.csv", "script/text_manifest.json"],
       "downstream": ["director-compiler", "beat-design"]
     },
     "beat-design": {

@@ -1,6 +1,6 @@
 ---
 name: video-producer
-description: "fact-locked, director-level video production workflow for turning ideas, articles, source documents, podcasts, local/reference videos, research briefs, or raw footage into publishable videos. use when the user needs source-grounded scriptwriting with claim ledgers and citations, chinese/youtube/bilibili/douyin explainer scripts, 小白debug/hyperframes-style visual analysis, phrase-level storyboard, sub-second animation timeline, IndexTTS2 voice clone/TTS, VO-measured timing (5 chars/sec), layered game-like composition, AI/SVG/icon asset generation, motion-life GSAP choreography, asset choreography, audio/sfx/music cue binding, remotion/motion-canvas/hyperframes segment prompts, aesthetic qc, anti-ppt density checks, and final assembly/publish packs."
+description: "fact-locked video production workflow with default deep narrative scriptwriting: single-event or multi-point 来龙去脉, verified 秘辛, cause/incentive/conflict arcs, colloquial spoken 口播, claim ledgers, director compiler, IndexTTS2, HyperFrames/Remotion segments, and QC. Use for any 文案/口播/脚本 request — agent auto-runs depth research without user naming internal stages."
 ---
 
 # Video Producer
@@ -13,7 +13,7 @@ Act as a **fact-locked director compiler**, not a generic video prompt writer.
 
 Never jump from `idea/script -> visual description -> render` for serious videos. Use the enforced path:
 
-`source cards -> claim ledger -> colloquial retention script -> narration beats -> director event graph -> sub-second beat timeline -> asset actor choreography -> event-bound audio cues -> segment prompt/code -> qc`
+`source cards -> claim ledger -> deep narrative map + thread ledger -> colloquial 口播 script -> narration beats -> director event graph -> sub-second beat timeline -> asset actor choreography -> event-bound audio cues -> segment prompt/code -> qc`
 
 Treat aesthetics, motion, sound, and source accuracy as required deliverables. A good result is not only visually rich; it is also factually traceable, phrase-synced, and executable.
 
@@ -21,15 +21,19 @@ Treat aesthetics, motion, sound, and source accuracy as required deliverables. A
 
 - For factual videos, create `research/source_cards.jsonl`, `research/claim_ledger.csv`, and `research/factcheck_report.md` before final script approval.
 - Do not let a source-backed sentence enter `script/voiceover.md` unless it has a `claim_id` such as `[C012]` and a claim ledger row.
+- **Default script depth:** continuous **storytelling** not news ticker — each beat must **dwell** (enter/evidence/mechanism/landing) before the next; use `carry_forward` in spine; forbid 此外/据悉 hard cuts.
 - Preserve qualifiers from sources: who, where, when, scope, draft/alleged/reported status, “as of” timing, nationality/location limits, and exceptions. Do not generalize a scoped source into a universal claim.
 - For dense explainers, compile every narration phrase into timed events. One sentence should usually create 2-8 micro-events, not one static card.
 - Do not render a segment until `script/beat_timeline.json`, `script/director_event_graph.json`, and `assets/asset_choreography_manifest.csv` exist for that segment.
 - **VO-first timing:** plan narration at **~5 Chinese characters per second**; after TTS, run `measure_segment_vo.py` and bind segment duration to **actual WAV**, not equal shot splits or planned seconds alone.
-- **Rich segments:** each segment needs `segments/<id>/vo_timing.json`, `micro_timing.json`, ≥6 SVG/icon assets, layered composition (ambient + midground + foreground/HUD), and motion on ≥3 layers per beat. Reject static-card-only frames.
+- **Rich segments:** each segment needs `segments/<id>/vo_timing.json`, `micro_timing.json`, **≥12 topic-specific SVG/icon assets**, **≥4 decorative plates**, **≥3 web-sourced photos/screenshots** in `segments/<id>/assets/ref/` tied to narration beats, and **≥1 video clip or screen recording** when the script mentions demos/releases/processes. Layered composition (ambient + midground + foreground/HUD), motion on **≥4 layers per beat**. Aim for **50–80% frame occupancy** and **≥15 choreographed motion actors** per segment. Reject static-card-only frames or beats with accidental empty zones.
+- **口播-画面对齐：** 口播提到具体人物、产品、事件、文档、界面、现场时，必须在 `assets/asset_manifest.csv` 中有对应的 **真实图片/截图/视频**（`ref/` 或 `screenshot_*` / `broll_*`），并在 `narration_beats.csv` 的 `source_visual` 字段绑定；不能只用 SVG 抽象图标代替证据层。采集流程见 `references/web-sourced-visual-assets.md`。
+- **中文优先（美术资产）：** 生成、检索、描述美术资产时 **默认用中文** — 包括 image/SVG 生成 prompt、`media-use --intent`、素材库搜索词、`asset_choreography_manifest.csv` 的 `source_or_prompt`、以及 `visual_asset_brief.json` 的 `prompt` 字段。仅当素材本身必须是英文内容时保留英文（英文 UI 截图、代码窗口、品牌名、缩写、原文引用）；此时用中文描述构图与风格，英文只出现在素材本体或 overlay 文本层。
 - Every important visual action must choose an event-bound SFX cue, deliberate silence, or explicit no-cue decision.
 - Render exact Chinese text as programmatic text layers. Do not bake readable Chinese into generated raster images.
 - **Project root:** before writing any artifact, complete **Step 0**. All paths below are relative to `PROJECT_DIR`. Never scatter video artifacts in the agent workspace root or the skill repo root.
 - Do not copy a reference creator’s watermark, copyrighted assets, voice identity, exact phrasing, or branded opening/ending. Copy only structure, pacing, visual grammar, and quality bar.
+- **Review Studio = human web console only:** `review-studio/` is a local FastAPI + static UI for humans to review/edit/preview. During normal video production, **do not read** `review-studio/web/*`, `review-studio/server/*`, or other Review Studio source — they are large and unrelated to artifact authoring; reading them wastes tokens. Agents interact via `PROJECT_DIR` artifacts (`.video/review_registry.jsonl`, `regen_queue.json`, `state.json`, etc.) and bundled `scripts/*.py` (`validate_gates.py`, `review_sync.py`, `regen_dispatch.py`). Load `references/review-studio-plan.md` or `review-studio/README.md` only when the user explicitly asks to **set up, run, or debug** Review Studio — not for routine script/research/segment work.
 
 ## Step 0 — Project bootstrap (ALWAYS first)
 
@@ -99,6 +103,8 @@ Research and facts:
 Script and director compiler:
 
 - `script/creative_brief.md`, `script/outline.md`, `script/voiceover.md`, `script/on_screen_text.md`.
+- `script/narrative_thread_map.json` — `story_scope`, master thread, insight layers, selective omissions, spine (**always** for scriptwriting).
+- `research/thread_ledger.csv` — verified story links: entity↔entity (multi) or phase↔phase (single-event arc).
 - `script/retention_curve.json` — hook/tension/proof/mechanism/twist/takeaway structure.
 - `script/narration_beats.csv` — phrase-level timing, semantic action, claim IDs, emotion, retention role, visual response, source visual, and SFX intent.
 - `script/director_event_graph.json` — event causality, attention flow, proof edges, and audio/style edges.
@@ -123,7 +129,9 @@ Execution and delivery:
 
 ## Workflow modes
 
-Select the smallest mode that satisfies the request:
+**Auto-routing:** infer the smallest mode from the user request. Never ask “要不要跑某某阶段”. For any 文案 / 口播 / 脚本 / 深度 / 来龙去脉 request → load `references/deep-narrative-investigation.md` and produce depth artifacts automatically. Only skip depth when user **explicitly** says shallow/outline-only (`只要大纲`, `不要调研`).
+
+Select mode:
 
 1. `plan` — create project plan and open questions from an idea.
 2. `ingest` — organize transcripts, notes, source docs, footage, and media paths.
@@ -131,8 +139,8 @@ Select the smallest mode that satisfies the request:
 4. `style-match` — convert style DNA into art direction, tokens, storyboard primitives, motion grammar, audio cue grammar, and QC gates.
 5. `research` — create source cards and research brief.
 6. `fact-lock` — create/validate `claim_ledger.csv`; run `scripts/script_claim_lint.py <project> --fail-under 85`.
-7. `narrative-script` — write a source-grounded, colloquial, retention-focused script. Use claim IDs inline and reference links for editor checking.
-8. `script` — create outline, voiceover, on-screen text, text manifest, and narration beats.
+7. `narrative-script` — **default script deliverable:** auto deep-dive (single or multi), fill `thread_ledger.csv` + `narrative_thread_map.json`, write `outline.md` + colloquial `voiceover.md`; run `thread_depth_lint.py` + `script_claim_lint.py`.
+8. `script` — split approved voiceover into `narration_beats.csv`, `text_manifest.json`, on-screen text.
 9. `art-direction` — create visual language: palette, type, layout, composition, material/icon/SVG strategy.
 10. `storyboard` — design segment timings, metaphors, frame composition, shot intent, and asset needs.
 11. `beat-design` — create phrase-level `narration_beats.csv`.
@@ -140,7 +148,7 @@ Select the smallest mode that satisfies the request:
 13. `asset-choreography` — refine asset actor behavior and frame density.
 14. `shot-design` — create or refresh `script/shotlist.json`; use `scripts/storyboard_to_shotlist.py` for a draft.
 15. `sound-design` — create event-bound SFX/music/TTS/mix artifacts. **IndexTTS2:** load `references/indextts2-voice-protocol.md`; batch via `scripts/indextts2_generate.py`; measure via `scripts/measure_segment_vo.py`.
-16. `assets` / `audio-assets` — source/generate/select visual/audio assets and log rights.
+16. `assets` / `audio-assets` — **dual track:** (A) **web-source** real photos/screenshots/video clips from narration + `source_cards` → `segments/<id>/assets/ref/`; (B) **generate** SVG/plates/icons. Log all in `asset_manifest.csv` with `beat_ids` + rights. Load `references/web-sourced-visual-assets.md` + `references/visual-asset-generation.md`.
 17. `segment` — create one renderable segment with HyperFrames, Remotion, Motion Canvas, Manim, FFmpeg, or an editor. **Required pipeline:** measure VO → build micro timing → generate layered assets → build beat-synced HTML → `segment_timing_lint.py` → render with embedded VO.
 18. `audio-mix` — run or adapt `scripts/ffmpeg_audio_mix.py` when local files exist.
 19. `assemble` — build `edit/timeline.json`, captions, concat/mix scripts, and draft export.
@@ -156,8 +164,23 @@ Post-init validators (run when the relevant stage starts, not only at the end):
 
 ```bash
 python "$SKILL_DIR/scripts/validate_project.py" "$PROJECT_DIR"
+python "$SKILL_DIR/scripts/thread_depth_lint.py" "$PROJECT_DIR" --fail-under 80
 python "$SKILL_DIR/scripts/script_claim_lint.py" "$PROJECT_DIR" --fail-under 85
 ```
+
+## Deep narrative investigation protocol
+
+**Default for all scriptwriting** — one event or many. Load `references/deep-narrative-investigation.md` automatically; user never names this step.
+
+**Mandatory behavior:**
+
+1. Set `story_scope`: `single` (one event → 前尘/博弈/转折/后果 arc) or `multi` (weave bullets into one chain).
+2. Research **links** with sources — temporal (`prelude→trigger→aftermath`) or entity (`A↔B` cause/incentive/conflict). Each verified link → `thread_ledger.csv` + `claim_type=relationship`.
+3. Fill `narrative_thread_map.json`: spine beats each with `dwell_layers`, `landing_line`, `carry_forward`.
+4. Write `outline.md` + `voiceover.md` as **连续讲故事** — each beat: enter→evidence→mechanism→landing before next; no 新闻稿硬切（此外/据悉）.
+5. Auto-run `thread_depth_lint.py` then `script_claim_lint.py` before delivering copy.
+
+Skip only when user explicitly opts out of depth (`只要大纲`). If a link lacks evidence → `open_question`, say on camera, or cut — never invent.
 
 ## Fact-linked script protocol
 
@@ -166,24 +189,24 @@ Load `references/fact-linked-script-system.md` and `references/retention-storyte
 Write scripts in this order:
 
 1. Build `source_cards.jsonl` from primary/high-quality sources where possible.
-2. Build `claim_ledger.csv` before final voiceover. Include source URLs, supporting quote/context, and interpretation guardrail.
-3. Draft `script/outline.md` with hook, twist, proof, mechanism, stakes, nuance, and takeaway.
-4. Draft `script/voiceover.md` in spoken style with `[Cxxx]` tags on factual claims and `[OPINION]` markers on analysis.
-5. Add a references table that maps claim IDs to source link text for editor verification.
-6. Run `scripts/script_claim_lint.py <project> --fail-under 85`.
+2. Build `claim_ledger.csv` before final voiceover. Include relationship rows for thread links.
+3. **Always** complete `thread_ledger.csv` + `narrative_thread_map.json` (single-story or multi-weave).
+4. Draft `script/outline.md` then `script/voiceover.md` — master thread first, selective omissions, 口播 texture.
+5. Add references table mapping claim IDs to sources.
+6. Auto-run `thread_depth_lint.py` + `script_claim_lint.py`.
 7. Manually re-read high-risk sources before beat compilation.
 
 Style target for Chinese scripts:
 
 - Open with an immediately visible failure, contradiction, surprising detail, or misread correction.
-- Use plain spoken Chinese; avoid corporate/documentary stiffness.
+- Use plain spoken Chinese with **research authority**: short clauses, source anchors (原文/公告/时间线), pauses before reveals — not speculative fillers like 你想啊/其实吧.
 - Add judgment and drama from verified structure, not fabricated facts.
 - Explain fresh context, incentives, timeline, and “很多人没注意到的限定词”.
 - Do not copy any creator’s branded greeting or catchphrase.
 
 ## Director compiler protocol
 
-Load `references/director-compiler-os.md`, `references/director-micro-timeline-protocol.md`, `references/asset-choreography-and-frame-density.md`, `references/voice-synced-animation-design.md`, `references/vo-sync-timing-protocol.md`, `references/motion-life-playbook.md`, `references/layered-composition-depth.md`, `references/visual-asset-generation.md`, and `references/hyperframes-director-implementation.md` when the user wants richer animation, 小白debug/HyperFrames style, not-PPT output, or precise phrase/audio sync.
+Load `references/director-compiler-os.md`, `references/director-micro-timeline-protocol.md`, `references/asset-choreography-and-frame-density.md`, `references/voice-synced-animation-design.md`, `references/vo-sync-timing-protocol.md`, `references/motion-life-playbook.md`, `references/layered-composition-depth.md`, `references/visual-asset-generation.md`, `references/web-sourced-visual-assets.md`, and `references/hyperframes-director-implementation.md` when the user wants richer animation, 小白debug/HyperFrames style, not-PPT output, or precise phrase/audio sync.
 
 Required process:
 
@@ -196,10 +219,11 @@ Required process:
 
 Density rules:
 
-- No normal frame should hold unchanged for more than 1.5 seconds.
+- No normal frame should hold unchanged for more than 1.0 seconds.
 - Every 0.3-1.2 seconds should have an attention, object, text, camera, background, or audio change.
-- Every 5 seconds should contain a foreground event, a midground/object action, and a background/depth or camera change.
-- A segment is empty if meaningful visual content occupies less than about 28% of the frame for over 1.5 seconds, unless documented as deliberate silence/drop.
+- Every 5 seconds should contain a foreground event, a midground/object action, and a background/depth or camera change — **plus ≥5 visible assets on screen**.
+- A segment is empty if meaningful visual content occupies less than about **50%** of the frame for over 1.0 seconds, unless documented as deliberate silence/drop.
+- **Asset batch rule:** before segment render, list all beat-level asset needs; generate **≥12 icons + ≥4 plates** per segment in one pass.
 
 ## 小白debug / Douyin AI explainer recipe
 
@@ -210,7 +234,7 @@ Default style:
 - 16:9 light-grid teaching canvas mixed with real UI/code/browser/terminal proof shots.
 - Programmatic Chinese subtitles in bottom pill; short labels and badges.
 - Rounded SVG/card/icon style, simple mascot/robot optional, clear arrows and source cards.
-- UI proof layer: settings panels, browser docs, code windows, terminal commands, highlight boxes, red arrows.
+- `UI proof layer`: settings panels, browser docs, code windows, terminal commands, highlight boxes, red arrows — use **downloaded screenshots** in `assets/ref/` when showing real products/sites, not only drawn mockups.
 - Explanation layer: machine/pipeline/source-card/card-stack/comparison-split/error-stamp/success-badge.
 - No single screenshot or card talked over for 10 seconds. Add highlight sweeps, cursor actions, punch-ins, callouts, crop changes, or diagram cutaways.
 
@@ -268,7 +292,7 @@ Rules:
 - Plan beats at **5 汉字/秒**; after TTS, **re-time everything** from measured WAV.
 - Each beat clip duration = `vo_timing.beats[].duration_sec` (tolerance ≤ 0.05s).
 - Schedule GSAP from `micro_timing.json` at absolute `t` — not only clip starts.
-- Per beat: ≥4 micro-events, ≥3 moving layers, different entrance patterns.
+- Per beat: ≥4 micro-events, ≥4 moving layers, different entrance patterns.
 - Continuous ambient motion on track 0 (grid drift, orbs, scan line, slow camera push).
 - Embed segment VO WAV in composition; visual times must match same `vo_timing.json`.
 
@@ -278,11 +302,12 @@ Load `references/layered-composition-depth.md` and `references/visual-asset-gene
 
 Before segment render:
 
-1. Search topic for visual metaphors, UI patterns, game-HUD references (document in `design/art_direction.md`).
-2. Create `segments/<id>/assets/` with ≥6 SVG icons + 1–2 decorative PNG plates (transparent where possible).
-3. Use image models for **non-text** plates only; all Chinese via programmatic layers.
-4. Stack layers with z-index, overlap, parallax, drop shadows — aim for game-like depth, not flat PPT.
-5. Optional: `segments/<id>/visual_asset_brief.json` from template.
+1. **Web-source pass（先做）:** 从 `narration_beats.csv` + `claim_ledger` 列出每个 beat 的证据素材需求 → **中文搜索** → 下载到 `segments/<id>/assets/ref/`（见 `web-sourced-visual-assets.md`）。口播点名的内容优先找真实图/视频，再补 SVG。
+2. Search topic for visual metaphors, UI patterns, game-HUD references — **用中文写搜索词与 moodboard 备注**（document in `design/art_direction.md` / `design/visual_moodboard.json`）。
+3. Create `segments/<id>/assets/` with **≥12 SVG icons + ≥4 decorative PNG plates** + **≥3 ref photos/screenshots + ≥1 clip when applicable** (transparent plates where possible). **宁多勿少**：每个 beat 至少 5 个可见资产在动；背景层持续有 ambient 填充（网格、光斑、粒子、纹理）。
+4. Use image models for **non-text** plates only; all Chinese via programmatic layers. **Image/SVG prompts 默认中文**（见 `visual-asset-generation.md`）。
+5. Stack layers with z-index, overlap, parallax, drop shadows — aim for game-like depth, not flat PPT. **画面填满**： intentional negative space only; 其余区域用 midground/foreground 资产与持续 ambient 动画占满。
+6. Optional: `segments/<id>/visual_asset_brief.json` from template — list **every** planned asset with Chinese `prompt`, `source_url` (if web), and motion binding.
 
 ## Audio protocol
 
@@ -301,7 +326,7 @@ Rules:
 For each segment:
 
 1. Read project art direction, tokens, storyboard, shotlist, text manifest, beat timeline, event graph, asset choreography, cue sheet, **`vo_timing.json`**, **`micro_timing.json`**.
-2. Generate assets per `references/visual-asset-generation.md`; write `segments/<id>/assets/*`.
+2. **Web-source + generate:** run `references/web-sourced-visual-assets.md` pass first; then generate per `references/visual-asset-generation.md`; write `segments/<id>/assets/*` (including `assets/ref/`).
 3. Write `segments/<id>/brief.md`, `segments/<id>/styleframe.md`, and `segments/<id>/.hyperframes/expanded-prompt.md` or equivalent render prompt/code.
 4. Build `segments/<id>/index.html` (or HyperFrames composition) with:
    - `data-duration` = `vo_timing.total_sec`
@@ -320,6 +345,7 @@ Before final rendering or delivery, run the relevant commands:
 
 ```bash
 scripts/validate_project.py <project>
+scripts/thread_depth_lint.py <project> --fail-under 80
 scripts/script_claim_lint.py <project> --fail-under 85
 scripts/beat_timeline_lint.py <project> --fail-under 80
 scripts/aesthetic_score.py <project> --fail-under 72
@@ -332,7 +358,17 @@ If a score fails, revise the earliest upstream artifact instead of patching the 
 
 ## Review Studio & human gates
 
-Load `references/review-studio-plan.md` when the user wants per-stage or per-asset approval before continuing, a local web UI to review beats/assets/renders, or a rejected-asset → agent regen workflow.
+Review Studio is a **human-facing web console** (orchestrator + reviewer UI). It is **not** part of the agent authoring contract — agents should not traverse or read its implementation to “understand the workflow.”
+
+Load `references/review-studio-plan.md` **only** when the user wants to set up Review Studio, debug the local server, or design the human approval workflow — not when writing scripts, researching, or building segments.
+
+**Agent read boundary (token guard):**
+
+| Read | Do not read (unless user asks to fix Review Studio itself) |
+|------|--------------------------------------------------------------|
+| `PROJECT_DIR/.video/*` (`state.json`, `review_registry.jsonl`, `regen_queue.json`, `studio.json`) | `review-studio/web/*` (`app.js`, `styles.css`, `timeline-editor.js`, …) |
+| `PROJECT_DIR/script/`, `segments/`, `assets/`, … | `review-studio/server/*` (`main.py`, `artifacts.py`, `timing.py`, …) |
+| `scripts/validate_gates.py`, `review_sync.py`, `regen_dispatch.py`, `test_review_studio.py` | Full `references/review-studio-plan.md` (800+ lines) unless human-gate setup is the task |
 
 **Architecture:** one Review Studio codebase in the skill repo serves **all** video projects. Each project only stores data under `.video/`, `script/`, `segments/`, etc. Do **not** copy `review-studio/` into project directories.
 

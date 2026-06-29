@@ -24,6 +24,13 @@
 - 不覆盖 `approved` / `locked` 产物；修改时创建 **版本化 draft**（`*.v003.md`、`render_hq.mp4`）
 - 网页是 **Orchestrator + Reviewer**，不把生成逻辑塞进前端
 
+**Agent 读取边界（防 token 爆炸）：**
+
+- `review-studio/` 是 **给人用的本地网页控制台**，不是 Agent 制片必读材料。
+- 常规 script / research / segment 任务：**不要**读取 `review-studio/web/*`、`review-studio/server/*` 或本规格全文。
+- Agent 应读：`PROJECT_DIR/.video/`（`state.json`、`review_registry.jsonl`、`regen_queue.json` 等）+ 项目内 `script/`、`segments/` 等产物；用 `scripts/validate_gates.py`、`review_sync.py`、`regen_dispatch.py` 与审核状态对齐。
+- 仅当用户明确要求 **启动/调试 Review Studio** 或 **改 Review Studio 本身** 时，才读 `review-studio/README.md` 或本文件相关章节。
+
 ---
 
 ## 1. 完整 Pipeline 与 Stage 定义

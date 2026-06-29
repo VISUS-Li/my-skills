@@ -262,6 +262,8 @@ def main() -> int:
         "script/beat_director_notes.md": "# Beat Director Notes\n\nUse this file to explain the creative rationale behind dense beat timing, frame occupancy, and sound sync choices.\n",
         "script/voiceover.md": (skill_root() / "assets" / "templates" / "voiceover.md").read_text(encoding="utf-8"),
         "script/outline.md": (skill_root() / "assets" / "templates" / "outline.md").read_text(encoding="utf-8"),
+        "script/narrative_thread_map.json": (skill_root() / "assets" / "templates" / "narrative_thread_map.json").read_text(encoding="utf-8"),
+        "research/thread_ledger.csv": (skill_root() / "assets" / "templates" / "thread_ledger.csv").read_text(encoding="utf-8"),
         "research/source_cards.jsonl": (skill_root() / "assets" / "templates" / "source_cards.jsonl").read_text(encoding="utf-8"),
         "research/claim_ledger.csv": (skill_root() / "assets" / "templates" / "claim_ledger.csv").read_text(encoding="utf-8"),
         "research/factcheck_report.md": (skill_root() / "assets" / "templates" / "factcheck_report.md").read_text(encoding="utf-8"),

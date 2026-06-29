@@ -7,10 +7,12 @@ import asyncio
 import csv
 import json
 import sys
+import threading
+import uuid
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, File, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -41,8 +43,16 @@ from review_core import (  # noqa: E402
 )
 from jobs import JobRunner  # noqa: E402
 from workspace import is_video_project, workspace_mgr  # noqa: E402
-from artifacts import find_voiceover_path, list_stage_artifacts, read_artifact, write_artifact  # noqa: E402
-from timing import audio_summary, patch_beat_timing, patch_micro_event  # noqa: E402
+from artifacts import (  # noqa: E402
+    find_voiceover_path,
+    list_stage_artifacts,
+    read_artifact,
+    resolve_asset_file,
+    write_artifact,
+)
+from timing import audio_summary, patch_beat_timing, patch_micro_event, resolve_timeline_media  # noqa: E402
+import preview_manager as preview_mgr  # noqa: E402
+import tts as tts_api  # noqa: E402
 
 SKILL_ROOT = ROOT
 WEB_ROOT = Path(__file__).resolve().parents[1] / "web"
@@ -134,6 +144,10 @@ class ProjectSwitchBody(BaseModel):
     path: str
 
 
+class RevealPathBody(BaseModel):
+    path: str
+
+
 class ArtifactWriteBody(BaseModel):
     content: str
     note: str = ""
@@ -151,6 +165,19 @@ class MicroEventPatchBody(BaseModel):
 class VoiceoverWriteBody(BaseModel):
     content: str
     note: str = ""
+
+
+class TtsConfigPatchBody(BaseModel):
+    base_url: str | None = None
+    webui_url: str | None = None
+    emotion_control_method: str | None = None
+    voice_reference: dict[str, Any] | None = None
+    defaults: dict[str, Any] | None = None
+    segment_emotion_vectors: dict[str, Any] | None = None
+
+
+class RefSelectBody(BaseModel):
+    path: str
 
 
 def _default_segment() -> str:
@@ -234,24 +261,6 @@ def _cps_band(cps: float) -> str:
     return "ok"
 
 
-def _tts_health(root: Path) -> dict[str, Any]:
-    cfg_path = root / "audio" / "indextts2_config.json"
-    if not cfg_path.exists():
-        return {"available": False, "reason": "indextts2_config.json missing"}
-    cfg = json.loads(cfg_path.read_text(encoding="utf-8-sig"))
-    base_url = str(cfg.get("base_url", "")).rstrip("/") + "/"
-    try:
-        import urllib.request
-
-        req = urllib.request.Request(f"{base_url}config", method="GET")
-        with urllib.request.urlopen(req, timeout=5) as resp:
-            if resp.status == 200:
-                return {"available": True, "base_url": base_url, "status": "online"}
-    except Exception as exc:  # noqa: BLE001
-        return {"available": False, "base_url": base_url, "reason": str(exc)}
-    return {"available": False, "base_url": base_url, "reason": "unknown"}
-
-
 def _create_job(script: str, args: list[str], cwd: Path, *, label: str = "") -> dict[str, Any]:
     job = job_runner.create(script, args, cwd, label=label)
     try:
@@ -267,13 +276,40 @@ def _create_job(script: str, args: list[str], cwd: Path, *, label: str = "") -> 
     return job_runner.to_dict(job)
 
 
+TTS_JOB_PRESETS = frozenset({
+    "indextts_segment",
+    "indextts_beats",
+    "indextts_beats_align",
+    "audio_chain_tts",
+})
+
+
+def _tts_base_url_args() -> list[str]:
+    try:
+        cfg = tts_api.load_config(_root())
+        base = str(cfg.get("base_url", "")).strip()
+        if base.startswith("http"):
+            if not base.endswith("/"):
+                base = base.rstrip("/") + "/"
+            return ["--base-url", base]
+    except Exception:  # noqa: BLE001
+        pass
+    return []
+
+
 def _job_presets(seg: str, beats: list[str] | None = None) -> dict[str, tuple[str, list[str], Path, str]]:
     root = _root()
     beat_args = ["--beats", *(beats or [])] if beats else []
+    tts_url = _tts_base_url_args()
     presets: dict[str, tuple[str, list[str], Path, str]] = {
         "segment_timing_lint": (
             sys.executable,
-            [str(SCRIPTS / "segment_timing_lint.py"), str(root), seg],
+            [
+                str(SCRIPTS / "segment_timing_lint.py"),
+                str(root),
+                seg,
+                *([] if preview_mgr.composition_ready(root, seg) else ["--audio-only"]),
+            ],
             root,
             "Segment timing lint",
         ),
@@ -291,15 +327,21 @@ def _job_presets(seg: str, beats: list[str] | None = None) -> dict[str, tuple[st
         ),
         "indextts_segment": (
             sys.executable,
-            [str(SCRIPTS / "indextts2_generate.py"), str(root), "--segment", seg, "--concat"],
+            [str(SCRIPTS / "indextts2_generate.py"), str(root), "--segment", seg, "--concat", *tts_url],
             root,
             "IndexTTS2 full segment",
         ),
         "indextts_beats": (
             sys.executable,
-            [str(SCRIPTS / "indextts2_generate.py"), str(root), "--segment", seg, *beat_args, "--concat", "--force"],
+            [str(SCRIPTS / "indextts2_generate.py"), str(root), "--segment", seg, *beat_args, "--concat", "--force", *tts_url],
             root,
             "IndexTTS2 selected beats",
+        ),
+        "indextts_beats_align": (
+            sys.executable,
+            [str(SCRIPTS / "audio_chain.py"), str(root), seg, *beat_args, "--force-tts", *tts_url],
+            root,
+            "IndexTTS2 beats + align",
         ),
         "audio_chain": (
             sys.executable,
@@ -309,7 +351,7 @@ def _job_presets(seg: str, beats: list[str] | None = None) -> dict[str, tuple[st
         ),
         "audio_chain_tts": (
             sys.executable,
-            [str(SCRIPTS / "audio_chain.py"), str(root), seg],
+            [str(SCRIPTS / "audio_chain.py"), str(root), seg, *tts_url],
             root,
             "Audio chain (TTS→measure→micro→lint)",
         ),
@@ -419,6 +461,47 @@ def post_pick_directory(title: str = "选择文件夹") -> dict[str, Any]:
     if not selected:
         return {"cancelled": True, "path": None}
     return {"cancelled": False, "path": str(Path(selected).resolve())}
+
+
+@app.post("/api/dialog/reveal-path")
+def post_reveal_path(body: RevealPathBody) -> dict[str, Any]:
+    """Open the system file manager at an asset path (local server only)."""
+    from reveal_path import reveal_in_filesystem
+
+    root = _root()
+    rel = body.path.strip().replace("\\", "/").lstrip("/")
+    if not rel:
+        raise HTTPException(status_code=400, detail="path is required")
+
+    resolved = resolve_asset_file(
+        root,
+        rel,
+        asset_id=Path(rel).stem,
+        segment_id=_segment_from_media_path(rel),
+    )
+    if resolved is None:
+        resolved = resolve_safe_path(root, rel)
+    if resolved is None:
+        raise HTTPException(status_code=400, detail={"message": "path outside project", "path": rel})
+
+    try:
+        reveal_in_filesystem(resolved)
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail={"message": "path not found on disk", "path": rel},
+        ) from exc
+
+    if resolved.is_file():
+        opened = str(resolved.parent)
+        selected = str(resolved)
+    elif resolved.is_dir():
+        opened = str(resolved)
+        selected = None
+    else:
+        opened = str(resolved.parent)
+        selected = None
+    return {"opened": opened, "selected": selected, "relative": rel}
 
 
 @app.post("/api/project/switch")
@@ -566,12 +649,42 @@ def patch_beat(beat_id: str, body: BeatPatchBody, segment: str | None = None) ->
     return {"beat_id": beat_id, "stale": stale}
 
 
+def _segment_from_media_path(file_path: str) -> str:
+    parts = file_path.replace("\\", "/").split("/")
+    if len(parts) >= 2 and parts[0] == "segments":
+        return parts[1]
+    return _default_segment()
+
+
+def _enrich_asset_row(root: Path, row: dict[str, str]) -> dict[str, Any]:
+    asset_id = row.get("asset_id", "")
+    segment_id = row.get("segment_id") or _default_segment()
+    path_or_url = row.get("path_or_url") or ""
+    resolved = resolve_asset_file(
+        root,
+        path_or_url,
+        asset_id=asset_id,
+        segment_id=segment_id,
+    )
+    item: dict[str, Any] = dict(row)
+    item["exists"] = resolved is not None
+    item["size_bytes"] = resolved.stat().st_size if resolved else 0
+    if resolved:
+        item["media_path"] = resolved.relative_to(root).as_posix()
+    elif path_or_url and not path_or_url.startswith(("http://", "https://", "//")):
+        item["media_path"] = path_or_url.replace("\\", "/")
+    else:
+        item["media_path"] = None
+    return item
+
+
 @app.get("/api/assets")
 def get_assets(segment: str | None = None, status: str | None = None) -> dict[str, Any]:
-    path = _root() / "assets" / "asset_manifest.csv"
+    root = _root()
+    path = root / "assets" / "asset_manifest.csv"
     if not path.exists():
         return {"assets": []}
-    registry = registry_index(read_registry_lines(_root()))
+    registry = registry_index(read_registry_lines(root))
     assets: list[dict[str, Any]] = []
     with path.open(newline="", encoding="utf-8-sig") as handle:
         for row in csv.DictReader(handle):
@@ -580,11 +693,11 @@ def get_assets(segment: str | None = None, status: str | None = None) -> dict[st
             asset_id = row.get("asset_id", "")
             reg = registry.get(f"asset:{asset_id}", {})
             review_status = row.get("review_status") or reg.get("status", "review")
-            item = dict(row)
-            item["review_status"] = review_status
-            item["registry"] = reg
             if status and review_status != status:
                 continue
+            item = _enrich_asset_row(root, dict(row))
+            item["review_status"] = review_status
+            item["registry"] = reg
             assets.append(item)
     return {"assets": assets}
 
@@ -722,7 +835,9 @@ def get_publish() -> dict[str, Any]:
 @app.post("/api/jobs/preset/{preset_name}")
 def post_job_preset(preset_name: str, segment: str | None = None, beats: str | None = None) -> dict[str, Any]:
     seg = segment or _default_segment()
-    beat_list = [b.strip() for b in beats.split(",")] if beats else None
+    beat_list = [b.strip() for b in beats.split(",") if b.strip()] if beats else None
+    if preset_name in {"indextts_beats", "indextts_beats_align"} and not beat_list:
+        raise HTTPException(status_code=400, detail="beats query param required for beat-level TTS presets")
     presets = _job_presets(seg, beat_list)
     if preset_name not in presets:
         raise HTTPException(status_code=404, detail=f"unknown preset: {preset_name}")
@@ -735,19 +850,126 @@ def post_job_preset(preset_name: str, segment: str | None = None, beats: str | N
         raise HTTPException(status_code=404, detail=f"composition builder missing for {seg}")
     if preset_name == "render_draft" and not cwd.exists():
         raise HTTPException(status_code=404, detail=f"segment dir missing: {cwd}")
-    return {"job": _create_job(script, args, cwd, label=label)}
+    job = _create_job(script, args, cwd, label=label)
+    if preset_name in TTS_JOB_PRESETS:
+        tts_api.init_tts_job_progress(_root(), segment=seg, job_id=str(job["id"]), label=label)
+    return {"job": job}
 
 
 @app.get("/api/timeline")
 def get_timeline(segment: str | None = None) -> dict[str, Any]:
     seg = segment or _default_segment()
-    vo_path = _root() / "segments" / seg / "vo_timing.json"
-    micro_path = _root() / "segments" / seg / "micro_timing.json"
+    root = _root()
+    vo_path = root / "segments" / seg / "vo_timing.json"
+    micro_path = root / "segments" / seg / "micro_timing.json"
     beats = _read_beats(seg)
     vo = json.loads(vo_path.read_text(encoding="utf-8-sig")) if vo_path.exists() else {}
     micro_raw = json.loads(micro_path.read_text(encoding="utf-8-sig")) if micro_path.exists() else []
     micro_events = micro_raw if isinstance(micro_raw, list) else micro_raw.get("events", [])
-    return {"segment_id": seg, "total_sec": vo.get("total_sec"), "beats": beats, "micro_events": micro_events}
+    total = float(vo.get("total_sec") or 0)
+    if not total and beats:
+        total = sum(float(b.get("actual_sec") or b.get("planned_sec") or 0) for b in beats)
+    return {
+        "segment_id": seg,
+        "total_sec": round(total, 3) if total else None,
+        "beats": beats,
+        "micro_events": micro_events,
+        "media": resolve_timeline_media(root, seg),
+        "preview": preview_mgr.hyperframes_status(root, seg),
+    }
+
+
+@app.get("/api/preview/hyperframes")
+def get_hyperframes_preview(segment: str | None = None) -> dict[str, Any]:
+    seg = segment or _default_segment()
+    return preview_mgr.hyperframes_status(_root(), seg)
+
+
+def _composition_missing_detail(root: Path, segment: str, message: str) -> dict[str, str]:
+    expected = root / "segments" / segment / "index.html"
+    return {
+        "message": message,
+        "project_root": str(root.resolve()),
+        "expected_path": str(expected),
+        "segment_dir": str(root / "segments" / segment),
+        "hint": "请在 Review Studio 选择视频项目，并在时间轴点击「重建合成」生成 index.html；Studio 需 POST 启动",
+    }
+
+
+@app.get("/api/preview/hyperframes/start")
+def get_hyperframes_preview_start_hint(segment: str | None = None) -> dict[str, Any]:
+    """Diagnostic GET — composition status before POST start."""
+    seg = segment or _default_segment()
+    root = _root()
+    status = preview_mgr.hyperframes_status(root, seg)
+    if not status.get("composition_ready"):
+        raise HTTPException(
+            status_code=404,
+            detail=_composition_missing_detail(root, seg, f"segments/{seg}/index.html missing"),
+        )
+    return {
+        **status,
+        "method": "POST",
+        "hint": "合成页已就绪；请用 POST 启动 HyperFrames Studio",
+    }
+
+
+@app.post("/api/preview/hyperframes/start")
+def post_hyperframes_preview_start(segment: str | None = None, port: int | None = None) -> dict[str, Any]:
+    seg = segment or _default_segment()
+    root = _root()
+    try:
+        return preview_mgr.start_hyperframes_studio(root, seg, port=port)
+    except preview_mgr.CompositionNotReadyError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=_composition_missing_detail(root, seg, str(exc)),
+        ) from exc
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@app.post("/api/preview/hyperframes/stop")
+def post_hyperframes_preview_stop(segment: str | None = None) -> dict[str, Any]:
+    seg = segment or _default_segment()
+    return preview_mgr.stop_hyperframes_studio(_root(), seg)
+
+
+@app.get("/api/preview/composition/{segment}/{file_path:path}")
+def get_composition_asset(segment: str, file_path: str) -> FileResponse:
+    root = _root()
+    seg_dir = root / "segments" / segment
+    if not seg_dir.is_dir():
+        raise HTTPException(status_code=404, detail=f"segment not found: {segment}")
+    rel = file_path or "index.html"
+    resolved = resolve_safe_path(seg_dir, rel)
+    if not resolved or not resolved.is_file():
+        raise HTTPException(status_code=404, detail=f"asset not found: {rel}")
+    import mimetypes
+
+    ext = resolved.suffix.lower()
+    mime_overrides = {
+        ".svg": "image/svg+xml",
+        ".webp": "image/webp",
+        ".wav": "audio/wav",
+        ".mp3": "audio/mpeg",
+        ".mp4": "video/mp4",
+        ".webm": "video/webm",
+        ".mov": "video/quicktime",
+        ".m4v": "video/x-m4v",
+        ".json": "application/json",
+        ".html": "text/html; charset=utf-8",
+        ".htm": "text/html; charset=utf-8",
+        ".css": "text/css; charset=utf-8",
+        ".js": "text/javascript; charset=utf-8",
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".gif": "image/gif",
+        ".woff2": "font/woff2",
+    }
+    media_type = mime_overrides.get(ext) or mimetypes.guess_type(resolved.name)[0] or "application/octet-stream"
+    return FileResponse(resolved, media_type=media_type, headers={"Content-Disposition": "inline"})
 
 
 @app.post("/api/jobs/run")
@@ -770,22 +992,161 @@ def get_jobs(limit: int = 30) -> dict[str, Any]:
 
 @app.get("/api/tts/health")
 def get_tts_health() -> dict[str, Any]:
-    return _tts_health(_root())
+    return tts_api.health_check(_root())
 
 
 @app.get("/api/tts/config")
 def get_tts_config() -> dict[str, Any]:
-    path = _root() / "audio" / "indextts2_config.json"
+    root = _root()
+    path = tts_api.config_path(root)
     if not path.exists():
         raise HTTPException(status_code=404, detail="indextts2_config.json missing")
-    return {"path": "audio/indextts2_config.json", "config": json.loads(path.read_text(encoding="utf-8-sig"))}
+    return {"path": tts_api.CONFIG_REL, "config": tts_api.load_config(root)}
+
+
+@app.put("/api/tts/config")
+def put_tts_config(body: TtsConfigPatchBody) -> dict[str, Any]:
+    root = _root()
+    existing = tts_api.load_config(root)
+    if not existing and not body.base_url:
+        raise HTTPException(status_code=400, detail="base_url required when creating new config")
+    patch = body.model_dump(exclude_none=True)
+    merged = tts_api.merge_config(existing, patch)
+    if not merged.get("base_url"):
+        raise HTTPException(status_code=400, detail="base_url is required")
+    if not str(merged["base_url"]).startswith("http"):
+        raise HTTPException(status_code=400, detail="base_url must start with http")
+    if not str(merged["base_url"]).endswith("/"):
+        merged["base_url"] = str(merged["base_url"]).rstrip("/") + "/"
+    if not merged.get("webui_url"):
+        merged["webui_url"] = merged["base_url"]
+    tts_api.save_config(root, merged)
+    append_history(root, {
+        "type": "tts_config_updated",
+        "path": tts_api.CONFIG_REL,
+        "base_url": merged.get("base_url"),
+        "at": utc_now(),
+    })
+    return {
+        "path": tts_api.CONFIG_REL,
+        "config": merged,
+        "health": tts_api.health_check(root),
+    }
+
+
+@app.get("/api/tts/progress")
+def get_tts_progress() -> dict[str, Any]:
+    return tts_api.read_progress(_root())
+
+
+@app.get("/api/audio/refs")
+def get_audio_refs() -> dict[str, Any]:
+    return tts_api.list_refs(_root())
+
+
+@app.put("/api/audio/refs/select")
+def put_audio_ref_select(body: RefSelectBody) -> dict[str, Any]:
+    try:
+        result = tts_api.select_ref(_root(), body.path)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    append_history(_root(), {
+        "type": "tts_ref_selected",
+        "path": result["selected_path"],
+        "at": utc_now(),
+    })
+    return result
+
+
+@app.post("/api/audio/refs/upload")
+async def post_audio_ref_upload(
+    file: UploadFile = File(...),
+    select: bool = True,
+) -> dict[str, Any]:
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="filename required")
+    lower = file.filename.lower()
+    if not lower.endswith((".wav", ".mp3")):
+        raise HTTPException(status_code=400, detail="only .wav and .mp3 files are supported")
+    data = await file.read()
+    if len(data) < 16:
+        raise HTTPException(status_code=400, detail="file too small to be a valid audio file")
+
+    root = _root()
+    upload_id = str(uuid.uuid4())
+    filename = Path(file.filename).name
+    tts_api.write_upload_state(root, upload_id, {
+        "status": "queued",
+        "message": "已接收，准备处理…",
+        "progress": 5,
+        "filename": filename,
+    })
+
+    def worker() -> None:
+        try:
+            result = tts_api.save_ref_upload(
+                root, filename, data, select=select, upload_id=upload_id,
+            )
+            tts_api.write_upload_state(root, upload_id, {
+                "status": "completed",
+                "message": "上传完成",
+                "progress": 100,
+                "filename": filename,
+                "result": result,
+            })
+            append_history(root, {
+                "type": "tts_ref_uploaded",
+                "path": result["path"],
+                "upload_id": upload_id,
+                "at": utc_now(),
+            })
+        except Exception as exc:  # noqa: BLE001
+            tts_api.write_upload_state(root, upload_id, {
+                "status": "failed",
+                "message": str(exc),
+                "progress": 0,
+                "filename": filename,
+                "error": str(exc),
+            })
+
+    threading.Thread(target=worker, daemon=True).start()
+    return {"upload_id": upload_id, "status": "queued", "filename": filename}
+
+
+@app.get("/api/audio/refs/upload/{upload_id}")
+def get_audio_ref_upload_status(upload_id: str) -> dict[str, Any]:
+    state = tts_api.read_upload_state(_root(), upload_id)
+    if not state:
+        raise HTTPException(status_code=404, detail="upload not found")
+    return state
+
+
+@app.delete("/api/audio/refs")
+def delete_audio_ref(path: str) -> dict[str, Any]:
+    try:
+        result = tts_api.delete_ref(_root(), path)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    append_history(_root(), {
+        "type": "tts_ref_deleted",
+        "path": result["deleted"],
+        "at": utc_now(),
+    })
+    return result
 
 
 @app.get("/api/audio/summary")
 def get_audio_summary(segment: str | None = None) -> dict[str, Any]:
     seg = segment or _default_segment()
-    summary = audio_summary(_root(), seg)
-    summary["tts"] = _tts_health(_root())
+    root = _root()
+    summary = audio_summary(root, seg)
+    summary["tts"] = tts_api.health_check(root)
+    summary["refs"] = tts_api.list_refs(root)
+    summary["progress"] = tts_api.read_progress(root)
     return summary
 
 
@@ -923,9 +1284,25 @@ def get_dependency(changed: str) -> dict[str, Any]:
 
 @app.get("/api/media/{file_path:path}")
 def get_media(file_path: str) -> FileResponse:
-    resolved = resolve_safe_path(_root(), file_path)
-    if not resolved or not resolved.exists() or not resolved.is_file():
-        raise HTTPException(status_code=404, detail="file not found")
+    root = _root()
+    rel = file_path.replace("\\", "/").lstrip("/")
+    resolved = resolve_safe_path(root, rel)
+    if not resolved or not resolved.is_file():
+        resolved = resolve_asset_file(
+            root,
+            rel,
+            asset_id=Path(rel).stem,
+            segment_id=_segment_from_media_path(rel),
+        )
+    if not resolved or not resolved.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "message": "file not found",
+                "path": rel,
+                "project_root": str(root.resolve()),
+            },
+        )
     import mimetypes
 
     ext = resolved.suffix.lower()
@@ -934,6 +1311,9 @@ def get_media(file_path: str) -> FileResponse:
         ".webp": "image/webp",
         ".wav": "audio/wav",
         ".mp4": "video/mp4",
+        ".webm": "video/webm",
+        ".mov": "video/quicktime",
+        ".m4v": "video/x-m4v",
         ".json": "application/json",
         ".jsonl": "application/x-ndjson",
         ".md": "text/markdown; charset=utf-8",

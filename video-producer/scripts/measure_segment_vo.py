@@ -9,6 +9,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from beat_csv_utils import narration_char_count, planned_duration_sec  # noqa: E402
+
 
 def probe_dur(wav: Path) -> float:
     out = subprocess.check_output(
@@ -30,11 +32,14 @@ def main() -> int:
 
     vo_path = root / "segments" / seg / "vo_timing.json"
     locked: dict[str, dict] = {}
+    cached: dict[str, dict] = {}
     if vo_path.exists():
-        existing = json.loads(vo_path.read_text(encoding="utf-8"))
+        existing = json.loads(vo_path.read_text(encoding="utf-8-sig"))
         for b in existing.get("beats", []):
             if b.get("locked"):
                 locked[b["beat_id"]] = b
+            else:
+                cached[b["beat_id"]] = b
 
     rows = []
     t = 0.0
@@ -43,19 +48,25 @@ def main() -> int:
             if row["segment_id"].upper() != seg:
                 continue
             bid = row["beat_id"]
-            chars = int(row["char_count"])
-            planned = float(row["duration_sec"])
+            chars = narration_char_count(row)
+            planned = planned_duration_sec(row)
             if bid in locked:
                 lb = locked[bid]
                 dur = float(lb["duration_sec"])
                 source = "manual"
             else:
                 wav = beats_dir / f"{bid}.wav"
-                if not wav.exists():
-                    print(f"missing: {wav}", file=sys.stderr)
-                    return 1
-                dur = probe_dur(wav)
-                source = "measured"
+                if wav.exists():
+                    dur = probe_dur(wav)
+                    source = "measured"
+                elif bid in cached:
+                    dur = float(cached[bid]["duration_sec"])
+                    source = str(cached[bid].get("source") or "cached")
+                    print(f"keep cached: {bid} {dur}s (no wav)")
+                else:
+                    dur = planned
+                    source = "planned"
+                    print(f"planned fallback: {bid} {dur}s (missing {wav.name})")
             rows.append({
                 "beat_id": bid,
                 "start_sec": round(t, 3),

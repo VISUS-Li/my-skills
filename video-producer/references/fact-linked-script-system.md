@@ -34,6 +34,7 @@ claim_id,claim,claim_type,source_ids,source_urls,supporting_quote,source_context
 Definitions:
 
 - `claim`: the precise factual proposition.
+- `claim_type`: use `fact` for events/stats; use `relationship` for verified links between entities (cause, incentive, escalation); use `analysis` for `[OPINION]` lines.
 - `supporting_quote`: short quote or exact paraphrase from source. Keep it narrow.
 - `source_context`: who/what/when/where the source is about.
 - `interpretation_guardrail`: what must **not** be inferred from the source.

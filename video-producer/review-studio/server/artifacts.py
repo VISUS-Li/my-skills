@@ -111,3 +111,53 @@ def find_voiceover_path(root: Path) -> Path | None:
         return versioned[0]
     default = script_dir / "voiceover.md"
     return default if default.exists() else None
+
+
+def resolve_asset_file(
+    root: Path,
+    path_or_url: str,
+    *,
+    asset_id: str = "",
+    segment_id: str = "S001",
+) -> Path | None:
+    """Resolve a visual asset to an on-disk file, trying common fallbacks."""
+    rel = (path_or_url or "").strip().replace("\\", "/")
+    if rel.startswith(("http://", "https://", "//")):
+        return None
+
+    def try_path(candidate: str) -> Path | None:
+        if not candidate:
+            return None
+        resolved = resolve_safe_path(root, candidate)
+        if resolved and resolved.is_file():
+            return resolved
+        return None
+
+    hit = try_path(rel)
+    if hit:
+        return hit
+
+    stem = asset_id or (Path(rel).stem if rel else "")
+    ext = Path(rel).suffix if rel and Path(rel).suffix else ""
+    seg = segment_id or "S001"
+    fallbacks: list[str] = []
+    if stem:
+        if ext:
+            fallbacks.append(f"segments/{seg}/assets/{stem}{ext}")
+        else:
+            fallbacks.extend([
+                f"segments/{seg}/assets/{stem}.svg",
+                f"segments/{seg}/assets/{stem}.png",
+                f"segments/{seg}/assets/{stem}.webp",
+                f"segments/{seg}/assets/{stem}.mp4",
+                f"segments/{seg}/assets/{stem}.webm",
+                f"segments/{seg}/assets/{stem}.mov",
+            ])
+    if rel:
+        fallbacks.append(f"assets/{Path(rel).name}")
+
+    for candidate in fallbacks:
+        hit = try_path(candidate)
+        if hit:
+            return hit
+    return None

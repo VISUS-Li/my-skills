@@ -124,8 +124,8 @@ Before render:
 
 - [ ] Max unchanged hold ≤ **1.5s**
 - [ ] ≥ **4 micro-events** per narration beat (or document exception)
-- [ ] ≥ **6 SVG/icon assets** visible across segment
-- [ ] ≥ **3 z-layers** with motion
+- [ ] ≥ **6 SVG/icon assets** visible across segment → target **≥12**; lint fails if sparse
+- [ ] ≥ **4 z-layers** with motion (ambient must never freeze >0.8s)
 - [ ] No beat clip duration deviates from VO > **0.05s**
 
 Run: `python scripts/segment_timing_lint.py <project> S001`

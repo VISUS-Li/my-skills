@@ -24,7 +24,7 @@ Use these contracts so every intermediate output is reviewable, editable, and re
 | storyboard | `script/storyboard.json` | Are timings, visuals, segment engines, visual metaphors, assets, and transitions right? |
 | shot-design | `script/shotlist.json` | Does each segment have shot size, camera move, depth, composition, and edit intent? |
 | design | `design/design.md`, `design/tokens.json` | Are color, type, layout, safe area, and motion rules implementable? |
-| assets | `assets/asset_manifest.csv` | Are icons/images/B-roll/textures/SFX planned and rights recorded? |
+| assets | `assets/asset_manifest.csv`, `segments/<id>/assets/ref/*` | 每个 beat 是否有 ref 图/clip？rights、口播对齐、SVG+证据双层 |
 | segment | `segments/<id>/render.mp4`, `segments/<id>/segment_report.md` | Does this segment communicate clearly and look rich enough? |
 | assemble | `edit/timeline.json`, `edit/assembly_command.sh`, `exports/final*.mp4` | Does the whole video flow and sound right? |
 | aesthetic-review | `edit/aesthetic_report.md` | Is the video visually rich enough to avoid empty/PPT-like output? |

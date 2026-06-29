@@ -1,4 +1,7 @@
 asset_id,type,source,path_or_url,segment_id,role,rights_status,status,review_status,beat_ids,actor_id,version,last_regen_at,notes
-icon_pipeline,icon,generated_or_icon_set,assets/icons/pipeline.svg,001_hook,stage icon,self-created,needed,keep icon style consistent
-texture_grain,texture,generated,assets/textures/grain.png,all,subtle depth,self-created,needed,low opacity
-sfx_whoosh,audio,licensed_or_generated,assets/sfx/whoosh.wav,transitions,transition energy,needs-check,needed,record license before final
+ref_press_photo_001,photo,https://example.com/press/photo.jpg,segments/S001/assets/ref/ref_press_photo_001.jpg,S001,proof,licensed,ready,pending,B003;B004,actor_ref_photo,001,,口播提到发布会现场时使用
+screenshot_product_ui,screenshot,self-created browser capture,segments/S001/assets/ref/screenshot_product_ui.png,S001,proof,self-created,ready,pending,B006,actor_screenshot,001,,产品界面证明
+broll_keynote_demo,broll,https://www.youtube.com/watch?v=EXAMPLE,segments/S001/assets/ref/broll_keynote_demo.mp4,S001,proof,fair-use-reference-only,ready,pending,B008,actor_broll,001,,yt-dlp 裁 15s 官方 demo
+icon_pipeline,icon,generated_or_icon_set,segments/S001/assets/icon_pipeline.svg,S001,explanation,self-created,needed,pending,B001;B002,actor_icon,001,,矢量解释层
+texture_grain,texture,generated,segments/S001/assets/s001_hero_plate.png,S001,atmosphere,self-created,needed,pending,all,actor_plate,001,,低 opacity 装饰
+sfx_whoosh,audio,licensed_or_generated,assets/sfx/whoosh.wav,transitions,rhythm,needs-check,needed,pending,,,,record license before final

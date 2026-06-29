@@ -3,9 +3,13 @@
   "style_refs": ["design/art_direction.md", "design/tokens.json", "design/visual_moodboard.json"],
   "research_refs": ["research/research_brief.md"],
   "min_assets": {
-    "svg_icons": 6,
-    "decorative_png": 2,
-    "motion_actors": 8
+    "web_ref_photos": 3,
+    "web_ref_clips": 1,
+    "svg_icons": 12,
+    "decorative_png": 4,
+    "ui_primitives": 6,
+    "ambient_fillers": 3,
+    "motion_actors": 15
   },
   "layers": {
     "ambient": ["grid", "orbs", "hero_plate"],
@@ -17,12 +21,12 @@
     {
       "id": "icon_example",
       "type": "svg",
-      "prompt": "128x128 SVG, 2-4px stroke, topic icon, no text",
+      "prompt": "128×128 SVG，2–4px 描边，[主题]图标，禁止内嵌文字",
       "path": "segments/S001/assets/icon_example.svg",
       "layer": "foreground",
       "motion": "stamp_hit",
       "rights_status": "cleared"
     }
   ],
-  "image_gen_notes": "No readable Chinese in raster images; use programmatic text layers"
+  "image_gen_notes": "栅格图禁止可读中文；中文走 programmatic text layer。Image/SVG/检索 prompt 默认中文，仅素材本体为英文 UI/代码时保留英文片段。"
 }

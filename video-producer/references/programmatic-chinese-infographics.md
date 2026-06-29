@@ -17,7 +17,7 @@ Treat Chinese text as layout data, not image content. Text-to-image and text-to-
 ## Implementation rules
 
 1. Split every scene into `background_plate`, `diagram_layer`, `text_layer`, `caption_layer`, and `audio_sync`.
-2. Use image generation prompts that reserve blank space: “blank labels, no readable text, clean panels for later overlay.”
+2. Use image generation prompts that reserve blank space — **默认中文**：「留白标签区，禁止任何可读文字，干净面板供后期叠加中文」。
 3. Keep a `text_manifest.json` with each text item: `id`, `content`, `font_role`, `position`, `max_width`, `start_sec`, `end_sec`, `animation`, and `proofread_status`.
 4. Proofread `text_manifest.json` before render. No “final” export with `proofread_status != approved`.
 5. Use fallback CJK fonts available on the target machine. Do not bundle commercial fonts unless licensing allows it.
@@ -26,7 +26,11 @@ Treat Chinese text as layout data, not image content. Text-to-image and text-to-
 
 ## Prompt pattern for no-text plates
 
-`Create a clean vector-style educational illustration plate for [concept]. Use warm off-white background, rounded panels, teal/blue/green accents, soft shadows, subtle grid. Leave all labels blank; do not include any readable text, letters, numbers, or symbols. Reserve clear spaces where Chinese labels will be overlaid later.`
+**中文 prompt（默认）：**
+
+`为 [概念] 制作干净矢量风教育插画底图。暖色 off-white 背景，圆角面板，青/蓝/绿点缀，柔和投影， subtle 网格。所有标签区留白；禁止任何可读文字、字母、数字或符号。预留清晰区域供后期叠加中文标签。构图饱满，边缘可用装饰纹理/光斑填充，避免大面积空洞。`
+
+English fallback only if the model ignores Chinese.
 
 ## Quality gate
 

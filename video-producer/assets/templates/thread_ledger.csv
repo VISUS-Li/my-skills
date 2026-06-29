@@ -1,0 +1,4 @@
+thread_id,from_entity,to_entity,relationship_type,relationship_summary,claim_ids,source_ids,evidence_strength,script_angle,on_screen_visual,status,notes
+T001,前尘/背景,当前事件,prelude|origin|trigger,用来源证实的因果或铺垫,C001,S001,verified,口播第二转折,timeline or source_card,verified,
+T002,当前事件,直接后果,effect|aftermath|legacy,可证实的后续影响,C002,S002,verified,口播后半 stakes,comparison_split,verified,
+T003,表面叙事,隐藏细节,hidden_context|turning_point,较少人知但可引用的细节,C003,S003,verified,秘辛 reveal,source_card highlight,verified,

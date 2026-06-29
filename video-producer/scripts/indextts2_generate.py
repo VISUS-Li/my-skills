@@ -11,23 +11,38 @@ import sys
 import time
 from pathlib import Path
 
+SCRIPTS = Path(__file__).resolve().parent
+if str(SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS))
+
 try:
-    from gradio_client import Client, handle_file
+    from gradio_client import handle_file
 except ImportError:
     print("pip install gradio_client", file=sys.stderr)
     raise
+
+from audio_ref_utils import convert_to_wav, is_riff_file, wav_path_for_ref  # noqa: E402
+from beat_csv_utils import narration_char_count  # noqa: E402
+from indextts2_connect import check_indextts_url, connect_client, load_base_url, normalize_base_url  # noqa: E402
+from tts_progress import clear_progress, write_progress  # noqa: E402
 
 
 def load_config(root: Path) -> dict:
     cfg_path = root / "audio/indextts2_config.json"
     if cfg_path.exists():
-        return json.loads(cfg_path.read_text(encoding="utf-8"))
+        return json.loads(cfg_path.read_text(encoding="utf-8-sig"))
     return {"base_url": "http://127.0.0.1:7860/", "voice_reference": {"path": "audio/refs/narrator_ref.wav"}}
 
 
-def ensure_ref(client: Client, ref_path: Path, example_index: int = 3) -> Path:
-    if ref_path.exists() and ref_path.stat().st_size > 50_000 and ref_path.read_bytes()[:4] == b"RIFF":
-        return ref_path
+def ensure_ref(client, ref_path: Path, example_index: int = 3) -> Path:
+    if ref_path.exists():
+        if ref_path.suffix.lower() == ".mp3":
+            wav_path = ref_path.with_suffix(".wav")
+            if not is_riff_file(wav_path):
+                convert_to_wav(ref_path, wav_path)
+            ref_path = wav_path
+        if is_riff_file(ref_path) and ref_path.stat().st_size > 10_000:
+            return ref_path
     ref_path.parent.mkdir(parents=True, exist_ok=True)
     ex = client.predict(example_index, api_name="/on_example_click")
     src = ex[0]["value"] if isinstance(ex[0], dict) else ex[0]
@@ -94,6 +109,39 @@ def concat_wav(files: list[Path], out: Path) -> None:
     subprocess.run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(lst), "-c", "copy", str(out)], check=True)
 
 
+def progress_payload(
+    *,
+    status: str,
+    segment_id: str | None,
+    phase: str,
+    message: str,
+    percent: int,
+    done: int,
+    total: int,
+    beat_ids: list[str],
+    beat_status: dict[str, str],
+    completed_beats: list[str],
+    current_beat: str | None = None,
+    error: str | None = None,
+) -> dict:
+    payload = {
+        "status": status,
+        "phase": phase,
+        "message": message,
+        "percent": percent,
+        "segment_id": segment_id,
+        "current_beat": current_beat,
+        "done": done,
+        "total": total,
+        "beats": beat_ids,
+        "beat_status": beat_status,
+        "completed_beats": completed_beats,
+    }
+    if error:
+        payload["error"] = error
+    return payload
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Generate VO beats via IndexTTS2")
     parser.add_argument("root", nargs="?", default=".", help="Project root")
@@ -107,9 +155,8 @@ def main() -> int:
 
     root = Path(args.root).resolve()
     cfg = load_config(root)
-    base = args.base_url or cfg.get("base_url", "http://127.0.0.1:7860/")
-    ref_rel = cfg.get("voice_reference", {}).get("path", "audio/refs/narrator_ref.wav")
-    ref_path = root / ref_rel
+    base = load_base_url(root, args.base_url)
+    ref_rel = cfg.get("voice_reference", {}).get("tts_path") or cfg.get("voice_reference", {}).get("path", "audio/refs/narrator_ref.wav")
     example_index = int(cfg.get("voice_reference", {}).get("example_index", 3))
 
     beats = load_beats(root, args.segment)
@@ -117,42 +164,207 @@ def main() -> int:
         wanted = set(args.beats)
         beats = [b for b in beats if b["beat_id"] in wanted]
 
+    beat_ids = [row["beat_id"] for row in beats]
+    total = len(beats)
+    beat_status = {bid: "pending" for bid in beat_ids}
+    completed_beats: list[str] = []
+
+    clear_progress(root)
+    write_progress(root, progress_payload(
+        status="running",
+        segment_id=args.segment,
+        phase="preflight",
+        message=f"检测 IndexTTS 服务 {base}",
+        percent=1,
+        done=0,
+        total=total,
+        beat_ids=beat_ids,
+        beat_status=beat_status,
+        completed_beats=completed_beats,
+    ))
+
+    try:
+        check_indextts_url(base, timeout=10.0)
+    except RuntimeError as exc:
+        write_progress(root, progress_payload(
+            status="failed",
+            segment_id=args.segment,
+            phase="preflight",
+            message=str(exc),
+            percent=0,
+            done=0,
+            total=total,
+            beat_ids=beat_ids,
+            beat_status=beat_status,
+            completed_beats=completed_beats,
+            error=str(exc),
+        ))
+        print(str(exc), file=sys.stderr)
+        return 1
+
+    write_progress(root, progress_payload(
+        status="running",
+        segment_id=args.segment,
+        phase="connecting",
+        message=f"正在连接 IndexTTS {base}",
+        percent=3,
+        done=0,
+        total=total,
+        beat_ids=beat_ids,
+        beat_status=beat_status,
+        completed_beats=completed_beats,
+    ))
+
+    try:
+        client = connect_client(base, timeout=120.0)
+    except RuntimeError as exc:
+        write_progress(root, progress_payload(
+            status="failed",
+            segment_id=args.segment,
+            phase="connecting",
+            message=str(exc),
+            percent=0,
+            done=0,
+            total=total,
+            beat_ids=beat_ids,
+            beat_status=beat_status,
+            completed_beats=completed_beats,
+            error=str(exc),
+        ))
+        print(str(exc), file=sys.stderr)
+        return 1
+
+    try:
+        ref_path = wav_path_for_ref(root, str(ref_rel).replace("\\", "/"))
+    except (FileNotFoundError, RuntimeError):
+        ref_path = root / str(ref_rel).replace("\\", "/")
+
+    write_progress(root, progress_payload(
+        status="running",
+        segment_id=args.segment,
+        phase="reference",
+        message="加载参考音频…",
+        percent=5,
+        done=0,
+        total=total,
+        beat_ids=beat_ids,
+        beat_status=beat_status,
+        completed_beats=completed_beats,
+    ))
+
+    try:
+        ref_path = ensure_ref(client, ref_path, example_index)
+        ref = handle_file(str(ref_path))
+    except Exception as exc:  # noqa: BLE001
+        write_progress(root, progress_payload(
+            status="failed",
+            segment_id=args.segment,
+            phase="reference",
+            message=f"参考音频失败：{exc}",
+            percent=0,
+            done=0,
+            total=total,
+            beat_ids=beat_ids,
+            beat_status=beat_status,
+            completed_beats=completed_beats,
+            error=str(exc),
+        ))
+        print(f"ref FAIL: {exc}", file=sys.stderr)
+        return 1
+
     out_dir = root / "audio/stems/voice/beats"
     out_dir.mkdir(parents=True, exist_ok=True)
     manifest = root / "audio/stems/voice/generation_manifest.jsonl"
 
-    client = Client(base)
-    ref_path = ensure_ref(client, ref_path, example_index)
-    ref = handle_file(str(ref_path))
-
     generated: list[Path] = []
+    done = 0
     with manifest.open("a", encoding="utf-8") as log:
         for row in beats:
             bid = row["beat_id"]
+            beat_status[bid] = "running"
+            pct = 5 + int((done / max(total, 1)) * 90)
+            write_progress(root, progress_payload(
+                status="running",
+                segment_id=args.segment,
+                phase="generating",
+                message=f"正在生成 {bid} ({done + 1}/{total})",
+                percent=pct,
+                done=done,
+                total=total,
+                beat_ids=beat_ids,
+                beat_status=dict(beat_status),
+                completed_beats=list(completed_beats),
+                current_beat=bid,
+            ))
             out = out_dir / f"{bid}.wav"
             if not args.force and out.exists() and out.stat().st_size > 1000:
                 print(f"skip {bid}")
                 generated.append(out)
+                done += 1
+                beat_status[bid] = "done"
+                completed_beats.append(bid)
                 continue
             text = row["narration"].strip()
             seg = row["segment_id"]
-            max_tok = min(600, max(80, int(row["char_count"]) * 3))
+            max_tok = min(600, max(80, narration_char_count(row) * 3))
             print(f"gen {bid} ({len(text)} chars)")
             try:
                 src = synthesize(client, ref, text, seg, cfg, max_tok)
                 shutil.copy2(src, out)
                 generated.append(out)
                 log.write(json.dumps({"beat_id": bid, "status": "ok"}, ensure_ascii=False) + "\n")
+                done += 1
+                beat_status[bid] = "done"
+                completed_beats.append(bid)
             except Exception as exc:  # noqa: BLE001
                 print(f"FAIL {bid}: {exc}", file=sys.stderr)
+                beat_status[bid] = "failed"
+                write_progress(root, progress_payload(
+                    status="failed",
+                    segment_id=args.segment,
+                    phase="generating",
+                    message=f"{bid} 生成失败：{exc}",
+                    percent=pct,
+                    done=done,
+                    total=total,
+                    beat_ids=beat_ids,
+                    beat_status=dict(beat_status),
+                    completed_beats=list(completed_beats),
+                    current_beat=bid,
+                    error=str(exc),
+                ))
                 return 1
             time.sleep(args.sleep)
 
     if args.concat and generated:
+        write_progress(root, progress_payload(
+            status="running",
+            segment_id=args.segment,
+            phase="concat",
+            message="拼接整段配音…",
+            percent=98,
+            done=done,
+            total=total,
+            beat_ids=beat_ids,
+            beat_status=dict(beat_status),
+            completed_beats=list(completed_beats),
+        ))
         master = root / "audio/stems/voice/voiceover_full.wav"
         concat_wav(generated, master)
         print(f"master: {master}")
 
+    write_progress(root, progress_payload(
+        status="completed",
+        segment_id=args.segment,
+        phase="completed",
+        message=f"配音完成 {done}/{total} beats",
+        percent=100,
+        done=done,
+        total=total,
+        beat_ids=beat_ids,
+        beat_status=dict(beat_status),
+        completed_beats=list(completed_beats),
+    ))
     print(f"done: {len(generated)} beats")
     return 0
 

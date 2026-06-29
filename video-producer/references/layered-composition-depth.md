@@ -13,7 +13,7 @@ Use when user wants ** richer frames**, **overlap**, **parallax**, or **game-lik
 | 4 | `hud-ui` | captions, badges, disclaimer | minimal move; always readable |
 | 5 | `fx-overlay` | sparks, speed lines, particles (sparse) | short bursts on micro-events |
 
-**Rule:** at least **3 visible depth layers** every beat; **overlap allowed** — cards may cover 10–20% of neighbors for depth.
+**Rule:** at least **4 visible depth layers** every beat; **overlap allowed** — cards may cover 10–20% of neighbors for depth. **Fill the frame:** ambient + midground + foreground should together cover **50–80%** of the canvas; use supporting icons, chips, and texture at edges to avoid accidental empty margins.
 
 ## HyperFrames implementation
 
@@ -68,17 +68,19 @@ Borrow **HUD grammar**, not fantasy art:
 
 Before coding segment:
 
-1. Web search: `"[topic] infographic motion design"` / `"explainer HUD ui"`
+1. Web search: `"[主题] 信息图 动效 设计"` / `"科普 HUD 界面"` — **中文 query 优先**
 2. Save 3 references to `design/visual_moodboard.json` (URLs + notes)
 3. Extract: palette, corner radius, shadow depth, icon stroke — **not** literal copy
 
 ## Composition checklist (per beat)
 
-- [ ] Background still moving (orb/scan/grid)
+- [ ] Background still moving (orb/scan/grid) — never static >0.8s
 - [ ] Midground primary actor changes state
-- [ ] Foreground accent (icon/stamp/arrow) animates
+- [ ] Foreground accent (icon/stamp/arrow) animates — **≥2 foreground accents** on dense beats
 - [ ] HUD caption updates
 - [ ] Optional FX on micro-event only
+- [ ] **≥5 distinct assets visible** on screen (excluding caption text)
+- [ ] No accidental empty quadrant — fill with texture, grid, or small icons
 
 ## Anti-patterns
 

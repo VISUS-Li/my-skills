@@ -32,6 +32,7 @@ Rules:
 - Claims about current events, laws, prices, product features, public figures, statistics, or tool capabilities need high-quality, recent sources.
 - Social posts and forum comments can show community sentiment but should not be sole support for factual claims.
 - Do not use third-party video/audio/images in final assets unless rights status is explicitly acceptable.
+- When a claim references a source URL with usable media, **download it during the assets stage** to `segments/<id>/assets/ref/` and link via `asset_manifest.csv` + `narration_beats.source_visual`. See `references/web-sourced-visual-assets.md`.
 
 ## Research Brief
 

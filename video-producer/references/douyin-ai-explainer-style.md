@@ -14,7 +14,7 @@ Use this recipe for Chinese AI/science explainer videos similar to a clean Douyi
 
 ## Visual primitives
 
-Every 4-8 second scene should include at least four of these, with one as the hero:
+Every 4-8 second scene should include at least **six** of these (target **eight** on dense beats), with one as the hero — **画面应被多层资产占满，ambient 层持续微动**:
 
 - `hero_machine`: AI training box, diffusion machine, CLIP bridge, glyph-guidance module, model cabinet.
 - `card_stack`: image examples, before/after outputs, reference cards, mini screenshots.
@@ -63,7 +63,7 @@ Readable Chinese must be final-rendered as text layers:
 - Keep important Chinese labels short: 2-8 characters for badges; 8-16 characters for titles; 1-2 subtitle lines.
 - Never ask an image/video model to generate exact Chinese captions, UI labels, subtitles, or diagram labels. Generate the illustration without text, then overlay text.
 - For screenshots/examples that must demonstrate wrong Chinese, render the wrong glyphs deliberately as text or import the real reference image with rights noted.
-- In prompts for image generation, include “no readable text, blank labels/signs, clean spaces reserved for later Chinese text overlay.”
+- In prompts for image generation, include **中文描述** +「禁止可读文字，标签/sign 留白，预留中文 overlay 区域，构图饱满层次丰富」.
 
 ## Audio style
 

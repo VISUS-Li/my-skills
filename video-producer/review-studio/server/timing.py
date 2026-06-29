@@ -116,6 +116,23 @@ def patch_micro_event(
     return {"event_id": event_id, "t": t, "stale": stale}
 
 
+def resolve_timeline_media(root: Path, segment: str) -> dict[str, str | None]:
+    """Resolve preview media paths relative to project root."""
+    vo_candidates = [
+        root / "audio" / "voice" / f"{segment}_vo.wav",
+        root / "audio" / "stems" / "voice" / "voiceover_full.wav",
+        root / "segments" / segment / f"{segment}_vo.wav",
+    ]
+    vo_path = next((p for p in vo_candidates if p.exists()), None)
+    mp4 = root / "segments" / segment / "render.mp4"
+    html = root / "segments" / segment / "index.html"
+    return {
+        "vo_wav": vo_path.relative_to(root).as_posix() if vo_path else None,
+        "render_mp4": mp4.relative_to(root).as_posix() if mp4.exists() else None,
+        "composition_html": html.relative_to(root).as_posix() if html.exists() else None,
+    }
+
+
 def audio_summary(root: Path, segment: str) -> dict[str, Any]:
     vo = load_vo_timing(root, segment)
     beats = vo.get("beats", [])

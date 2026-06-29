@@ -10,6 +10,7 @@
 - 修改 status=approved|locked 的文件内容（除非用户显式 unlock）
 - 在 upstream stage ≠ approved 时运行下游脚本（如未 approved segment 就 render）
 - 跳过 stage_gate 直接写 state.json（必须用 stage_gate.py 或 Review Studio API）
+- **读取 `review-studio/` 源码**（`web/*`、`server/*` 等）来做常规制片 — Review Studio 只是给人用的网页控制台，与写脚本/做 segment 无关，读它会 token 爆炸。Agent 只读 **当前项目** `PROJECT_DIR` 下的产物，并用 `scripts/validate_gates.py`、`review_sync.py`、`regen_dispatch.py` 同步状态
 
 ## 允许
 - 处理 regen_queue 中 assigned_to 匹配的任务

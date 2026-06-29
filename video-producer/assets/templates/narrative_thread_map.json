@@ -1,0 +1,67 @@
+{
+  "version": "v001",
+  "story_scope": "single",
+  "user_input_points": [
+    "用户给的唯一事件或主题（一件事也要深挖前尘后果）"
+  ],
+  "master_thread": "一句话：这件事的弧线/真正讲的是什么（不是标题复读）",
+  "narrative_engine": "origin_to_aftermath|misread_correction|incentive_chase|escalation_ladder|timeline_pivot|hidden_third_party|two_front_squeeze",
+  "insight_layers": {
+    "surface": "观众普遍以为发生了什么",
+    "mechanism": "实际机制/博弈如何运转",
+    "secret": "较少人知道、可证实的细节（必填，附 claim_ids）"
+  },
+  "selective_omit": [
+    {
+      "topic": "可省略的背景或时间点",
+      "reason": "与 master_thread 无关 / 观众已知 / 无可靠来源"
+    }
+  ],
+  "spine": [
+    {
+      "phase": "hook",
+      "time_hint": "0-8s",
+      "thread_ids": ["T001"],
+      "viewer_payoff": "钩子：误读或秘辛预告",
+      "claim_ids": [],
+      "dwell_layers": {
+        "enter": "如何进入（承接开场）",
+        "evidence": "具体可引用细节",
+        "mechanism": "为什么重要",
+        "landing": "本节拍收束句"
+      },
+      "landing_line": "写完口播前必填：本拐点意味着什么",
+      "carry_forward": "下一节拍必须接住的线头"
+    },
+    {
+      "phase": "turn",
+      "time_hint": "25-60s",
+      "thread_ids": ["T002"],
+      "viewer_payoff": "博弈/转折/verified 关联",
+      "claim_ids": [],
+      "dwell_layers": {
+        "enter": "从上一节拍承接",
+        "evidence": "",
+        "mechanism": "",
+        "landing": ""
+      },
+      "landing_line": "",
+      "carry_forward": ""
+    },
+    {
+      "phase": "payoff",
+      "time_hint": "final",
+      "thread_ids": ["T001", "T002", "T003"],
+      "viewer_payoff": "master_thread 收束",
+      "claim_ids": [],
+      "dwell_layers": {
+        "enter": "回调前文关键细节",
+        "evidence": "",
+        "mechanism": "",
+        "landing": "一句 memorable 总结"
+      },
+      "landing_line": "",
+      "carry_forward": ""
+    }
+  ]
+}

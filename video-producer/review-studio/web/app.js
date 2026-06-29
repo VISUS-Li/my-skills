@@ -4,24 +4,29 @@ let activeView = "pipeline";
 let selectedStageId = "script";
 let selectedBeatId = null;
 let timelineData = null;
-let dragState = null;
+let timelineEditorHandle = null;
 let activeEditors = {};
 let lightboxZoom = 1;
+let beatsTtsPollTimer = null;
+let activeBeatsTts = null;
+let lastTtsProgress = { status: "idle" };
 
 const TABS = [
   { view: "pipeline", icon: "🎬", label: "流程" },
   { view: "script", icon: "📝", label: "文案" },
-  { view: "beats", icon: "🎯", label: "Beats" },
-  { view: "audio", icon: "🎙️", label: "音频" },
+  { view: "beats", icon: "🎙️", label: "口播 & 配音" },
   { view: "assets", icon: "🖼️", label: "资产" },
   { view: "timeline", icon: "⏱️", label: "时间轴" },
-  { view: "preview", icon: "▶️", label: "预览" },
   { view: "stage", icon: "📦", label: "阶段" },
   { view: "queue", icon: "📋", label: "待办" },
   { view: "jobs", icon: "⚙️", label: "任务" },
   { view: "qc", icon: "✅", label: "质检" },
   { view: "history", icon: "📜", label: "历史" },
 ];
+
+const ASSET_IMAGE_RE = /\.(svg|png|jpe?g|webp|gif)$/i;
+const ASSET_VIDEO_RE = /\.(mp4|webm|mov|m4v)$/i;
+const ASSET_PREVIEW_RE = /\.(svg|png|jpe?g|webp|gif|mp4|webm|mov|m4v)$/i;
 
 const STATUS_ZH = {
   draft: "草稿",
@@ -46,6 +51,10 @@ function statusZh(s) {
   return STATUS_ZH[s] || s || "—";
 }
 
+function statusClass(status) {
+  return `status ${status || "draft"}`;
+}
+
 function statusBadge(s) {
   return `<span class="${statusClass(s)}">${esc(statusZh(s))}</span>`;
 }
@@ -53,6 +62,19 @@ function statusBadge(s) {
 function mediaUrl(path) {
   if (!path) return "";
   return `/api/media/${String(path).split(/[/\\]/).filter(Boolean).map(encodeURIComponent).join("/")}`;
+}
+
+function assetMediaKind(path) {
+  if (!path) return null;
+  if (ASSET_VIDEO_RE.test(path)) return "video";
+  if (ASSET_IMAGE_RE.test(path)) return "image";
+  return null;
+}
+
+function assetKindLabel(kind) {
+  if (kind === "video") return "视频";
+  if (kind === "image") return "图片";
+  return "媒体";
 }
 
 function escAttr(s) {
@@ -95,12 +117,15 @@ function initWorkspaceToggle() {
 function initLightbox() {
   const lb = document.getElementById("asset-lightbox");
   const backdrop = document.getElementById("lightbox-backdrop");
-  const close = () => {
+  const content = document.getElementById("lightbox-content");
+  function close() {
     lb?.classList.add("hidden");
     backdrop?.classList.add("hidden");
-    document.getElementById("lightbox-content").innerHTML = "";
+    content?.querySelector("video")?.pause();
+    if (content) content.innerHTML = "";
     lightboxZoom = 1;
-  };
+    setLightboxMediaMode(null);
+  }
   document.getElementById("lightbox-close")?.addEventListener("click", close);
   backdrop?.addEventListener("click", close);
   document.getElementById("lightbox-zoom-in")?.addEventListener("click", () => setLightboxZoom(lightboxZoom + 0.25));
@@ -121,29 +146,42 @@ function setLightboxZoom(z) {
   if (el) el.style.transform = `scale(${lightboxZoom})`;
 }
 
+function setLightboxMediaMode(kind) {
+  const isVideo = kind === "video";
+  document.querySelectorAll("#lightbox-zoom-out, #lightbox-zoom-in, #lightbox-fit").forEach(el => {
+    el.classList.toggle("hidden", isVideo);
+  });
+}
+
 window.openAssetLightbox = async (path, title) => {
   const lb = document.getElementById("asset-lightbox");
   const backdrop = document.getElementById("lightbox-backdrop");
   const content = document.getElementById("lightbox-content");
   const url = mediaUrl(path);
+  const kind = assetMediaKind(path);
   document.getElementById("lightbox-title").textContent = title || path;
   lightboxZoom = 1;
   content.style.transform = "scale(1)";
-  const ext = (path.split(".").pop() || "").toLowerCase();
-  if (ext === "svg") {
-    try {
-      const res = await fetch(url);
-      const text = await res.text();
-      if (text.trim().startsWith("<") || text.includes("<svg")) {
-        content.innerHTML = `<object type="image/svg+xml" data="data:image/svg+xml;charset=utf-8,${encodeURIComponent(text)}"></object>`;
-      } else {
+  setLightboxMediaMode(kind);
+  if (kind === "video") {
+    content.innerHTML = `<video src="${url}" controls autoplay playsinline preload="metadata" class="lightbox-video"></video>`;
+  } else {
+    const ext = (path.split(".").pop() || "").toLowerCase();
+    if (ext === "svg") {
+      try {
+        const res = await fetch(url);
+        const text = await res.text();
+        if (text.trim().startsWith("<") || text.includes("<svg")) {
+          content.innerHTML = `<object type="image/svg+xml" data="data:image/svg+xml;charset=utf-8,${encodeURIComponent(text)}"></object>`;
+        } else {
+          content.innerHTML = `<img src="${url}" alt="${esc(title)}" />`;
+        }
+      } catch {
         content.innerHTML = `<img src="${url}" alt="${esc(title)}" />`;
       }
-    } catch {
+    } else {
       content.innerHTML = `<img src="${url}" alt="${esc(title)}" />`;
     }
-  } else {
-    content.innerHTML = `<img src="${url}" alt="${esc(title)}" />`;
   }
   lb.classList.remove("hidden");
   backdrop.classList.remove("hidden");
@@ -181,11 +219,28 @@ function editorGetValue(containerId) {
   return eid ? EditorPane.getValue(eid) : "";
 }
 
-function assetThumb(path, assetId) {
+function assetThumb(asset) {
+  const path = (typeof asset === "string") ? asset : (asset.media_path || asset.path_or_url);
+  const assetId = (typeof asset === "string") ? path : (asset.asset_id || path);
+  const exists = (typeof asset === "object") ? asset.exists !== false : true;
+  const kind = assetMediaKind(path);
+  if (!exists || !path) {
+    return `<div class="asset-thumb asset-thumb-missing" title="文件尚未生成">
+      <span class="asset-fallback">未生成</span>
+      <span class="zoom-hint missing">缺失</span>
+    </div>`;
+  }
   const url = mediaUrl(path);
+  const hint = kind === "video" ? "▶ 播放" : "🔍 放大";
+  if (kind === "video") {
+    return `<div class="asset-thumb asset-thumb-video" onclick="openAssetLightbox('${escAttr(path)}','${escAttr(assetId)}')" title="点击播放">
+      <video src="${url}" muted playsinline preload="metadata" class="asset-thumb-video-el"></video>
+      <span class="zoom-hint">${hint}</span>
+    </div>`;
+  }
   return `<div class="asset-thumb" onclick="openAssetLightbox('${escAttr(path)}','${escAttr(assetId)}')" title="点击放大">
     <img src="${url}" alt="${esc(assetId)}" loading="lazy" onerror="assetThumbFallback(this,'${escAttr(path)}')" />
-    <span class="zoom-hint">🔍 放大</span>
+    <span class="zoom-hint">${hint}</span>
   </div>`;
 }
 
@@ -212,6 +267,8 @@ function tableWrap(html) {
 }
 
 function setActiveTab(view) {
+  if (view === "audio") view = "beats";
+  if (view === "preview") view = "timeline";
   activeView = view;
   document.querySelectorAll(".tab").forEach(b => b.classList.toggle("active", b.dataset.view === view));
   document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
@@ -241,8 +298,59 @@ async function api(path, opts = {}) {
   return res.json();
 }
 
-function statusClass(status) {
-  return `status ${status || "draft"}`;
+function parseFetchError(data, fallback = "请求失败") {
+  if (!data) return fallback;
+  if (typeof data === "string") {
+    try {
+      return parseFetchError(JSON.parse(data), fallback);
+    } catch {
+      return data || fallback;
+    }
+  }
+  if (typeof data.detail === "string") return data.detail;
+  if (Array.isArray(data.detail)) {
+    return data.detail.map(item => item.msg || item.message || JSON.stringify(item)).join("；");
+  }
+  if (data.error) return String(data.error);
+  if (data.message) return String(data.message);
+  return fallback;
+}
+
+function setRefUploadUi(visible, label, pct) {
+  const wrap = document.getElementById("ref-upload-status");
+  const bar = document.getElementById("ref-upload-bar");
+  const lbl = document.getElementById("ref-upload-label");
+  const btn = document.getElementById("ref-upload-btn");
+  if (wrap) wrap.classList.toggle("hidden", !visible);
+  if (lbl) lbl.textContent = label || "处理中…";
+  if (bar) {
+    bar.style.width = `${Math.max(0, Math.min(100, pct || 0))}%`;
+    bar.classList.toggle("indeterminate", visible && (pct == null || pct <= 0));
+  }
+  if (btn) {
+    btn.disabled = visible;
+    btn.textContent = visible ? "处理中…" : "上传 WAV / MP3";
+  }
+}
+
+async function pollRefUpload(uploadId) {
+  for (let i = 0; i < 600; i++) {
+    await new Promise(r => setTimeout(r, 400));
+    const st = await api(`/audio/refs/upload/${uploadId}`);
+    setRefUploadUi(true, st.message || statusZh(st.status), st.progress ?? 10);
+    if (st.status === "completed") return st;
+    if (st.status === "failed") throw new Error(st.error || st.message || "上传失败");
+  }
+  throw new Error("上传超时，请稍后刷新参考音频库");
+}
+
+function bindRefUploadInput() {
+  const input = document.getElementById("tts-ref-upload");
+  if (!input || input.dataset.bound === "1") return;
+  input.dataset.bound = "1";
+  input.addEventListener("change", () => {
+    if (input.files?.[0]) uploadTtsRef().catch(e => toast(String(e.message || e)));
+  });
 }
 
 function esc(s) {
@@ -360,10 +468,10 @@ async function refreshActiveView() {
     pipeline: renderPipeline,
     script: renderScript,
     beats: renderBeats,
-    audio: renderAudio,
+    audio: renderBeats,
     assets: renderAssets,
     timeline: renderTimeline,
-    preview: renderPreview,
+    preview: renderTimeline,
     stage: renderStageDetail,
     queue: renderQueue,
     jobs: renderJobs,
@@ -373,27 +481,226 @@ async function refreshActiveView() {
   if (map[activeView]) await map[activeView]();
 }
 
+async function ensureTtsOnline() {
+  const health = await api("/tts/health");
+  if (!health.available) {
+    const detail = health.reason || health.base_url || "IndexTTS 不可用";
+    throw new Error(`IndexTTS 离线：${detail}`);
+  }
+  return health;
+}
+
+function isTtsPreset(name) {
+  return /indextts|audio_chain_tts/.test(name);
+}
+
+function ttsProgressPercent(prog) {
+  if (!prog || prog.status === "idle") return 0;
+  if (typeof prog.percent === "number" && !Number.isNaN(prog.percent)) {
+    return Math.min(100, Math.max(0, Math.round(prog.percent)));
+  }
+  const total = Number(prog.total || 0);
+  const done = Number(prog.done || 0);
+  if (total > 0) return Math.min(100, Math.round((done / total) * 100));
+  return prog.status === "completed" ? 100 : 0;
+}
+
+function ttsProgressLabel(prog) {
+  if (!prog || prog.status === "idle") return "配音进度：空闲";
+  const pct = ttsProgressPercent(prog);
+  const beatPart = prog.total
+    ? `${prog.done ?? 0}/${prog.total}`
+    : `${pct}%`;
+  const phase = prog.phase && prog.phase !== "generating" ? ` · ${prog.phase}` : "";
+  const cur = prog.current_beat ? ` · ${prog.current_beat}` : "";
+  const msg = prog.message ? ` · ${prog.message}` : "";
+  return `配音进度：${beatPart}${phase}${cur}${msg} (${statusZh(prog.status)})`;
+}
+
 async function runPreset(name, extra = "") {
+  if (isTtsPreset(name)) await ensureTtsOnline();
   const url = `/jobs/preset/${name}?segment=${currentSegment}${extra}`;
   const res = await fetch(`${API}${url}`, { method: "POST" });
   const data = await res.json();
   if (!res.ok) throw new Error(JSON.stringify(data));
   toast(`任务 ${name}：${data.job.status === "queued" ? "已排队" : data.job.status}`);
-  pollJob(data.job.id);
+  const logEl = document.getElementById("vo-log")
+    || document.getElementById("timeline-log")
+    || document.getElementById("job-log");
+  const isTts = isTtsPreset(name);
+  pollJob(data.job.id, logEl, { isTts });
+  if (isTts) startBeatsTtsTracking(data.job.id, null);
   return data.job;
 }
 
-async function pollJob(jobId, logEl) {
-  for (let i = 0; i < 120; i++) {
-    await new Promise(r => setTimeout(r, 1000));
+function formatTtsProgress(prog) {
+  if (!prog || prog.status === "idle") return "";
+  if (prog.phase === "lint" && prog.lint_score != null) {
+    const issues = (prog.lint_issues || []).slice(0, 3).map(i => i.message || i).join("; ");
+    return `[时长质检] ${prog.lint_score}/${prog.lint_fail_under ?? 80}${issues ? ` · ${issues}` : ""} (${statusZh(prog.status)})`;
+  }
+  if (prog.message) return `[配音进度] ${prog.message} (${prog.percent ?? 0}% · ${statusZh(prog.status)})`;
+  const cur = prog.current_beat ? ` · 当前 ${prog.current_beat}` : "";
+  const err = prog.error ? `\n错误：${prog.error}` : "";
+  return `[配音进度] ${prog.done ?? 0}/${prog.total ?? "?"}${cur} (${statusZh(prog.status)})${err}`;
+}
+
+async function pollJob(jobId, logEl, options = {}) {
+  const intervalMs = options.isTts ? 500 : 1000;
+  const maxSec = options.maxSec ?? (options.isTts ? 900 : 120);
+  const maxIter = Math.ceil((maxSec * 1000) / intervalMs);
+  for (let i = 0; i < maxIter; i++) {
+    await new Promise(r => setTimeout(r, intervalMs));
     const { job } = await api(`/jobs/${jobId}`);
-    if (logEl) logEl.textContent = `[${job.status}] ${job.label || job.script}\n${job.stdout_tail || ""}\n${job.stderr_tail || ""}`;
+    let progressLine = "";
+    if (options.isTts) {
+      try {
+        const prog = await api("/tts/progress");
+        progressLine = formatTtsProgress(prog);
+        updateTtsProgressBar(prog);
+        updateBeatsTtsCells(prog);
+        lastTtsProgress = prog;
+      } catch { /* optional */ }
+    }
+    if (logEl) {
+      logEl.textContent = `[${job.status}] ${job.label || job.script}\n${progressLine}\n${job.stdout_tail || ""}\n${job.stderr_tail || ""}`.trim();
+    }
     if (job.status === "completed" || job.status === "failed") {
       toast(`任务${job.status === "completed" ? "完成" : "失败"}`);
+      if (options.isTts) {
+        try {
+          const prog = await api("/tts/progress");
+          updateTtsProgressBar(prog);
+          updateBeatsTtsCells(prog);
+          lastTtsProgress = prog;
+        } catch { /* optional */ }
+      }
+      stopBeatsTtsTracking(false);
       if (job.status === "completed") await refreshActiveView();
       return job;
     }
   }
+  toast("任务轮询超时，请到「任务」页查看");
+}
+
+function updateTtsProgressBar(prog) {
+  const bar = document.getElementById("tts-progress-bar");
+  const label = document.getElementById("tts-progress-label");
+  if (!bar || !label) return;
+  if (!prog || prog.status === "idle") {
+    bar.style.width = "0%";
+    label.textContent = "配音进度：空闲";
+    return;
+  }
+  const pct = ttsProgressPercent(prog);
+  bar.style.width = `${pct}%`;
+  label.textContent = ttsProgressLabel(prog);
+}
+
+function initCollapsiblePanel(toggleId, panelId, storageKey, defaultCollapsed = false) {
+  const toggle = document.getElementById(toggleId);
+  const panel = document.getElementById(panelId);
+  if (!toggle || !panel) return;
+  const collapsed = localStorage.getItem(storageKey) === "1" || (localStorage.getItem(storageKey) === null && defaultCollapsed);
+  panel.classList.toggle("collapsed", collapsed);
+  toggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
+  toggle.onclick = () => {
+    const now = panel.classList.toggle("collapsed");
+    localStorage.setItem(storageKey, now ? "1" : "0");
+    toggle.setAttribute("aria-expanded", now ? "false" : "true");
+  };
+}
+
+function formatRefDate(iso) {
+  if (!iso) return "—";
+  return String(iso).slice(0, 19).replace("T", " ");
+}
+
+function beatTtsStatusHtml(beatId, prog) {
+  if (!prog || prog.status === "idle") {
+    return `<span class="tts-beat-idle">—</span>`;
+  }
+  const bs = prog.beat_status?.[beatId];
+  const completed = prog.completed_beats || [];
+  if (bs === "running" || (prog.status === "running" && prog.current_beat === beatId)) {
+    return `<span class="status running tts-beat-status">生成中</span>`;
+  }
+  if (bs === "failed" || (prog.status === "failed" && prog.current_beat === beatId)) {
+    return `<span class="status failed tts-beat-status">失败</span>`;
+  }
+  if (bs === "done" || completed.includes(beatId)) {
+    return `<span class="status completed tts-beat-status">已完成</span>`;
+  }
+  if (bs === "pending" && prog.status === "running") {
+    return `<span class="status queued tts-beat-status">排队</span>`;
+  }
+  if (prog.status === "running" && Array.isArray(prog.beats) && prog.beats.includes(beatId)) {
+    return `<span class="status queued tts-beat-status">排队</span>`;
+  }
+  if (prog.status === "completed" && Array.isArray(prog.beats) && prog.beats.includes(beatId)) {
+    return `<span class="status completed tts-beat-status">已完成</span>`;
+  }
+  return `<span class="tts-beat-idle">—</span>`;
+}
+
+function updateBeatsTtsCells(prog) {
+  lastTtsProgress = prog || { status: "idle" };
+  document.querySelectorAll("[data-tts-beat]").forEach(el => {
+    const beatId = el.dataset.ttsBeat;
+    el.innerHTML = beatTtsStatusHtml(beatId, lastTtsProgress);
+    const drawerEl = document.getElementById(`drawer-tts-st-${beatId}`);
+    if (drawerEl) drawerEl.innerHTML = beatTtsStatusHtml(beatId, lastTtsProgress);
+  });
+  updateTtsProgressBar(prog);
+}
+
+function stopBeatsTtsTracking(refresh = false) {
+  if (beatsTtsPollTimer) {
+    clearInterval(beatsTtsPollTimer);
+    beatsTtsPollTimer = null;
+  }
+  activeBeatsTts = null;
+  if (refresh && activeView === "beats") renderBeats();
+}
+
+function startBeatsTtsTracking(jobId, beatIds) {
+  activeBeatsTts = { jobId, beatIds };
+  if (beatsTtsPollTimer) clearInterval(beatsTtsPollTimer);
+  beatsTtsPollTimer = setInterval(async () => {
+    try {
+      const prog = await api("/tts/progress");
+      updateBeatsTtsCells(prog);
+      updateTtsProgressBar(prog);
+      if (activeBeatsTts?.jobId) {
+        const { job } = await api(`/jobs/${activeBeatsTts.jobId}`);
+        if (job.status === "completed" || job.status === "failed") {
+          stopBeatsTtsTracking(true);
+        }
+      } else if (prog.status === "completed" || prog.status === "failed") {
+        stopBeatsTtsTracking(true);
+      }
+    } catch { /* optional */ }
+  }, 500);
+}
+
+function renderRefLibraryRows(refs) {
+  const items = refs.refs || [];
+  if (!items.length) {
+    return `<tr><td colspan="5">暂无参考音频，请上传 WAV 文件</td></tr>`;
+  }
+  return items.map(r => `
+    <tr class="ref-row${r.selected ? " ref-row-selected" : ""}">
+      <td>${r.selected ? `<span class="status approved">当前</span>` : ""} ${esc(r.label || r.name)} <span class="ref-format">${(r.format || "wav").toUpperCase()}</span></td>
+      <td>${Math.round((r.size_bytes || 0) / 1024)} KB</td>
+      <td>${formatRefDate(r.uploaded_at)}</td>
+      <td><audio controls preload="none" src="${mediaUrl(r.path)}" class="ref-audio-player"></audio></td>
+      <td>
+        <div class="toolbar ref-toolbar">
+          ${r.selected ? "" : `<button class="btn btn-primary btn-compact" onclick="selectTtsRef('${escAttr(r.path)}')">选用</button>`}
+          <button class="btn btn-secondary btn-compact" onclick="deleteTtsRef('${escAttr(r.path)}','${escAttr(r.name)}')">删除</button>
+        </div>
+      </td>
+    </tr>`).join("");
 }
 
 // --- Pipeline ---
@@ -453,7 +760,7 @@ async function renderScript() {
     </div>
     <div class="card card-no-accent" style="margin-top:20px">
       <div class="card-icon-title"><span class="emoji">🎯</span><h3>Beats 概览</h3></div>
-      <p class="metric">共 <strong>${beats.length}</strong> 条 · 详细编辑请前往「Beats」· 改口播后请到「音频」跑对齐链</p>
+      <p class="metric">共 <strong>${beats.length}</strong> 条 · 逐条编辑请前往「口播 & 配音」</p>
       ${tableWrap(`<thead><tr><th>Beat</th><th>口播</th><th>计划</th><th>实测</th></tr></thead>
         <tbody>${beats.slice(0, 15).map(b => `<tr>
           <td>${b.beat_id}</td>
@@ -483,15 +790,18 @@ window.saveVoiceover = async () => {
   toast("口播已保存");
 };
 
-// --- Beats ---
-async function renderBeats() {
-  const { beats } = await api(`/beats?segment=${currentSegment}`);
-  document.getElementById("beats").innerHTML = pageWrap("Beats 口播", `${currentSegment} · 逐条编辑、试听与 TTS`, tableWrap(`<thead><tr>
-    <th>Beat</th><th>口播</th><th>计划</th><th>实测</th><th>偏差</th><th>CPS</th><th>状态</th><th>操作</th>
-  </tr></thead><tbody>${beats.map(b => {
-    const cps = b.vo?.cps ?? (b.char_count && b.actual_sec ? (Number(b.char_count)/Number(b.actual_sec)).toFixed(1) : "-");
+// --- 口播 & 配音（Beats + Audio 合并） ---
+function beatNeedsAttention(b) {
+  const drift = Math.abs(Number(b.drift_sec || 0));
+  return drift > 0.3 || b.cps_band === "warn" || b.cps_band === "fail";
+}
+
+function renderBeatTableRows(beats, prog) {
+  return beats.map(b => {
+    const cps = b.vo?.cps ?? (b.char_count && b.actual_sec ? (Number(b.char_count) / Number(b.actual_sec)).toFixed(1) : "-");
     const drift = b.drift_sec != null ? `${b.drift_sec > 0 ? "+" : ""}${b.drift_sec}s` : "-";
-    return `<tr>
+    const driftClass = beatNeedsAttention(b) ? "beat-row-attention" : "";
+    return `<tr class="${driftClass}" data-beat-row="${b.beat_id}">
       <td><a href="#" onclick="openBeatDetail('${b.beat_id}');return false">${b.beat_id}</a></td>
       <td><textarea id="n-${b.beat_id}" class="beat-text" rows="2">${esc(b.narration || "")}</textarea></td>
       <td>${b.planned_sec ?? b.duration_sec ?? "-"}s</td>
@@ -499,13 +809,167 @@ async function renderBeats() {
       <td>${drift}</td>
       <td><span class="${statusClass(b.cps_band)}">${cps}</span></td>
       <td>${statusBadge(b.review_status)}</td>
+      <td data-tts-beat="${b.beat_id}">${beatTtsStatusHtml(b.beat_id, prog)}</td>
+      <td class="beat-audio-cell">${b.vo_wav ? `<audio controls preload="none" src="${mediaUrl(b.vo_wav)}"></audio>` : `<span class="tts-beat-idle">无</span>`}</td>
       <td>
         <button class="btn btn-secondary btn-compact" onclick="saveBeat('${b.beat_id}')">保存</button>
-        <button class="btn btn-secondary btn-compact" onclick="regenBeatTts('${b.beat_id}')">配音</button>
-        ${b.vo_wav ? `<audio controls src="${mediaUrl(b.vo_wav)}"></audio>` : ""}
+        <button class="btn btn-secondary btn-compact" onclick="regenBeatTts('${b.beat_id}', true)">配音+对齐</button>
+        <button class="btn btn-secondary btn-compact" onclick="regenBeatTts('${b.beat_id}', false)">仅配音</button>
       </td>
     </tr>`;
-  }).join("")}</tbody>`));
+  }).join("");
+}
+
+async function renderBeats() {
+  let prog = lastTtsProgress;
+  try {
+    prog = await api("/tts/progress");
+    lastTtsProgress = prog;
+  } catch { /* optional */ }
+
+  const summary = await api(`/audio/summary?segment=${currentSegment}`);
+  const { beats } = await api(`/beats?segment=${currentSegment}`);
+  const tts = summary.tts || {};
+  let cfg = {};
+  try {
+    cfg = (await api("/tts/config")).config || {};
+  } catch {
+    cfg = {};
+  }
+  const refs = summary.refs || { refs: [], selected_path: "" };
+  const defaults = cfg.defaults || {};
+  const selectedRef = refs.selected_path || cfg.voice_reference?.path || "";
+  const attentionCount = beats.filter(beatNeedsAttention).length;
+
+  document.getElementById("beats").innerHTML = pageWrap(
+    "口播 & 配音",
+    `${currentSegment} · ${beats.length} 条 beat · 编辑口播、IndexTTS 配音与时长对齐`,
+    `
+    <div class="card card-no-accent vo-summary-card">
+      <div class="vo-summary-metrics">
+        <p class="metric">IndexTTS · <strong>${tts.available ? "在线" : "离线"}</strong> ${esc(tts.base_url || tts.reason || "")}</p>
+        <p class="metric">参考音 · <strong>${tts.reference_exists ? "已就绪" : "缺失"}</strong> ${esc(tts.reference_path || selectedRef || "未设置")}</p>
+        <p class="metric">计划总长 <strong>${summary.planned_total_sec}s</strong> · 实测 <strong>${summary.actual_total_sec}s</strong> · 偏差 <strong>${summary.drift_total_sec}s</strong>${attentionCount ? ` · <strong>${attentionCount}</strong> 条需关注` : ""}</p>
+      </div>
+      <div class="tts-progress-wrap">
+        <p id="tts-progress-label" class="metric">配音进度：空闲</p>
+        <div class="tts-progress-track"><div id="tts-progress-bar" class="tts-progress-bar"></div></div>
+      </div>
+      <div class="toolbar vo-chain-toolbar">
+        <button class="btn btn-primary" onclick="runPreset('audio_chain_tts').catch(e=>toast(e.message))">完整链：配音→对齐</button>
+        <button class="btn btn-secondary" onclick="runPreset('indextts_segment').catch(e=>toast(e.message))">仅整段配音</button>
+        <button class="btn btn-secondary" onclick="runPreset('audio_chain').catch(e=>toast(e.message))">仅对齐（不配音）</button>
+        <button class="btn btn-secondary" onclick="runPreset('audio_chain_build').catch(e=>toast(e.message))">对齐 + 重建画面</button>
+        <button class="btn btn-secondary" onclick="runPreset('measure_vo').catch(e=>toast(e.message))">测量时长</button>
+        <button class="btn btn-secondary" onclick="runPreset('build_micro_timing').catch(e=>toast(e.message))">微事件对齐</button>
+        <button class="btn btn-secondary" onclick="checkTtsHealth().catch(e=>toast(e.message))">检测 IndexTTS</button>
+      </div>
+      <pre id="vo-log" class="vo-log"></pre>
+    </div>
+    <div class="vo-workspace">
+      <div class="vo-main">
+        <div class="card card-no-accent">
+          <div class="beats-filter-bar">
+            <label class="beats-filter-label">
+              <input type="checkbox" id="beats-filter-attention" onchange="toggleBeatsFilter()" />
+              仅显示需关注（偏差 &gt;0.3s 或 CPS 异常）
+            </label>
+            <span id="beats-filter-count" class="metric"></span>
+          </div>
+          ${tableWrap(`<thead><tr>
+            <th>Beat</th><th>口播</th><th>计划</th><th>实测</th><th>偏差</th><th>CPS</th><th>状态</th><th>配音</th><th>音频</th><th>操作</th>
+          </tr></thead><tbody id="beats-table-body">${renderBeatTableRows(beats, prog)}</tbody>`)}
+        </div>
+      </div>
+      <aside class="vo-aside">
+        <div class="card card-no-accent">
+          <div class="card-icon-title"><span class="emoji">🎧</span><h3>参考音频库</h3></div>
+          <p class="metric">共 <strong>${(refs.refs || []).length}</strong> 条 · WAV / MP3</p>
+          <p class="metric">当前 <strong>${esc(selectedRef || "未设置")}</strong></p>
+          ${tableWrap(`<thead><tr><th>名称</th><th>大小</th><th>上传</th><th>试听</th><th>操作</th></tr></thead>
+            <tbody>${renderRefLibraryRows(refs)}</tbody>`)}
+          <div id="ref-upload-status" class="ref-upload-status hidden">
+            <p id="ref-upload-label" class="metric">准备上传…</p>
+            <div class="tts-progress-track"><div id="ref-upload-bar" class="tts-progress-bar indeterminate"></div></div>
+          </div>
+          <div class="toolbar">
+            <input id="tts-ref-upload" class="ios-input ref-upload-input" type="file" accept=".wav,.mp3,audio/wav,audio/mpeg,audio/mp3" />
+            <button type="button" id="ref-upload-btn" class="btn btn-primary" onclick="uploadTtsRef().catch(e=>toast(e.message))">上传</button>
+          </div>
+        </div>
+        <div class="card card-no-accent">
+          <button type="button" id="tts-config-toggle" class="collapse-header" aria-expanded="false">
+            <span class="toggle-icon">▼</span>
+            <span class="emoji">⚙️</span>
+            <span>IndexTTS 配置</span>
+            <span class="collapse-hint">${esc(cfg.base_url || "未配置")}</span>
+          </button>
+          <div id="tts-config-panel" class="collapse-panel collapsed">
+            <div class="ios-group">
+              <div class="group-caption">服务地址</div>
+              <div class="ios-group-body">
+                <div class="field-row field-row-stack">
+                  <label class="field-label" for="tts-base-url">Gradio 地址</label>
+                  <input id="tts-base-url" class="ios-input" type="url" placeholder="http://10.0.221.33:37191/" value="${escAttr(cfg.base_url || "")}" />
+                </div>
+              </div>
+            </div>
+            <div class="ios-group" style="margin-top:12px">
+              <div class="group-caption">生成参数</div>
+              <div class="ios-group-body">
+                <div class="field-row">
+                  <label class="field-label" for="tts-emo-weight">情感权重</label>
+                  <input id="tts-emo-weight" class="ios-input" type="number" step="0.05" min="0" max="1" value="${defaults.emo_weight ?? 0.65}" />
+                </div>
+                <div class="field-divider"></div>
+                <div class="field-row">
+                  <label class="field-label" for="tts-temperature">Temperature</label>
+                  <input id="tts-temperature" class="ios-input" type="number" step="0.05" min="0" max="2" value="${defaults.temperature ?? 0.8}" />
+                </div>
+                <div class="field-divider"></div>
+                <div class="field-row">
+                  <label class="field-label" for="tts-top-p">Top P</label>
+                  <input id="tts-top-p" class="ios-input" type="number" step="0.05" min="0" max="1" value="${defaults.top_p ?? 0.8}" />
+                </div>
+              </div>
+            </div>
+            <div class="toolbar">
+              <button class="btn btn-primary" onclick="saveTtsConfig().catch(e=>toast(e.message))">保存配置</button>
+              <button class="btn btn-secondary" onclick="checkTtsHealth().catch(e=>toast(e.message))">检测连接</button>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>`
+  );
+
+  window.__beatsAllRows = beats;
+  initCollapsiblePanel("tts-config-toggle", "tts-config-panel", "rs-tts-config-collapsed", true);
+  bindRefUploadInput();
+  updateTtsProgressBar(summary.progress || prog);
+  updateBeatsTtsCells(prog);
+  updateBeatsFilterCount();
+}
+
+window.toggleBeatsFilter = () => {
+  const onlyAttention = document.getElementById("beats-filter-attention")?.checked;
+  const beats = window.__beatsAllRows || [];
+  document.querySelectorAll("[data-beat-row]").forEach(row => {
+    const beatId = row.dataset.beatRow;
+    const beat = beats.find(b => b.beat_id === beatId);
+    if (!beat) return;
+    row.style.display = onlyAttention && !beatNeedsAttention(beat) ? "none" : "";
+  });
+  updateBeatsFilterCount();
+};
+
+function updateBeatsFilterCount() {
+  const el = document.getElementById("beats-filter-count");
+  if (!el) return;
+  const beats = window.__beatsAllRows || [];
+  const onlyAttention = document.getElementById("beats-filter-attention")?.checked;
+  const visible = onlyAttention ? beats.filter(beatNeedsAttention).length : beats.length;
+  el.textContent = `显示 ${visible} / ${beats.length} 条`;
 }
 
 window.openBeatDetail = async (beatId) => {
@@ -520,12 +984,15 @@ window.openBeatDetail = async (beatId) => {
     <textarea id="drawer-narration" class="beat-text" rows="4">${esc(beat.narration || "")}</textarea>
     <p class="metric">计划 ${beat.planned_sec ?? "-"}s · 实测 ${beat.vo?.duration_sec ?? "-"}s · CPS ${beat.vo?.cps ?? "-"}</p>
     <p class="metric">Claim ${esc(beat.claim_ids || "-")} · 动作 ${esc(beat.semantic_action || "-")}</p>
-    ${beat.vo_wav ? `<audio controls src="${mediaUrl(beat.vo_wav)}"></audio>` : ""}
+    ${beat.vo_wav ? `<audio controls preload="none" src="${mediaUrl(beat.vo_wav)}"></audio>` : ""}
+    <p style="margin-top:12px"><strong>IndexTTS 配音状态</strong></p>
+    <div id="drawer-tts-st-${beatId}" class="beat-drawer-tts">${beatTtsStatusHtml(beatId, lastTtsProgress)}</div>
     <p><strong>微事件 (${(beat.micro_events || []).length})</strong></p>
     <ul>${micro || "<li>无</li>"}</ul>
     <div class="toolbar">
       <button class="btn btn-primary" onclick="saveBeatFromDrawer('${beatId}')">保存口播</button>
-      <button class="btn btn-secondary" onclick="regenBeatTts('${beatId}')">重生成 TTS</button>
+      <button class="btn btn-secondary" onclick="regenBeatTts('${beatId}', true)">配音+对齐</button>
+      <button class="btn btn-secondary" onclick="regenBeatTts('${beatId}', false)">仅配音</button>
     </div>
     <div class="ios-group" style="margin-top:16px">
       <div class="group-caption">手动时长</div>
@@ -572,59 +1039,142 @@ async function saveBeat(beatId) {
   await renderBeats();
 }
 
-window.regenBeatTts = async (beatId) => {
-  await fetch(`${API}/jobs/preset/indextts_beats?segment=${currentSegment}&beats=${beatId}`, { method: "POST" })
+window.regenBeatTts = async (beatId, align = true) => {
+  try {
+    await ensureTtsOnline();
+  } catch (err) {
+    toast(String(err.message || err));
+    return;
+  }
+  const preset = align ? "indextts_beats_align" : "indextts_beats";
+  await fetch(`${API}/jobs/preset/${preset}?segment=${currentSegment}&beats=${beatId}`, { method: "POST" })
     .then(r => r.json())
-    .then(d => { toast(`配音任务：${statusZh(d.job?.status)}`); pollJob(d.job.id); });
+    .then(d => {
+      if (d.detail) throw new Error(typeof d.detail === "string" ? d.detail : JSON.stringify(d.detail));
+      toast(`${beatId} 配音任务：${statusZh(d.job?.status)}`);
+      const logEl = document.getElementById("vo-log");
+      pollJob(d.job.id, logEl, { isTts: true });
+      startBeatsTtsTracking(d.job.id, [beatId]);
+      const drawerSt = document.getElementById(`drawer-tts-st-${beatId}`);
+      if (drawerSt) drawerSt.innerHTML = beatTtsStatusHtml(beatId, { status: "running", current_beat: beatId, beat_status: { [beatId]: "running" } });
+    })
+    .catch(e => toast(String(e.message || e)));
 };
 
-// --- Audio Lab ---
-async function renderAudio() {
-  const summary = await api(`/audio/summary?segment=${currentSegment}`);
-  const tts = summary.tts || {};
-  const driftRows = (summary.drift_beats || []).slice(0, 20).map(b =>
-    `<tr><td>${b.beat_id}</td><td>${b.planned_sec}s</td><td>${b.duration_sec}s</td>
-    <td>${b.drift_sec > 0 ? "+" : ""}${b.drift_sec}s</td>
-    <td><span class="${statusClass(b.cps_band)}">${b.cps}</span></td></tr>`
-  ).join("");
-  document.getElementById("audio").innerHTML = pageWrap("音频实验室", "IndexTTS 配音与时长对齐", `
-    <div class="card card-no-accent">
-      <div class="card-icon-title"><span class="emoji">🎙️</span><h3>连接与时长</h3></div>
-      <p class="metric">IndexTTS · <strong>${tts.available ? "在线" : "离线"}</strong> ${esc(tts.base_url || tts.reason || "")}</p>
-      <p class="metric">计划总长 <strong>${summary.planned_total_sec}s</strong> · 实测 <strong>${summary.actual_total_sec}s</strong> · 偏差 <strong>${summary.drift_total_sec}s</strong></p>
-      <div class="toolbar">
-        <button class="btn btn-primary" onclick="runPreset('audio_chain_tts').catch(e=>toast(e.message))">完整链：配音→对齐</button>
-        <button class="btn btn-secondary" onclick="runPreset('audio_chain').catch(e=>toast(e.message))">仅对齐（不配音）</button>
-        <button class="btn btn-secondary" onclick="runPreset('audio_chain_build').catch(e=>toast(e.message))">对齐 + 重建画面</button>
-        <button class="btn btn-secondary" onclick="runPreset('measure_vo').catch(e=>toast(e.message))">测量时长</button>
-        <button class="btn btn-secondary" onclick="runPreset('build_micro_timing').catch(e=>toast(e.message))">微事件对齐</button>
-      </div>
-      <pre id="audio-log"></pre>
-    </div>
-    <div class="card card-no-accent" style="margin-top:20px">
-      <h3>时长偏差 Beats（${(summary.drift_beats || []).length}）</h3>
-      ${tableWrap(`<thead><tr><th>Beat</th><th>计划</th><th>实测</th><th>偏差</th><th>CPS</th></tr></thead>
-      <tbody>${driftRows || "<tr><td colspan=5>无明显偏差</td></tr>"}</tbody>`)}
-    </div>`);
-}
+// --- Audio helpers (sidebar in 口播 & 配音) ---
+window.selectTtsRef = async (path) => {
+  await api("/audio/refs/select", { method: "PUT", body: JSON.stringify({ path }) });
+  toast(`已选用：${path.split("/").pop()}`);
+  await renderBeats();
+};
+
+window.deleteTtsRef = async (path, name) => {
+  if (!confirm(`确定删除参考音频「${name}」？`)) return;
+  const q = new URLSearchParams({ path });
+  const res = await fetch(`${API}/audio/refs?${q}`, { method: "DELETE" });
+  const data = await res.json();
+  if (!res.ok) throw new Error(typeof data.detail === "string" ? data.detail : JSON.stringify(data));
+  toast(`已删除：${name}`);
+  await renderBeats();
+};
+
+window.saveTtsConfig = async () => {
+  const baseUrl = document.getElementById("tts-base-url")?.value.trim();
+  const body = {
+    base_url: baseUrl,
+    webui_url: baseUrl,
+    defaults: {
+      emo_weight: parseFloat(document.getElementById("tts-emo-weight")?.value || "0.65"),
+      temperature: parseFloat(document.getElementById("tts-temperature")?.value || "0.8"),
+      top_p: parseFloat(document.getElementById("tts-top-p")?.value || "0.8"),
+    },
+  };
+  const res = await api("/tts/config", { method: "PUT", body: JSON.stringify(body) });
+  toast(`配置已保存 · IndexTTS ${res.health?.available ? "在线" : "离线"}`);
+  await renderBeats();
+};
+
+window.uploadTtsRef = async () => {
+  const input = document.getElementById("tts-ref-upload");
+  const file = input?.files?.[0];
+  if (!file) throw new Error("请先选择 WAV 或 MP3 文件");
+  const lower = file.name.toLowerCase();
+  if (!lower.endsWith(".wav") && !lower.endsWith(".mp3")) {
+    throw new Error("仅支持 .wav 和 .mp3 文件");
+  }
+  const form = new FormData();
+  form.append("file", file, file.name);
+  setRefUploadUi(true, "正在上传…", 8);
+  let res;
+  try {
+    res = await fetch(`${API}/audio/refs/upload?select=true`, { method: "POST", body: form });
+  } catch (err) {
+    setRefUploadUi(false);
+    throw err;
+  }
+  let data = {};
+  try {
+    data = await res.json();
+  } catch {
+    data = {};
+  }
+  if (!res.ok) {
+    setRefUploadUi(false);
+    throw new Error(parseFetchError(data, `上传失败 (${res.status})`));
+  }
+  setRefUploadUi(true, "已接收，准备转码…", 15);
+  const finalState = await pollRefUpload(data.upload_id);
+  setRefUploadUi(false);
+  toast(`已上传：${finalState.result?.path || file.name}`);
+  if (input) input.value = "";
+  await renderBeats();
+};
+
+window.checkTtsHealth = async () => {
+  const health = await api("/tts/health");
+  toast(`IndexTTS ${health.available ? "在线" : "离线"} · ${health.base_url || health.reason || ""}`);
+  await renderBeats();
+};
 
 // --- Assets ---
 async function renderAssets() {
   const { assets } = await api(`/assets?segment=${currentSegment}`);
-  const visual = assets.filter(a => /\.(svg|png|jpe?g|webp|gif)$/i.test(a.path_or_url || ""));
-  document.getElementById("assets").innerHTML = pageWrap("视觉资产", `${currentSegment} · 共 ${visual.length} 项 · 点击缩略图放大`, `<div class="asset-grid">${visual.map(a => `
-    <article class="card asset-card card-no-accent">
-      ${assetThumb(a.path_or_url, a.asset_id)}
+  const visual = assets.filter(a => ASSET_PREVIEW_RE.test(a.path_or_url || ""));
+  const missing = visual.filter(a => !a.exists).length;
+  const videoCount = visual.filter(a => assetMediaKind(a.path_or_url || a.media_path) === "video").length;
+  const subtitle = `${currentSegment} · 共 ${visual.length} 项${videoCount ? `（${videoCount} 视频）` : ""}${missing ? ` · ${missing} 项未生成` : ""} · 点击缩略图预览`;
+  document.getElementById("assets").innerHTML = pageWrap("媒体资产", subtitle, `${missing ? `<div class="card card-no-accent asset-missing-banner"><p class="metric">有 ${missing} 个资产在 manifest 中已登记但磁盘上尚无文件。请生成 <code>segments/${currentSegment}/assets/</code> 下对应文件后刷新，或运行 <code>python scripts/review_sync.py &lt;project&gt;</code> 同步。</p></div>` : ""}<div class="asset-grid">${visual.map(a => {
+    const path = a.media_path || a.path_or_url || "";
+    const kind = assetMediaKind(path || a.path_or_url || "");
+    const previewLabel = kind === "video" ? "播放" : "放大";
+    return `
+    <article class="card asset-card card-no-accent${a.exists ? "" : " asset-card-missing"}">
+      ${assetThumb(a)}
       <h3>${a.asset_id}</h3>
+      ${kind ? `<span class="status draft asset-kind-badge">${assetKindLabel(kind)}</span>` : ""}
+      ${a.exists ? "" : `<span class="status draft">未生成</span>`}
       ${statusBadge(a.review_status || "review")}
+      <p class="metric asset-path">${esc(a.path_or_url || "")}</p>
       <div class="toolbar">
-        <button class="btn btn-primary btn-compact" onclick="reviewAsset('${a.asset_id}','approved')">通过</button>
+        <button class="btn btn-primary btn-compact" onclick="reviewAsset('${a.asset_id}','approved')" ${a.exists ? "" : "disabled title=\"请先生成文件\""}>通过</button>
         <button class="btn btn-secondary btn-compact" onclick="rejectAsset('${a.asset_id}')">驳回</button>
-        <button class="btn btn-secondary btn-compact" onclick="openAssetLightbox('${escAttr(a.path_or_url)}','${escAttr(a.asset_id)}')">放大</button>
+        <button class="btn btn-secondary btn-compact" onclick="openAssetLightbox('${escAttr(path)}','${escAttr(a.asset_id)}')" ${a.exists ? "" : "disabled"}>${previewLabel}</button>
+        <button class="btn btn-secondary btn-compact" onclick="openAssetFolder('${escAttr(path || a.path_or_url)}')">打开目录</button>
         <button class="btn btn-secondary btn-compact" onclick="enqueueAsset('${a.asset_id}')">加入待办</button>
       </div>
-    </article>`).join("") || `<div class="card card-no-accent"><p class="metric">暂无视觉资产</p></div>`}</div>`);
+    </article>`;
+  }).join("") || `<div class="card card-no-accent"><p class="metric">暂无媒体资产</p></div>`}</div>`);
 }
+
+window.openAssetFolder = async (path) => {
+  if (!path) return toast("无可用路径");
+  try {
+    const res = await api("/dialog/reveal-path", { method: "POST", body: JSON.stringify({ path }) });
+    toast(res.selected ? "已在文件管理器中定位文件" : "已在文件管理器中打开目录");
+  } catch (err) {
+    toast(String(err.message || err));
+  }
+};
 
 async function reviewAsset(assetId, status) {
   await api(`/assets/${assetId}/review`, { method: "POST", body: JSON.stringify({ status, note: "UI review" }) });
@@ -638,7 +1188,7 @@ async function rejectAsset(assetId) {
   await api(`/assets/${assetId}/review`, { method: "POST", body: JSON.stringify({ status: "rejected", note }) });
   toast(`${assetId} 已驳回`);
   await renderAssets();
-  await renderPreview();
+  await renderTimeline();
   await loadProjectMeta();
 }
 
@@ -659,109 +1209,45 @@ async function enqueueAsset(assetId) {
   await renderQueue();
 }
 
-// --- Timeline Editor ---
+// --- Timeline Editor (preview + zoom + scrub) ---
 async function renderTimeline() {
-  timelineData = await api(`/timeline?segment=${currentSegment}`);
-  const total = Number(timelineData.total_sec || 211);
-  const blocks = (timelineData.beats || []).map(b => {
-    const start = Number(b.vo?.start_sec ?? b.start_sec ?? 0);
-    const dur = Number(b.vo?.duration_sec ?? b.duration_sec ?? 1);
-    const planned = Number(b.planned_sec ?? b.duration_sec ?? dur);
-    const pStart = Number(b.start_sec ?? start);
-    return `
-      <div class="tl-block planned" style="left:${(pStart / total) * 100}%;width:${Math.max((planned / total) * 100, 0.3)}%" title="planned ${b.beat_id}"></div>
-      <div class="tl-block${selectedBeatId === b.beat_id ? " selected" : ""}" data-beat="${b.beat_id}" data-start="${start}" data-dur="${dur}"
-        style="left:${(start / total) * 100}%;width:${Math.max((dur / total) * 100, 0.5)}%" title="${b.beat_id} ${dur}s">${b.beat_id}</div>`;
-  }).join("");
-  const micro = (timelineData.micro_events || []).slice(0, 200).map(ev =>
-    `<span class="tl-micro" data-event="${ev.id}" data-t="${ev.t}" style="left:${(Number(ev.t || 0) / total) * 100}%" title="${ev.id} @ ${ev.t}s"></span>`
-  ).join("");
-  document.getElementById("timeline").innerHTML = pageWrap("时间轴", `${currentSegment} · ${total.toFixed(1)} 秒 · 灰条计划 / 蓝条实测`, `
-    <div class="card card-no-accent">
-      <p class="metric">拖拽蓝条右边缘调整时长；点击橙点修改微事件时间。</p>
-      <div class="tl-ruler" id="tl-ruler">${blocks}${micro}<div class="tl-playhead" id="tl-playhead" style="left:0"></div></div>
-      <div class="toolbar">
-        <button class="btn btn-primary" onclick="runPreset('segment_timing_lint').catch(e=>toast(e.message))">时长检查</button>
-        <button class="btn btn-secondary" onclick="runPreset('build_composition').catch(e=>toast(e.message))">重建合成</button>
-        <button class="btn btn-secondary" onclick="runPreset('audio_chain').catch(e=>toast(e.message))">重新对齐</button>
-      </div>
-      <pre id="timeline-log"></pre>
-    </div>`);
-  bindTimelineDrag(total);
-  document.querySelectorAll(".tl-micro").forEach(el => {
-    el.addEventListener("click", () => {
-      const t = prompt(`微事件 ${el.dataset.event} 新时间（秒）：`, el.dataset.t);
-      if (t == null) return;
-      api(`/timing/micro/${el.dataset.event}?segment=${currentSegment}`, { method: "PATCH", body: JSON.stringify({ t: parseFloat(t) }) })
-        .then(() => { toast("微事件时间已更新"); renderTimeline(); });
-    });
-  });
-}
-
-function bindTimelineDrag(total) {
-  const ruler = document.getElementById("tl-ruler");
-  if (!ruler) return;
-  ruler.querySelectorAll(".tl-block:not(.planned)").forEach(block => {
-    block.addEventListener("mousedown", (ev) => {
-      if (ev.offsetX < block.offsetWidth - 8) {
-        openBeatDetail(block.dataset.beat);
-        return;
-      }
-      dragState = { beatId: block.dataset.beat, startX: ev.clientX, origDur: parseFloat(block.dataset.dur), total, block };
-      ev.preventDefault();
-    });
-  });
-  document.onmousemove = (ev) => {
-    if (!dragState) return;
-    const dx = ev.clientX - dragState.startX;
-    const rulerW = document.getElementById("tl-ruler")?.offsetWidth || 1;
-    const dSec = (dx / rulerW) * dragState.total;
-    const newDur = Math.max(0.2, dragState.origDur + dSec);
-    dragState.block.style.width = `${Math.max((newDur / dragState.total) * 100, 0.5)}%`;
-    dragState.newDur = newDur;
-  };
-  document.onmouseup = async () => {
-    if (!dragState || dragState.newDur == null) { dragState = null; return; }
-    const { beatId, newDur } = dragState;
-    dragState = null;
-    try {
-      await api(`/timing/beats/${beatId}?segment=${currentSegment}`, {
-        method: "PATCH",
-        body: JSON.stringify({ duration_sec: newDur, locked: true }),
-      });
-      toast(`${beatId} → ${newDur.toFixed(2)}s`);
-      await renderTimeline();
-    } catch (e) { toast(String(e.message)); }
-  };
-}
-
-// --- Preview ---
-async function renderPreview() {
-  const project = await api("/project");
-  const blocked = project.render_blocked;
-  const mp4 = `segments/${currentSegment}/render.mp4`;
-  document.getElementById("preview").innerHTML = pageWrap("视频预览", `${currentSegment} 草稿渲染`, `
-    <div class="card card-no-accent">
-      <video controls src="${mediaUrl(mp4)}"></video>
-      <div class="toolbar">
-        <button class="btn btn-primary" id="render-btn" ${blocked ? "disabled" : ""} onclick="runDraftRender()">草稿渲染</button>
-        <button class="btn btn-secondary" onclick="runPreset('build_composition').catch(e=>toast(e.message))">重建合成页</button>
-      </div>
-      ${blocked ? `<p class="blocked">${esc(blocked)}</p>` : ""}
-      <pre id="job-log"></pre>
-    </div>`);
-}
-
-window.runDraftRender = async () => {
-  const log = document.getElementById("job-log");
-  try {
-    const job = await runPreset("render_draft");
-    await pollJob(job.id, log);
-  } catch (e) {
-    toast(String(e.message));
-    if (log) log.textContent = String(e.message);
+  if (timelineEditorHandle) {
+    timelineEditorHandle.destroy();
+    timelineEditorHandle = null;
   }
-};
+  timelineData = await api(`/timeline?segment=${currentSegment}`);
+  let project = { render_blocked: null };
+  try {
+    project = await api("/project");
+  } catch { /* optional */ }
+  const total = Number(timelineData.total_sec || 211);
+  document.getElementById("timeline").innerHTML = pageWrap(
+    "时间轴",
+    `${currentSegment} · ${total.toFixed(1)} 秒 · 预览与编辑（OpenCut 式 transport + 缩放）`,
+    `<div id="timeline-editor-host"></div>`
+  );
+  const host = document.getElementById("timeline-editor-host");
+  if (!host || !window.TimelineEditor) {
+    if (host) host.innerHTML = `<p class="metric">时间轴编辑器加载失败</p>`;
+    return;
+  }
+  timelineEditorHandle = TimelineEditor.mount(host, {
+    data: timelineData,
+    segment: currentSegment,
+    mediaUrl,
+    api,
+    selectedBeatId,
+    onBeatSelect: (beatId) => {
+      selectedBeatId = beatId;
+    },
+    onBeatOpen: (beatId) => openBeatDetail(beatId),
+    onRefresh: renderTimeline,
+    renderBlocked: project.render_blocked ? String(project.render_blocked) : "",
+    runPreset,
+    pollJob,
+    toast,
+  });
+}
 
 // --- Stage Detail ---
 async function renderStageDetail() {
@@ -916,7 +1402,13 @@ document.getElementById("sheet-backdrop")?.addEventListener("click", closeSheet)
       const data = JSON.parse(ev.data);
       if (data.type === "project_switched") afterProjectChange();
       if (data.type === "registry_updated" || data.type === "state_updated") loadProjectMeta();
-      if (data.type === "job_progress") renderJobs();
+      if (data.type === "job_progress") {
+        renderJobs();
+        api("/tts/progress").then(prog => {
+          updateTtsProgressBar(prog);
+          updateBeatsTtsCells(prog);
+        }).catch(() => {});
+      }
     };
   } catch (_) { /* optional */ }
 })();

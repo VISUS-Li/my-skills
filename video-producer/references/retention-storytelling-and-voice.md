@@ -13,6 +13,9 @@ Make the script sound like a real person explaining a fresh story with judgment,
 - Add viewpoints, but mark them as analysis, not fact.
 - Prefer story verbs: “卡住了、翻车了、绕开了、突然收紧、被迫换路、这才是关键”.
 - Avoid corporate tone: “本文将介绍、我们可以看到、从以下几个方面”.
+- Avoid **speculative oral fillers** that sound like guesswork: 你想啊、其实吧、我跟你说、这就有意思了. Use **evidence anchors** instead: 原文里、把时间线往回看、公告第X条、很多人只看标题但条款写的是…
+
+For **any scriptwriting** (one event or many), load `references/deep-narrative-investigation.md` automatically — single-story arcs (前尘/秘辛/后果) and multi-point weaving. Oral 口水话 rules are in that reference.
 
 ## Hook patterns
 
@@ -45,6 +48,13 @@ Drama must come from structure, not fabrication:
 - Use “限制词” as suspense: “注意，这里它说的不是所有人，而是...”
 - Let documents appear on screen as evidence cards, with highlighted clauses.
 - If a source is ambiguous, make ambiguity part of the story.
+
+## Story continuity (not news copy)
+
+- **Dwell before jump:** each turn needs mechanism + landing — what it means for the arc — before the next beat.
+- **Carry forward:** end a beat with a hook the next beat picks up (“带着这个限定词…”).
+- **Callbacks:** reference earlier details so the script feels like one thread tightening.
+- **Avoid:** 据悉/据报道/此外/另外/与此同时 as beat openers; fact stacks without so-what.
 
 ## Script formatting
 

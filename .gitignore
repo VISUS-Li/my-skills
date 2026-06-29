@@ -37,6 +37,10 @@ logs/
 tmp/
 temp/
 
+# Manual CLI stdout/stderr redirects (e.g. indextts2_generate.py > p1.out 2> p1.err)
+p*.out
+p*.err
+
 # Local agent skill copies (install via cross-agent-install docs)
 .claude/
 .agents/

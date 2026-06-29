@@ -2,7 +2,9 @@
 
 Video Producer 本地审核控制台 — 一套服务管理多个视频项目，网页内切换，无需重启。
 
-完整规格：`../references/review-studio-plan.md`
+> **给 Agent：** 本目录是 **人类用的网页控制台**（FastAPI + 静态前端）。常规制片时不要读取 `web/`、`server/` 源码 — 直接读 **项目目录** `PROJECT_DIR` 下的 `.video/`、`script/`、`segments/` 等产物，并用 `scripts/validate_gates.py`、`review_sync.py`、`regen_dispatch.py`。仅在用户要求启动/调试 Review Studio 或修改本控制台本身时再读本 README。
+
+完整规格：`../references/review-studio-plan.md`（人类/改 Studio 时用；常规制片不必读全文）
 
 ## 安装
 
@@ -44,18 +46,51 @@ Windows PowerShell：
 | **打开路径** + **浏览…** | 直接选单个项目目录（含 `.video/state.json`） |
 | **切换** | 手输绝对路径打开项目 |
 
-Tab：Pipeline · Script · Beats · Audio · Assets · Timeline · Preview · Stage · Regen Queue · Jobs · QC · History
+Tab：Pipeline · Script · 口播 & 配音 · Assets · Timeline（含预览） · Stage · Regen Queue · Jobs · QC · History
+
+### 口播 & 配音（原 Beats + Audio 合并）
+
+| 区域 | 功能 |
+|------|------|
+| **顶栏** | IndexTTS 状态、参考音、时长汇总、全局配音进度、整段 audio chain |
+| **主表** | 逐 beat 编辑口播、试听、单条配音+对齐；筛选「需关注」偏差/CPS |
+| **侧栏** | 参考音频库、IndexTTS 配置（可折叠） |
 
 ### 新功能（Phase 4–7）
 
 | Tab | 功能 |
 |-----|------|
 | **Script** | 编辑 `voiceover.md` + beats 概览 |
-| **Audio** | IndexTTS 状态、计划 vs 实测时长、一键 audio chain |
+| **口播 & 配音** | 逐 beat 口播编辑、参考音库、IndexTTS 配置、进度条、audio chain |
 | **Stage** | 每 stage 产物列表、内联编辑 MD/CSV/JSON |
-| **Timeline** | 计划/实测双轨、拖拽调整 beat duration、点击 micro-event |
+| **Timeline** | 合成页/成片/Studio 预览、口播波形轨、GSAP seek 同步、beat/微事件编辑 |
 | **Jobs** | 后台任务列表与 log |
-| **Beats** | Beat 详情抽屉、单 beat TTS、manual duration |
+| **Beats** | （已合并至「口播 & 配音」） |
+
+**Timeline / HyperFrames 预览 API：**
+
+```bash
+GET  /api/timeline?segment=S001              # 含 media + preview 块
+GET  /api/preview/composition/S001/index.html # 同源合成页（GSAP seek）
+GET  /api/preview/hyperframes?segment=S001   # Studio 状态
+POST /api/preview/hyperframes/start?segment=S001&port=3017
+POST /api/preview/hyperframes/stop?segment=S001
+```
+
+时间轴 Tab 支持四种预览：**合成页**（默认，iframe + `window.__timelines` seek）、**成片** MP4、**Studio** 热重载、**口播** WAV；波形轨与 playhead 联动。
+
+**IndexTTS API：**
+
+```bash
+GET  /api/tts/config          # 读取 indextts2_config.json
+PUT  /api/tts/config          # 更新 base_url / defaults / voice_reference
+GET  /api/tts/health          # 探测 IndexTTS WebUI
+GET  /api/tts/progress        # beat 级配音进度（generation_progress.json）
+GET  /api/audio/refs          # 参考音频库（含 uploaded_at、选用状态）
+POST /api/audio/refs/upload   # 上传参考 WAV / MP3（MP3 需 ffmpeg 自动转 WAV）
+PUT  /api/audio/refs/select   # 切换当前参考音
+DELETE /api/audio/refs?path=  # 删除参考音频
+```
 
 **Audio chain 预设（API / UI）：**
 
@@ -66,6 +101,12 @@ POST /api/jobs/preset/audio_chain?segment=S001
 # 完整链：TTS → measure → micro → lint
 POST /api/jobs/preset/audio_chain_tts?segment=S001
 
+# 仅整段 TTS（不对齐）
+POST /api/jobs/preset/indextts_segment?segment=S001
+
+# 单/多 beat 配音 + 对齐
+POST /api/jobs/preset/indextts_beats_align?segment=S001&beats=B001,B002
+
 # 对齐 + 重建 HTML
 POST /api/jobs/preset/audio_chain_build?segment=S001
 ```
@@ -75,7 +116,7 @@ CLI：
 ```bash
 python scripts/audio_chain.py <project> S001 --skip-tts
 python scripts/audio_chain.py <project> S001          # 含 IndexTTS
-python scripts/test_review_studio.py                # T1–T20
+python scripts/test_review_studio.py                # T1–T28
 ```
 
 ## 项目识别
