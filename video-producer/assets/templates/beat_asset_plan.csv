@@ -1,0 +1,4 @@
+beat_id,start_sec,duration_sec,primary_asset,secondary_asset,accent_asset,ambient_asset,motion_primary,motion_secondary,source_visual,ref_embed,caption_hint,min_visible_assets,layer_count_target
+B001,0.000,0.700,ref_press_photo_001,icon_pipeline,red_arrow,texture_grain,camera_push,stamp_hit,ref_press_photo_001,segments/S001/assets/ref/processed/ref_press_photo_001_640x360.jpg,来源标注,5,4
+B002,0.700,0.700,icon_pipeline,icon_gear,yellow_highlight_box,s001_hero_plate,line_draw,card_slide,none,,机制示意,5,4
+B003,1.400,0.700,screenshot_product_ui,source_card,red_arrow,texture_grain,zoom_punch,highlight_sweep,screenshot_product_ui,segments/S001/assets/ref/processed/screenshot_product_ui_640x360.jpg,界面证明,5,4

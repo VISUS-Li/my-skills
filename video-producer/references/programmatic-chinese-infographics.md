@@ -32,6 +32,26 @@ Treat Chinese text as layout data, not image content. Text-to-image and text-to-
 
 English fallback only if the model ignores Chinese.
 
+## Windows UTF-8 / Chinese SVG（硬规则）
+
+On Windows, **do not** use the agent Write tool or IDE save for SVG containing Chinese — encoding often corrupts to `?` or invalid UTF-8.
+
+**Required:**
+
+1. Generate Chinese SVG only via Python: `path.write_text(svg, encoding="utf-8")` or `\uXXXX` escapes in a script.
+2. File header: `<?xml version="1.0" encoding="UTF-8"?>` — **no BOM**.
+3. Font stack on `.cn` text: `"Noto Sans SC", "Microsoft YaHei", "PingFang SC", sans-serif`.
+4. Use project template `segments/<id>/assets/rebuild_chinese.py` — edit `LABELS`, run script, commit output SVG.
+5. After generation, run bundled lint:
+
+```bash
+python "$SKILL_DIR/scripts/verify_svg_utf8.py" "$PROJECT_DIR/segments/S001/assets"
+```
+
+**Fail** if: BOM present, invalid UTF-8, Chinese without XML UTF-8 declaration, or obvious mojibake.
+
+Quick checklist: `references/svg-utf8-windows.md`.
+
 ## Quality gate
 
 Fail a scene if:

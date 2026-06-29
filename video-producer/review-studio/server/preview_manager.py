@@ -57,6 +57,21 @@ def composition_embed_url(segment: str) -> str:
     return f"/api/preview/composition/{segment}/index.html"
 
 
+def studio_embed_url(segment: str, base_url: str | None) -> str | None:
+    if not base_url:
+        return None
+    return f"{base_url.rstrip('/')}/#project/{segment}"
+
+
+def resolve_composition_builder(root: Path, segment: str) -> Path | None:
+    seg = segment.lower()
+    for name in (f"build_{seg}_composition.py", "build_segment_index.py"):
+        path = root / "scripts" / name
+        if path.is_file():
+            return path
+    return None
+
+
 def hyperframes_status(root: Path, segment: str) -> dict[str, Any]:
     seg_dir = root / "segments" / segment
     key = _session_key(root, segment)
@@ -84,6 +99,7 @@ def hyperframes_status(root: Path, segment: str) -> dict[str, Any]:
 
     index_html = seg_dir / "index.html"
     ready = index_html.is_file()
+    running_url = studio_url if running else None
     return {
         "composition_ready": ready,
         "composition_embed_url": composition_embed_url(segment) if ready else None,
@@ -91,7 +107,8 @@ def hyperframes_status(root: Path, segment: str) -> dict[str, Any]:
         "index_html_expected": str(index_html),
         "project_root": str(root.resolve()),
         "studio_running": running,
-        "studio_url": studio_url if running else None,
+        "studio_url": running_url,
+        "studio_embed_url": studio_embed_url(segment, running_url),
         "studio_port": port,
         "studio_pid": pid,
         "segment_dir": str(seg_dir) if seg_dir.is_dir() else None,

@@ -26,41 +26,55 @@ Readable Chinese **never** goes into raster images — overlay via programmatic 
 
 | Asset type | Min count | Target (rich segments) | Notes |
 |---|---:|---:|---|
-| **Web photo / screenshot** (`assets/ref/`) | **3** | **5–8** | 口播点名的真实证据；绑定 `beat_ids` |
-| **Video clip / screen rec** | **1** | **2–4** | demo/发布/操作过程；trim 2–8s |
-| SVG icons (topic-specific) | 12 | 16–24 | stroke 2–4px, rounded, no text inside raster |
-| Decorative PNG (transparent) | 4 | 6–8 | plates, blobs, mascots, textures — **no readable Chinese** |
-| UI/source primitives | 6 | 8–12 | cards, stamps, arrows, device frames from design system |
-| Background/ambient fillers | 3 | 5+ | grid, orbs, grain, scan line, parallax shapes — **always moving** |
-| Motion actors | 15+ | 20+ | **every beat** should choreograph ≥5; no static hold >1.0s |
+| **Evidence stills** (`ref_*` / `stock_*`) | **3** | **5–8** | 绑定 `beat_ids` + `embed_*` |
+| **`motion_*` real video / screen rec** | **1** | **2–3** | demo/发布/操作；trim 2–8s |
+| **`broll_*` Ken Burns** | **0** | **2** | 补位 only；**不满足实拍门槛** |
+| SVG icons (topic-specific) | 12 | 16–24 | stroke 2–4px; Chinese via code layers |
+| Decorative PNG (transparent) | 4 | 6–8 | plates, blobs — **no readable Chinese** |
+| UI/source primitives | 6 | 8–12 | cards, stamps, arrows, device frames |
+| Background/ambient fillers | 3 | 5+ | grid, orbs — **always moving** |
+| Motion actors | 15+ | 20+ | **every beat** ≥5 visible assets |
 
-Per-beat checklist:
+Per-beat checklist (`beat_asset_plan.csv`):
 
-- ≥5 visible assets on screen (mix of icon/card/arrow/stamp/texture)
+- 4 asset slots + 2 motion verbs + optional `ref_embed`
+- ≥5 visible assets on screen
 - ≥4 layers with independent motion
-- Frame occupancy **50–80%** (see `asset-choreography-and-frame-density.md`)
-- Ambient track never fully static for >0.8s
+- Frame occupancy **50–80%**
 
-Log everything in `assets/asset_manifest.csv` with `rights_status` and **`beat_ids`** for ref media.
+Log `motion_type`, `embed_full`, `embed_card` in `assets/asset_manifest.csv`.
 
 ## Web-sourced real media（证据层，必做）
 
-**不要只做 SVG。** 当口播提到具体人物、产品、事件、界面、文档、现场画面时：
+Load **`references/multimedia-asset-taxonomy.md`** and **`references/web-sourced-visual-assets.md`**.
 
-1. Load **`references/web-sourced-visual-assets.md`** and run the beat → download pass **before** SVG batch gen.
-2. Prefer URLs already in `research/source_cards.jsonl`; search with **中文 query** when URL unknown.
-3. Save under `segments/<id>/assets/ref/`; register `type=photo|screenshot|broll|video_clip`.
-4. Fill `narration_beats.csv` → `source_visual` with the manifest `asset_id`.
+1. Plan `beat_asset_plan.csv` before bulk gen.
+2. Prefer URLs in `research/source_cards.jsonl`; **中文搜索** when unknown.
+3. Save processed embeds under `segments/<id>/assets/ref/processed/`.
+4. Fill `narration_beats.csv` → `source_visual` with manifest `asset_id`.
 
 Quick routing:
 
 | Need | Tool | Output |
 |---|---|---|
-| Known source URL from research | `curl -L` / browser save | `ref/ref_*.jpg` |
-| Official demo / keynote clip | `yt-dlp` + section trim | `ref/broll_*.mp4` |
-| Product UI / docs proof | Browser screenshot | `ref/screenshot_*.png` |
-| CC photo / B-roll fallback | Pexels/Pixabay/Mixkit + license note | `ref/` |
-| Entity still missing | Wikimedia / official press | `ref/` + attribution file |
+| Known source URL | `curl -L` / Playwright | `ref_*` → processed 1280/640 |
+| Related scene still | Unsplash/Pexels/Wikimedia | `stock_*` |
+| UI mock | Image model / PIL | `gen_*` |
+| Real footage | Screen rec / Pexels video-files | `motion_*` |
+| Official demo clip | `yt-dlp` section trim | `motion_*` |
+| Still missing video | ffmpeg zoompan | `broll_*` + `ken_burns` |
+
+## Video sourcing ladder（mandatory order）
+
+Agents must try in order and log failures in `video_types_report.json`:
+
+1. **User screen recording** — settings, disk usage (`screen_recording`; highest trust).
+2. **Pexels direct** — `videos.pexels.com/video-files/…` URL when available.
+3. **Playwright** — open Pexels/Pixabay page, read `<video src>` (`playwright install chromium`).
+4. **yt-dlp** — official short demo clip.
+5. **Ken Burns fallback** — `motion_type=ken_burns`, file `broll_*`; never report as real B-roll.
+
+QC artifact: `segments/<id>/assets/ref/processed/video_types_report.json`.
 
 ## Generation routing（解释层 + 装饰层）
 
@@ -109,14 +123,18 @@ Validate: open in browser; run through HyperFrames compile.
 ```
 segments/S001/
   assets/
-    ref/                          # 网络下载的真实素材（优先）
-      ref_press_photo_001.jpg
-      screenshot_product_ui.png
-      broll_keynote_demo_001.mp4
+    rebuild_chinese.py
+    ref/
+      processed/
+        ref_press_1280x720.jpg
+        ref_press_640x360.jpg
+        motion_demo_1280x720.mp4
+        broll_news_1280x720.mp4
+        video_types_report.json
     icon_newspaper.svg
-    icon_diaper.svg
     s001_hero_plate.png
-  visual_asset_brief.json   # optional manifest
+  beat_asset_plan.csv
+  visual_asset_brief.json
   index.html
   vo_timing.json
   s001_vo.wav

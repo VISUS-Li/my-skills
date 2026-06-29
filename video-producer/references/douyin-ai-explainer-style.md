@@ -81,3 +81,17 @@ Readable Chinese must be final-rendered as text layers:
 - Chinese text baked into generated images.
 - Transitions with no semantic reason.
 - BGM only with no UI/SFX rhythm.
+- Treating Ken Burns `broll_*` as “实拍” or sole video proof.
+
+## Evidence ≠ only news（beat 示例）
+
+Evidence can be **related** visuals, not only press screenshots. Pair with `UI proof layer`:
+
+| Beat role | Visual stack |
+|---|---|
+| Hook | `gen_*` C 盘 UI mock + `motion_*` 打字录屏 |
+| Conflict | `ref_*` 报道截图 + `stock_*` 支付/办公氛围 |
+| Mechanism | `gen_*` 路径示意 + `motion_*` 机房/数据流 |
+| Takeaway | programmatic SVG checklist + `stock_*` 信任场景 |
+
+Plan bindings in `beat_asset_plan.csv`; ≥70% beats need `ref_*` / `stock_*` / `motion_*` or valid `ref_embed` — not 70% news-only.

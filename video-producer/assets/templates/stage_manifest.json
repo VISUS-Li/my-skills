@@ -109,7 +109,15 @@
     "assets": {
       "label": "视觉资产",
       "depends_on": ["art-direction", "design", "sound-design"],
-      "required_artifacts": ["assets/asset_manifest.csv"],
+      "required_artifacts": [
+        "assets/asset_manifest.csv",
+        "segments/{segment}/beat_asset_plan.csv",
+        "segments/{segment}/assets/ref/processed/video_types_report.json"
+      ],
+      "validation_scripts": [
+        "beat_asset_coverage_lint.py {project} {segment} --fail-under 90",
+        "verify_svg_utf8.py {project}/segments/{segment}/assets"
+      ],
       "downstream": ["segments"]
     },
     "audio-assets": {
@@ -120,7 +128,11 @@
         "segments/{segment}/vo_timing.json",
         "segments/{segment}/micro_timing.json"
       ],
-      "validation_scripts": ["segment_timing_lint.py {project} {segment}"],
+      "validation_scripts": [
+        "measure_segment_vo.py {project} {segment}",
+        "build_micro_timing.py {project} {segment}",
+        "segment_timing_lint.py {project} {segment}"
+      ],
       "downstream": ["segments"]
     },
     "segments": {
@@ -128,7 +140,13 @@
       "depends_on": ["audio-assets", "assets", "director-compiler"],
       "required_artifacts": [
         "segments/{segment}/index.html",
-        "segments/{segment}/timing_qc_report.md"
+        "segments/{segment}/timing_qc_report.md",
+        "segments/{segment}/beat_asset_coverage_qc.md"
+      ],
+      "validation_scripts": [
+        "beat_asset_coverage_lint.py {project} {segment} --fail-under 90",
+        "verify_svg_utf8.py {project}/segments/{segment}/assets",
+        "segment_timing_lint.py {project} {segment} --full"
       ],
       "optional_artifacts": ["segments/{segment}/render.mp4"],
       "downstream": ["assemble", "aesthetic-review"]

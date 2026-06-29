@@ -26,13 +26,37 @@ Treat aesthetics, motion, sound, and source accuracy as required deliverables. A
 - For dense explainers, compile every narration phrase into timed events. One sentence should usually create 2-8 micro-events, not one static card.
 - Do not render a segment until `script/beat_timeline.json`, `script/director_event_graph.json`, and `assets/asset_choreography_manifest.csv` exist for that segment.
 - **VO-first timing:** plan narration at **~5 Chinese characters per second**; after TTS, run `measure_segment_vo.py` and bind segment duration to **actual WAV**, not equal shot splits or planned seconds alone.
-- **Rich segments:** each segment needs `segments/<id>/vo_timing.json`, `micro_timing.json`, **≥12 topic-specific SVG/icon assets**, **≥4 decorative plates**, **≥3 web-sourced photos/screenshots** in `segments/<id>/assets/ref/` tied to narration beats, and **≥1 video clip or screen recording** when the script mentions demos/releases/processes. Layered composition (ambient + midground + foreground/HUD), motion on **≥4 layers per beat**. Aim for **50–80% frame occupancy** and **≥15 choreographed motion actors** per segment. Reject static-card-only frames or beats with accidental empty zones.
-- **口播-画面对齐：** 口播提到具体人物、产品、事件、文档、界面、现场时，必须在 `assets/asset_manifest.csv` 中有对应的 **真实图片/截图/视频**（`ref/` 或 `screenshot_*` / `broll_*`），并在 `narration_beats.csv` 的 `source_visual` 字段绑定；不能只用 SVG 抽象图标代替证据层。采集流程见 `references/web-sourced-visual-assets.md`。
+- **Rich segments:** each segment needs `segments/<id>/vo_timing.json`, `micro_timing.json`, `segments/<id>/beat_asset_plan.csv`, **≥12 topic-specific SVG/icon assets**, **≥4 decorative plates**, **≥3 evidence stills** (`ref_*` / `stock_*`) in `segments/<id>/assets/ref/`, **≥1 `motion_*` real footage or screen recording**, and **≥2 `broll_*` Ken Burns** only as fill — Ken Burns alone does **not** satisfy the real-footage gate. Layered composition (ambient + midground + foreground/HUD), motion on **≥4 layers per beat**. Aim for **50–80% frame occupancy** and **≥15 choreographed motion actors** per segment. Reject static-card-only frames or beats with accidental empty zones.
+- **口播-画面对齐（分层）：** ≥70% beats 在 `beat_asset_plan.csv` 中绑定 `ref_*` / `stock_*` / `motion_*` 或有效 `ref_embed` — 不必全是新闻截图。点名事件/报道 → `ref_*` + 来源卡；机制/场景 → `stock_*` / `gen_*` / `motion_*`；抽象过渡 → SVG+plate 可仅解释层。具体实体 beat 不能只有 SVG。见 `references/multimedia-asset-taxonomy.md` + `references/web-sourced-visual-assets.md`。
 - **中文优先（美术资产）：** 生成、检索、描述美术资产时 **默认用中文** — 包括 image/SVG 生成 prompt、`media-use --intent`、素材库搜索词、`asset_choreography_manifest.csv` 的 `source_or_prompt`、以及 `visual_asset_brief.json` 的 `prompt` 字段。仅当素材本身必须是英文内容时保留英文（英文 UI 截图、代码窗口、品牌名、缩写、原文引用）；此时用中文描述构图与风格，英文只出现在素材本体或 overlay 文本层。
 - Every important visual action must choose an event-bound SFX cue, deliberate silence, or explicit no-cue decision.
 - Render exact Chinese text as programmatic text layers. Do not bake readable Chinese into generated raster images.
 - **Project root:** before writing any artifact, complete **Step 0**. All paths below are relative to `PROJECT_DIR`. Never scatter video artifacts in the agent workspace root or the skill repo root.
 - Do not copy a reference creator’s watermark, copyrighted assets, voice identity, exact phrasing, or branded opening/ending. Copy only structure, pacing, visual grammar, and quality bar.
+## Multimedia evidence contract
+
+Load `references/multimedia-asset-taxonomy.md` for every `assets` / `segment` stage.
+
+**Taxonomy (mandatory prefixes):** `ref_*` traceable proof · `stock_*` related stills · `gen_*` AI UI mocks · `motion_*` real video/screen rec · `broll_*` Ken Burns on stills only.
+
+**Beat binding:** `segments/<id>/beat_asset_plan.csv` — 4 assets + 2 motion verbs + optional `ref_embed` per beat; times from `vo_timing.json` after TTS.
+
+**Processed embeds:** `ref/processed/*_1280x720` (full) and `*_640x360` (source_card slot); `video_types_report.json` required.
+
+**Windows UTF-8:** never Write-tool Chinese SVG; use `rebuild_chinese.py` or Python `write_text(..., encoding='utf-8')`; run `verify_svg_utf8.py`.
+
+**Segment gates (before render):**
+
+```bash
+python "$SKILL_DIR/scripts/measure_segment_vo.py" "$PROJECT_DIR" S001
+python "$SKILL_DIR/scripts/build_micro_timing.py" "$PROJECT_DIR" S001
+python "$SKILL_DIR/scripts/beat_asset_coverage_lint.py" "$PROJECT_DIR" S001 --fail-under 90
+python "$SKILL_DIR/scripts/verify_svg_utf8.py" "$PROJECT_DIR/segments/S001/assets"
+python "$SKILL_DIR/scripts/segment_timing_lint.py" "$PROJECT_DIR" S001 --full
+```
+
+**Assets checkpoint report:** separately count ref/stock/gen stills; `motion_*` vs `broll_*` video; beats with `ref_embed`; acquisition failures + fix commands.
+
 - **Review Studio = human web console only:** `review-studio/` is a local FastAPI + static UI for humans to review/edit/preview. During normal video production, **do not read** `review-studio/web/*`, `review-studio/server/*`, or other Review Studio source — they are large and unrelated to artifact authoring; reading them wastes tokens. Agents interact via `PROJECT_DIR` artifacts (`.video/review_registry.jsonl`, `regen_queue.json`, `state.json`, etc.) and bundled `scripts/*.py` (`validate_gates.py`, `review_sync.py`, `regen_dispatch.py`). Load `references/review-studio-plan.md` or `review-studio/README.md` only when the user explicitly asks to **set up, run, or debug** Review Studio — not for routine script/research/segment work.
 
 ## Step 0 — Project bootstrap (ALWAYS first)
@@ -118,7 +142,7 @@ Visual/audio design:
 - `assets/asset_manifest.csv` — source, path/URL, role, rights, status.
 - `assets/asset_choreography_manifest.csv` — every visible asset as an actor: role, layer, on/off time, entrance, main motion, exit, states, SFX affordance.
 - `audio/audio_style_guide.md`, `audio/music_brief.md`, `audio/voice_profile.md`, `audio/tts_plan.json`, `audio/indextts2_config.json` (when using IndexTTS2).
-- `segments/<id>/vo_timing.json`, `segments/<id>/micro_timing.json`, `segments/<id>/assets/*`, `segments/<id>/visual_asset_brief.json` (optional).
+- `segments/<id>/vo_timing.json`, `segments/<id>/micro_timing.json`, `segments/<id>/beat_asset_plan.csv`, `segments/<id>/assets/*` (incl. `ref/processed/`, `video_types_report.json`), `segments/<id>/visual_asset_brief.json` (optional).
 - `audio/audio_cue_sheet.json`, `audio/sfx_search_queries.json`, `audio/audio_mix_plan.json`, `audio/loudness_targets.json`, `audio/audio_rights_log.md`.
 
 Execution and delivery:
@@ -148,15 +172,16 @@ Select mode:
 13. `asset-choreography` — refine asset actor behavior and frame density.
 14. `shot-design` — create or refresh `script/shotlist.json`; use `scripts/storyboard_to_shotlist.py` for a draft.
 15. `sound-design` — create event-bound SFX/music/TTS/mix artifacts. **IndexTTS2:** load `references/indextts2-voice-protocol.md`; batch via `scripts/indextts2_generate.py`; measure via `scripts/measure_segment_vo.py`.
-16. `assets` / `audio-assets` — **dual track:** (A) **web-source** real photos/screenshots/video clips from narration + `source_cards` → `segments/<id>/assets/ref/`; (B) **generate** SVG/plates/icons. Log all in `asset_manifest.csv` with `beat_ids` + rights. Load `references/web-sourced-visual-assets.md` + `references/visual-asset-generation.md`.
-17. `segment` — create one renderable segment with HyperFrames, Remotion, Motion Canvas, Manim, FFmpeg, or an editor. **Required pipeline:** measure VO → build micro timing → generate layered assets → build beat-synced HTML → `segment_timing_lint.py` → render with embedded VO.
-18. `audio-mix` — run or adapt `scripts/ffmpeg_audio_mix.py` when local files exist.
-19. `assemble` — build `edit/timeline.json`, captions, concat/mix scripts, and draft export.
-20. `aesthetic-review` — run `scripts/aesthetic_score.py <project> --fail-under 72`.
-21. `qc` — run validation, fact, beat, style, audio, rights, accessibility, and caption checks.
-22. `publish` — create title options, cover text, description, hashtags, chapters, and cutdown ideas.
-23. `revise` — modify the smallest upstream artifact and list downstream rebuild impact.
-24. `resume` — set `PROJECT_DIR` to the existing project (Step 0 skip-init path); inspect `.video/state.json` and continue from the next unapproved stage.
+16. `assets` — **sub-stages (strict order):** `assets-evidence` (ref + stock + motion real footage) → `assets-explain` (SVG + gen UI + plates) → `assets-motion-fallback` (Ken Burns `broll_*` only for gaps) → `assets-bind` (`beat_asset_plan.csv` + choreography rebind to `vo_timing.json`). Log `motion_type`, `embed_full`, `embed_card` in `asset_manifest.csv`. Load `references/multimedia-asset-taxonomy.md`, `references/web-sourced-visual-assets.md`, `references/visual-asset-generation.md`.
+17. `audio-assets` — TTS + **mandatory** `measure_segment_vo.py` → `build_micro_timing.py` → `segment_timing_lint.py`. VO total vs storyboard planned >10% → fix script or beats before segment render.
+18. `segment` — create one renderable segment with HyperFrames, Remotion, Motion Canvas, Manim, FFmpeg, or an editor. **Required pipeline:** measure VO → build micro timing → `beat_asset_coverage_lint` + `verify_svg_utf8` → build beat-synced HTML → `segment_timing_lint.py --full` → render with embedded VO.
+19. `audio-mix` — run or adapt `scripts/ffmpeg_audio_mix.py` when local files exist.
+20. `assemble` — build `edit/timeline.json`, captions, concat/mix scripts, and draft export.
+21. `aesthetic-review` — run `scripts/aesthetic_score.py <project> --fail-under 72`.
+22. `qc` — run validation, fact, beat, style, audio, rights, accessibility, and caption checks.
+23. `publish` — create title options, cover text, description, hashtags, chapters, and cutdown ideas.
+24. `revise` — modify the smallest upstream artifact and list downstream rebuild impact.
+25. `resume` — set `PROJECT_DIR` to the existing project (Step 0 skip-init path); inspect `.video/state.json` and continue from the next unapproved stage.
 
 All workflow modes assume Step 0 is complete. Pass `"$PROJECT_DIR"` wherever a command shows `<project>`.
 
@@ -206,7 +231,7 @@ Style target for Chinese scripts:
 
 ## Director compiler protocol
 
-Load `references/director-compiler-os.md`, `references/director-micro-timeline-protocol.md`, `references/asset-choreography-and-frame-density.md`, `references/voice-synced-animation-design.md`, `references/vo-sync-timing-protocol.md`, `references/motion-life-playbook.md`, `references/layered-composition-depth.md`, `references/visual-asset-generation.md`, `references/web-sourced-visual-assets.md`, and `references/hyperframes-director-implementation.md` when the user wants richer animation, 小白debug/HyperFrames style, not-PPT output, or precise phrase/audio sync.
+Load `references/director-compiler-os.md`, `references/director-micro-timeline-protocol.md`, `references/asset-choreography-and-frame-density.md`, `references/voice-synced-animation-design.md`, `references/vo-sync-timing-protocol.md`, `references/motion-life-playbook.md`, `references/layered-composition-depth.md`, `references/multimedia-asset-taxonomy.md`, `references/visual-asset-generation.md`, `references/web-sourced-visual-assets.md`, and `references/hyperframes-director-implementation.md` when the user wants richer animation, 小白debug/HyperFrames style, not-PPT output, or precise phrase/audio sync.
 
 Required process:
 
@@ -302,12 +327,14 @@ Load `references/layered-composition-depth.md` and `references/visual-asset-gene
 
 Before segment render:
 
-1. **Web-source pass（先做）:** 从 `narration_beats.csv` + `claim_ledger` 列出每个 beat 的证据素材需求 → **中文搜索** → 下载到 `segments/<id>/assets/ref/`（见 `web-sourced-visual-assets.md`）。口播点名的内容优先找真实图/视频，再补 SVG。
-2. Search topic for visual metaphors, UI patterns, game-HUD references — **用中文写搜索词与 moodboard 备注**（document in `design/art_direction.md` / `design/visual_moodboard.json`）。
-3. Create `segments/<id>/assets/` with **≥12 SVG icons + ≥4 decorative PNG plates** + **≥3 ref photos/screenshots + ≥1 clip when applicable** (transparent plates where possible). **宁多勿少**：每个 beat 至少 5 个可见资产在动；背景层持续有 ambient 填充（网格、光斑、粒子、纹理）。
-4. Use image models for **non-text** plates only; all Chinese via programmatic layers. **Image/SVG prompts 默认中文**（见 `visual-asset-generation.md`）。
-5. Stack layers with z-index, overlap, parallax, drop shadows — aim for game-like depth, not flat PPT. **画面填满**： intentional negative space only; 其余区域用 midground/foreground 资产与持续 ambient 动画占满。
-6. Optional: `segments/<id>/visual_asset_brief.json` from template — list **every** planned asset with Chinese `prompt`, `source_url` (if web), and motion binding.
+1. **Plan:** fill `segments/<id>/beat_asset_plan.csv` from narration + `vo_timing.json` (after TTS).
+2. **Evidence pass:** ref + stock + motion (`assets-evidence`) → `ref/processed/` at 1280×720 and 640×360; write `video_types_report.json`.
+3. **Explain pass:** SVG + gen UI + plates (`assets-explain`); Chinese SVG via `rebuild_chinese.py` only.
+4. **Fallback:** Ken Burns `broll_*` only for beats still missing embed (`assets-motion-fallback`).
+5. **Bind:** update `asset_choreography_manifest.csv`; run `beat_asset_coverage_lint.py` + `verify_svg_utf8.py`.
+6. Search topic for visual metaphors — **中文 moodboard** in `design/art_direction.md`.
+7. **≥12 SVG + ≥4 plates + ≥3 evidence stills + ≥1 motion_* + ≥2 broll_* fill**; each beat ≥5 visible assets moving.
+8. Optional: `visual_asset_brief.json` with Chinese `prompt`, `source_url`, `motion_type`.
 
 ## Audio protocol
 
@@ -326,7 +353,7 @@ Rules:
 For each segment:
 
 1. Read project art direction, tokens, storyboard, shotlist, text manifest, beat timeline, event graph, asset choreography, cue sheet, **`vo_timing.json`**, **`micro_timing.json`**.
-2. **Web-source + generate:** run `references/web-sourced-visual-assets.md` pass first; then generate per `references/visual-asset-generation.md`; write `segments/<id>/assets/*` (including `assets/ref/`).
+2. **Multimedia pass:** taxonomy + `beat_asset_plan.csv` per `references/multimedia-asset-taxonomy.md`; gates: `beat_asset_coverage_lint`, `verify_svg_utf8`, `video_types_report.json`.
 3. Write `segments/<id>/brief.md`, `segments/<id>/styleframe.md`, and `segments/<id>/.hyperframes/expanded-prompt.md` or equivalent render prompt/code.
 4. Build `segments/<id>/index.html` (or HyperFrames composition) with:
    - `data-duration` = `vo_timing.total_sec`
@@ -351,7 +378,9 @@ scripts/beat_timeline_lint.py <project> --fail-under 80
 scripts/aesthetic_score.py <project> --fail-under 72
 scripts/audio_score.py <project> --fail-under 72
 scripts/douyin_ai_explainer_score.py <project> --fail-under 78   # when using this recipe
-python scripts/segment_timing_lint.py <project> S001             # per segment before render
+python scripts/segment_timing_lint.py <project> S001 --full
+python scripts/beat_asset_coverage_lint.py <project> S001 --fail-under 90
+python scripts/verify_svg_utf8.py <project>/segments/S001/assets
 ```
 
 If a score fails, revise the earliest upstream artifact instead of patching the final render. Use `scripts/dependency_report.py <changed_path>` to list downstream impact.
@@ -405,5 +434,12 @@ python scripts/test_review_studio.py
 ## Checkpoint behavior
 
 Default to checkpoint mode: complete Step 0 first, then create or update one stage under `PROJECT_DIR`, write artifacts, run the applicable validators, summarize changes, and ask for review. Use autopilot only when the user explicitly asks to continue through all stages.
+
+**After `assets` stage**, the summary must include (not a single opaque asset count):
+
+1. Stills: `ref_*` / `stock_*` / `gen_*` counts with paths under `ref/processed/`
+2. Video: `motion_*` real segments vs `broll_*` Ken Burns — reported separately
+3. Beats: X/Y with `ref_embed` in `beat_asset_plan.csv`; list SVG-only concrete beats
+4. Failures: acquisition errors (Mixkit 403, Playwright missing, etc.) + commands the user can run
 
 Never overwrite `approved` or `locked` artifacts. Create a versioned sibling such as `voiceover.v002.md` and update state only after approval.

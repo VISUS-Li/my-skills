@@ -112,7 +112,8 @@
     const mp4Src = media.render_mp4 ? mediaUrl(media.render_mp4) : "";
     const voSrc = media.vo_wav ? mediaUrl(media.vo_wav) : "";
     const compositionUrl = preview.composition_embed_url || `/api/preview/composition/${segment}/index.html`;
-    const studioUrl = preview.studio_url || null;
+    const studioEmbedUrl = preview.studio_embed_url
+      || (preview.studio_url ? `${preview.studio_url}/#project/${segment}` : null);
 
     const state = {
       totalSec,
@@ -122,7 +123,7 @@
       selectedBeatId: selectedBeatId || null,
       drag: null,
       previewMode: defaultPreviewMode(media, preview),
-      studioUrl,
+      studioUrl: studioEmbedUrl,
     };
 
     host.innerHTML = `
@@ -325,7 +326,8 @@
       } else if (state.previewMode === "studio") {
         if (state.studioUrl) {
           studioIframe.classList.remove("hidden");
-          studioIframe.src = `${state.studioUrl}/?v=${Date.now()}`;
+          const base = state.studioUrl.split("#")[0].replace(/\/?$/, "/");
+          studioIframe.src = `${base}?v=${Date.now()}#project/${segment}`;
         } else {
           emptyEl.classList.remove("hidden");
           emptyEl.querySelector("span").textContent = "请展开「Studio 热重载」并点击启动";
@@ -569,7 +571,8 @@
       if (state.previewMode === "composition") {
         compIframe.src = `${compositionUrl}?v=${Date.now()}`;
       } else if (state.previewMode === "studio" && state.studioUrl) {
-        studioIframe.src = `${state.studioUrl}/?v=${Date.now()}`;
+        const base = state.studioUrl.split("#")[0].replace(/\/?$/, "/");
+        studioIframe.src = `${base}?v=${Date.now()}#project/${segment}`;
       } else if (state.previewMode === "mp4" && mp4Src) {
         video.src = `${mp4Src}${mp4Src.includes("?") ? "&" : "?"}v=${Date.now()}`;
       }
@@ -751,7 +754,7 @@
     host.querySelector("#tl-btn-studio-start").addEventListener("click", async () => {
       try {
         const res = await api(`/preview/hyperframes/start?segment=${segment}`, { method: "POST" });
-        state.studioUrl = res.studio_url || res.url;
+        state.studioUrl = res.studio_embed_url || res.studio_url || res.url;
         host.querySelector("#tl-btn-studio-start").disabled = true;
         host.querySelector("#tl-btn-studio-stop").disabled = false;
         toast(res.message || "Studio 已启动");

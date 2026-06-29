@@ -108,6 +108,27 @@ def scale_storyboard_to_duration(path: Path, target_duration: int) -> None:
     except Exception:
         return
 
+def scaffold_segment(root: Path, segment_id: str = "S001", *, force: bool = False) -> None:
+    """Create per-segment asset dirs, beat plan, and UTF-8 SVG rebuild template."""
+    seg = segment_id.upper()
+    seg_dir = root / "segments" / seg
+    for sub in (
+        "assets/ref/processed/_raw",
+        "assets/ref/processed/stock",
+        "assets/ref/_candidates",
+        ".hyperframes",
+    ):
+        (seg_dir / sub).mkdir(parents=True, exist_ok=True)
+
+    copy_template("beat_asset_plan.csv", seg_dir / "beat_asset_plan.csv", force=force)
+    copy_template("video_types_report.json", seg_dir / "assets" / "ref" / "processed" / "video_types_report.json", force=force)
+    rebuild_src = skill_root() / "assets" / "templates" / "rebuild_chinese.py"
+    rebuild_dst = seg_dir / "assets" / "rebuild_chinese.py"
+    if not rebuild_dst.exists() or force:
+        rebuild_dst.parent.mkdir(parents=True, exist_ok=True)
+        rebuild_dst.write_text(rebuild_src.read_text(encoding="utf-8"), encoding="utf-8")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Initialize a staged video production project with art direction, sound design, and quality gates.")
     parser.add_argument("--name", required=True, help="Human-readable video/project name")
@@ -278,6 +299,8 @@ def main() -> int:
             path.write_text(content, encoding="utf-8")
             if path.suffix == ".sh":
                 path.chmod(0o755)
+
+    scaffold_segment(root, "S001", force=args.force)
 
     print(f"Initialized video project: {root}")
     if args.recipe == "douyin-ai-explainer":

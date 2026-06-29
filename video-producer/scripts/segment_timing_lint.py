@@ -3,10 +3,44 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import re
 import sys
 from pathlib import Path
+
+from beat_csv_utils import planned_duration_sec  # noqa: E402
+
+
+def planned_segment_duration(root: Path, segment_id: str) -> float:
+    """Sum planned beat durations from narration_beats.csv for one segment."""
+    path = root / "script" / "narration_beats.csv"
+    if not path.exists():
+        return 0.0
+    total = 0.0
+    with path.open(encoding="utf-8-sig", newline="") as f:
+        for row in csv.DictReader(f):
+            if row.get("segment_id", "").upper() == segment_id.upper():
+                total += planned_duration_sec(row)
+    return total
+
+
+def count_motion_assets(assets_dir: Path) -> tuple[int, int]:
+    """Return (motion_real_count, broll_ken_burns_count) from ref tree."""
+    motion = 0
+    broll = 0
+    ref = assets_dir / "ref"
+    if not ref.is_dir():
+        return 0, 0
+    for p in ref.rglob("*"):
+        if not p.is_file() or p.suffix.lower() not in {".mp4", ".webm", ".mov", ".mkv"}:
+            continue
+        name = p.name.lower()
+        if name.startswith("motion_"):
+            motion += 1
+        elif name.startswith("broll_"):
+            broll += 1
+    return motion, broll
 
 
 def lint_segment(
@@ -30,11 +64,27 @@ def lint_segment(
         issues.append({"message": f"missing {vo_path.name}", "penalty": 40})
     else:
         vo = json.loads(vo_path.read_text(encoding="utf-8-sig"))
+        total_sec = float(vo.get("total_sec", 0))
+        planned_sec = planned_segment_duration(root, seg)
+        if planned_sec > 0 and total_sec > 0:
+            drift = abs(total_sec - planned_sec) / planned_sec
+            if drift > 0.10:
+                issues.append({
+                    "message": f"vo total {total_sec}s vs planned {planned_sec}s drift {drift:.0%} (>10%) — fix script/beats before render",
+                    "penalty": 25,
+                })
+
         for b in vo.get("beats", []):
             if b.get("source") == "planned":
                 continue
             cps = float(b.get("cps", 0))
-            if cps < 3.5 or cps > 7.5:
+            locked = bool(b.get("locked"))
+            if locked and (cps < 4.0 or cps > 6.0):
+                issues.append({
+                    "message": f"{b['beat_id']} locked beat cps={cps} outside 4.0-6.0 — unlock or re-cut VO",
+                    "penalty": 20,
+                })
+            elif cps < 3.5 or cps > 7.5:
                 issues.append({"message": f"{b['beat_id']} cps={cps} outside 3.5-7.5", "penalty": 8})
             elif cps < 4.0 or cps > 6.5:
                 issues.append({"message": f"{b['beat_id']} cps={cps} review band", "penalty": 3})
@@ -43,8 +93,8 @@ def lint_segment(
         if not micro.exists():
             if audio_only:
                 issues.append({
-                    "message": "missing micro_timing.json (optional in audio-only phase; run build_micro_timing)",
-                    "penalty": 3,
+                    "message": "missing micro_timing.json (run build_micro_timing.py after measure_segment_vo)",
+                    "penalty": 8,
                 })
             else:
                 issues.append({"message": "missing micro_timing.json", "penalty": 15})
@@ -79,19 +129,21 @@ def lint_segment(
                 png_count = sum(1 for a in assets if a.suffix.lower() in {".png", ".webp"})
                 ref_dir = assets_dir / "ref"
                 ref_count = 0
+                stock_count = 0
                 if ref_dir.is_dir():
-                    ref_count = sum(
-                        1
-                        for a in ref_dir.iterdir()
-                        if a.is_file() and a.suffix.lower() in {".jpg", ".jpeg", ".png", ".webp", ".gif"}
-                    )
-                    clip_count = sum(
-                        1
-                        for a in ref_dir.iterdir()
-                        if a.is_file() and a.suffix.lower() in {".mp4", ".webm", ".mov", ".mkv"}
-                    )
-                else:
-                    clip_count = 0
+                    processed = ref_dir / "processed"
+                    search_root = processed if processed.is_dir() else ref_dir
+                    for a in search_root.rglob("*"):
+                        if not a.is_file():
+                            continue
+                        if a.suffix.lower() not in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
+                            continue
+                        if a.name.lower().startswith("stock_"):
+                            stock_count += 1
+                        elif a.name.lower().startswith(("ref_", "screenshot_")):
+                            ref_count += 1
+                motion_count, broll_count = count_motion_assets(assets_dir)
+                evidence_stills = ref_count + stock_count
                 if svg_count < 12:
                     issues.append({
                         "message": f"only {svg_count} SVG assets (min 12 recommended for rich segments)",
@@ -102,15 +154,26 @@ def lint_segment(
                         "message": f"only {png_count} decorative plates (min 2 recommended)",
                         "penalty": 4,
                     })
-                if ref_count < 2:
+                if evidence_stills < 3:
                     issues.append({
-                        "message": f"only {ref_count} web-sourced ref photos in assets/ref/ (min 3 recommended; see web-sourced-visual-assets.md)",
-                        "penalty": min(14, 6 + max(0, 3 - ref_count) * 3),
+                        "message": f"only {evidence_stills} ref/stock stills in processed/ (min 3; see multimedia-asset-taxonomy.md)",
+                        "penalty": min(14, 6 + max(0, 3 - evidence_stills) * 3),
                     })
-                if ref_dir.is_dir() and clip_count < 1:
+                if motion_count < 1:
                     issues.append({
-                        "message": "no video clips in assets/ref/ (add broll when narration mentions demo/process/release)",
-                        "penalty": 4,
+                        "message": "no motion_* real video in assets/ref/ (Ken Burns broll_* does not count)",
+                        "penalty": 10,
+                    })
+                if broll_count < 1 and motion_count < 2:
+                    issues.append({
+                        "message": f"motion_*={motion_count}, broll_*={broll_count} — consider Ken Burns fill after real footage",
+                        "penalty": 2,
+                    })
+                vtr = ref_dir / "processed" / "video_types_report.json"
+                if ref_dir.is_dir() and not vtr.is_file():
+                    issues.append({
+                        "message": "missing assets/ref/processed/video_types_report.json",
+                        "penalty": 6,
                     })
 
     for item in issues:

@@ -363,7 +363,7 @@ def _job_presets(seg: str, beats: list[str] | None = None) -> dict[str, tuple[st
         ),
         "build_composition": (
             sys.executable,
-            [str(root / "scripts" / f"build_{seg.lower()}_composition.py")],
+            [str(preview_mgr.resolve_composition_builder(root, seg) or root / "scripts" / f"build_{seg.lower()}_composition.py")],
             root,
             "Build composition HTML",
         ),
@@ -846,8 +846,14 @@ def post_job_preset(preset_name: str, segment: str | None = None, beats: str | N
         if blocked:
             raise HTTPException(status_code=409, detail=f"render blocked: {blocked}")
     script, args, cwd, label = presets[preset_name]
-    if preset_name == "build_composition" and not Path(args[0]).exists():
-        raise HTTPException(status_code=404, detail=f"composition builder missing for {seg}")
+    if preset_name == "build_composition":
+        builder = preview_mgr.resolve_composition_builder(_root(), seg)
+        if not builder:
+            raise HTTPException(
+                status_code=404,
+                detail=f"composition builder missing for {seg} (expected build_{seg.lower()}_composition.py or build_segment_index.py)",
+            )
+        args = [str(builder)]
     if preset_name == "render_draft" and not cwd.exists():
         raise HTTPException(status_code=404, detail=f"segment dir missing: {cwd}")
     job = _create_job(script, args, cwd, label=label)

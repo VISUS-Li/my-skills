@@ -21,8 +21,9 @@
 1. 更新 artifact → status=review（不是 approved，除非用户明确说 auto-approve）
 2. regen_queue item → completed，附 note
 3. append `.video/history.jsonl`
-4. 若涉及 VO/beat 变更，重跑 measure → micro_timing → lint
-5. 运行 dependency stale 传播
+4. 若涉及 VO/beat 变更，重跑 measure → build_micro_timing → beat_asset_coverage_lint → segment_timing_lint
+5. 含中文 SVG 后跑 verify_svg_utf8.py
+6. 运行 dependency stale 传播
 
 ## 命令优先级（segment 视觉驳回）
 edit asset → build_composition → hyperframes lint → (人工 review) → render

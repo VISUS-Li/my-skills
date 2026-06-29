@@ -1,0 +1,33 @@
+{
+  "segment_id": "S001",
+  "generated_at": "",
+  "summary": {
+    "motion_real_footage": 0,
+    "motion_screen_recording": 0,
+    "broll_ken_burns": 0,
+    "still_ref": 0,
+    "still_stock": 0,
+    "still_gen": 0
+  },
+  "assets": [
+    {
+      "asset_id": "motion_typing_demo",
+      "path": "segments/S001/assets/ref/processed/motion_typing_1280x720.mp4",
+      "motion_type": "screen_recording",
+      "source_url": "",
+      "acquisition_method": "user_screen_recording",
+      "attempt_log": []
+    },
+    {
+      "asset_id": "broll_news_push",
+      "path": "segments/S001/assets/ref/processed/broll_news_1280x720.mp4",
+      "motion_type": "ken_burns",
+      "source_url": "",
+      "acquisition_method": "ffmpeg_zoompan",
+      "attempt_log": [
+        {"step": "pexels_direct", "ok": false, "note": "example: no matching clip"}
+      ]
+    }
+  ],
+  "failed_attempts": []
+}
