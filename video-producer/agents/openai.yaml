@@ -1,5 +1,6 @@
 interface:
   display_name: "Video Producer"
-  short_description: "Director-paced video workflow for factual scripts, prosody, visual sync, asset selection, motion choreography, HyperFrames segments, and QC."
+  short_description: "Director-grade workflow for factual explainers, news/context videos, story narration, visual sync, evidence assets, dynamic text, transitions, TTS, and QC."
   icon: "🎬"
-  color: "#2F6BFF"
+  color: "#D92D20"
+  default_prompt: "Create a director-grade factual or story-driven video project with source-grounded visuals, phrase-synced assets, dynamic text, transitions, sound design, and quality checks."

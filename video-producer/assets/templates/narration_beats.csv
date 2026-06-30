@@ -1,4 +1,6 @@
-beat_id,segment_id,start_sec,end_sec,duration_sec,narration,char_count,claim_ids,semantic_action,emotion,retention_role,beat_type,information_density,spoken_focus,visual_response_required,text_ids,sfx_intent,source_visual
-B001,S001,0.00,2.40,2.40,示例：先把问题摆出来。,12,C001,展示问题,curiosity,hook,hook,medium,问题本身,新元素出现并吸引注意,caption_001,SFX_B001_POP,none
-B002,S001,2.40,5.60,3.20,注意，这里真正关键的是限定词。,16,C002,强调限定词,focused,proof,proof,high,限定词,来源卡提前出现并高亮限定词,caption_002,deliberate_silence,ref_source_terms
-B003,S001,5.60,9.20,3.60,所以画面要让观众看到机制怎么转起来。,18,C003,解释机制,calm,mechanism,mechanism,medium,机制转起来,图解模块逐步连接,caption_003,SFX_B003_TICK,gen_mechanism_diagram
+beat_id,segment_id,start_sec,end_sec,duration_sec,narration,char_count,claim_ids,semantic_action,emotion,retention_role,beat_type,information_density,spoken_focus,visual_response_required,visual_need,material_mix,text_ids,sfx_intent,source_visual,transition_anchor,director_risk
+B001,S001,0.00,2.20,2.20,示例：那一刻，房间里的吊灯先晃了起来。,19,C001,建立现场,tense,hook,event,medium,吊灯晃起来,真实危险感必须先出现,credibility,real_footage+hf_text,text_hook_time,low_hit,motion_shaking_lamp,motion_direction,不要用地震图标替代真实现场
+B002,S001,2.20,5.00,2.80,很多人第一反应，是打开地震预警 App。,20,C002,打开界面,focused,proof,evidence,readable_dense,地震预警 App,手机界面或真实 App 页面要跟台词同步出现,proof,ui_screenshot+hf_phone_frame+hf_tap,text_app_label,ui_click,ref_app_home,hf_phone_frame,不要把手机框当成外部资产生成
+B003,S001,5.00,8.30,3.30,争议点在这里：预警页下方出现了广告。,21,C003,暴露争议,concerned,proof,evidence,readable_dense,广告,先完整展示页面再推近广告位并用红框锁定,proof,screenshot+hf_annotation+keyword_text,text_ad_label,stamp_hit,ref_app_ad_slot,hf_red_box,红框和文字应由 HyperFrames 原生生成
+B004,S001,8.30,12.00,3.70,而会员权益表里，普通模式和 VIP 的差别被写得很清楚。,27,C004,对比权益,analytical,contrast,contrast,high,普通模式和 VIP,完整表格后局部放大关键行列,contrast,table_screenshot+hf_red_box+contrast_label,text_normal_vip,tick,ref_vip_table,table_column,不要让整张表小到不可读
+B005,S001,12.00,15.00,3.00,最后问题不是一个广告，而是危险时刻能不能少一点干扰。,27,C005,观点收束,serious,viewpoint,viewpoint,low,少一点干扰,撤掉复杂素材让观点落地,closure,hf_black_screen+viewpoint_text,text_final_line,silence,none,hf_black_reset,观点句不要继续堆截图和图表

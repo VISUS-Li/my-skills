@@ -1,20 +1,32 @@
 {
-  "version": "v001",
+  "version": "v002",
   "timebase": "seconds",
   "policy": {
     "graph_required_for_dense_explainers": true,
-    "edges_explain_attention_causality_proof_audio_or_style": true
+    "edges_explain_attention_causality_proof_audio_or_style": true,
+    "transition_anchors_are_first_class": true,
+    "hyperframes_native_components_are_first_class": true
   },
   "nodes": [
     {
       "event_id": "E001",
-      "beat_id": "B001",
-      "segment_id": "S01",
-      "time_range": [0.0, 0.35],
-      "event_type": "attention_shift",
-      "description": "title card snaps in while background grid drifts",
-      "primary_asset": "title_card",
-      "claim_ids": []
+      "beat_id": "B003",
+      "segment_id": "S001",
+      "time_range": [5.0, 5.45],
+      "event_type": "attention_edge",
+      "description": "App page holds full context while the HyperFrames phone frame and camera push toward the ad area.",
+      "primary_asset": "ref_app_ad_slot",
+      "claim_ids": ["C003"]
+    },
+    {
+      "event_id": "E002",
+      "beat_id": "B003",
+      "segment_id": "S001",
+      "time_range": [5.45, 6.2],
+      "event_type": "proof_edge",
+      "description": "HyperFrames-native red box locks the ad slot and text_ad_label lands on the spoken word 广告.",
+      "primary_asset": "hf_red_box",
+      "claim_ids": ["C003"]
     }
   ],
   "edges": [
@@ -22,7 +34,13 @@
       "from": "E001",
       "to": "E002",
       "edge_type": "attention_edge",
-      "reason": "viewer follows title into first proof card"
+      "reason": "viewer follows the push-in from page context to disputed detail"
+    },
+    {
+      "from": "E002",
+      "to": "next_table_compare",
+      "edge_type": "style_edge",
+      "reason": "the HyperFrames red box becomes the red comparison marker in the next table beat"
     }
   ]
 }

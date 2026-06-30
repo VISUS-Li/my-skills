@@ -13,6 +13,7 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from review_core import append_history, validate_stage_dependencies  # noqa: E402
+from stage_validation import advancing_status, default_segment, validate_stage_complete  # noqa: E402
 
 VALID_STATUSES = {"draft", "review", "approved", "locked", "needs-revision", "rendered", "failed"}
 
@@ -29,14 +30,29 @@ def main() -> int:
         action="store_true",
         help="Fail if direct upstream stages are not approved|locked",
     )
+    parser.add_argument("--segment", default=None, help="Segment id for beat-contract checks (default: first segment)")
+    parser.add_argument(
+        "--skip-stage-validate",
+        action="store_true",
+        help="Skip artifact/beat-contract/lint checks (not recommended)",
+    )
     args = parser.parse_args()
 
     root = Path(args.root).resolve()
-    if args.require_deps_approved or args.status in {"review", "approved", "locked", "rendered"}:
+    if args.require_deps_approved or advancing_status(args.status):
         dep_errors = validate_stage_dependencies(root, args.stage, target_status=args.status)
         if dep_errors:
             for err in dep_errors:
                 print(err)
+            return 1
+    if advancing_status(args.status) and not args.skip_stage_validate:
+        seg = args.segment or default_segment(root)
+        stage_errors = validate_stage_complete(root, args.stage, segment=seg, run_scripts=True)
+        if stage_errors:
+            print(f"Stage readiness failed for {args.stage}:")
+            for err in stage_errors:
+                print(f"- {err}")
+            print(f"Fix artifacts, then run: python scripts/validate_stage.py {root} --stage {args.stage}")
             return 1
     state_path = root / ".video/state.json"
     if not state_path.exists():

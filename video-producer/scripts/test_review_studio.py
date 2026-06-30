@@ -430,6 +430,14 @@ def main() -> int:
     if code != 200 or "composition_ready" not in prev:
         failures.append(f"T37 preview status failed: {prev}")
 
+    # T35+ timeline tracks model
+    if code == 200 and "tracks" not in tl2:
+        failures.append("T39 timeline missing tracks model")
+    if code == 200:
+        code_dir, dir_data = http("GET", "/api/director/beats?segment=S001")
+        if code_dir != 200 or "beats" not in dir_data:
+            failures.append("T39 director beats API failed")
+
     status, js = http_media("/timeline-editor.js", read_bytes=65536)
     if status != 200 or b"WaveSurfer" not in js or b"__timelines" not in js:
         failures.append("T38 timeline-editor.js missing WaveSurfer/composition seek")

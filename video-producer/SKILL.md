@@ -1,229 +1,193 @@
 ---
 name: video-producer
-description: "Director-paced video production workflow for factual Chinese explainers, narration scripts, asset-driven HyperFrames/Remotion segments, IndexTTS2 voiceover, visual-sync planning, source-grounded assets, motion choreography, audio cues, and QC. Use when Codex needs to create, revise, diagnose, or render videos/scripts where pacing, voice-to-picture alignment, material selection, visual design, animation rhythm, or non-PPT production quality matters."
+description: "Director-grade video production skill for factual Chinese explainers, news/context videos, social issue narration, finance/tech explainers, and story-driven short videos. Use when Codex needs to create, revise, diagnose, or render videos/scripts where voice-to-picture precision, real evidence, screenshots, B-roll, dynamic text, data visualization, transitions, pacing, HyperFrames/Remotion implementation, TTS, sound design, or non-PPT editorial quality matters."
 ---
 
 # Video Producer
 
-Act as a **director compiler**. Do not jump from `idea/script -> prompt -> render`.
+Behave as a video director, not a template pipeline. The goal is a short video where the viewer sees the right thing at the exact moment the narration needs it: real footage for reality, screenshots for proof, diagrams for mechanisms, text for emphasis, charts for numbers, and a designed visual world that never feels like empty text on a plain background.
 
-Default path:
+Default execution path:
 
-`project bootstrap -> research/fact lock -> story voice -> director rhythm -> visual sync + assets -> motion/audio implementation -> QC`
+`bootstrap -> research/fact lock -> script beats -> director decisions -> external asset selection + HyperFrames-native plan -> implementation -> director QC`
 
-The output must feel like a directed video: the viewer knows what to look at, has enough time to understand it, hears a human-like rhythm, and sees motion that clarifies rather than decorates.
+Do not jump from `script -> broad visual prompt -> render`.
 
-## Step 0 - Project Bootstrap
+## Bootstrap
 
-Before writing any video artifact, resolve `PROJECT_DIR`.
+Resolve `PROJECT_DIR` before writing artifacts.
 
 - If the user provides a path, use it.
-- Otherwise create `videos/<short-kebab-topic>/` under the current workspace.
-- Never write `research/`, `script/`, `segments/`, `assets/`, `audio/`, or `exports/` in the skill repo root.
+- Otherwise run `init_video_project.py` with `--name` only; it creates `~/projects/<slug>/` automatically.
+- Never write project outputs into the skill repo root.
 
 Initialize only when `.video/state.json` is absent:
 
 ```bash
 python "$SKILL_DIR/scripts/init_video_project.py" \
   --name "<title>" \
-  --root "$PROJECT_DIR" \
   --input-type <idea|article|video|url|mixed> \
   --ratio <16:9|9:16> \
-  --duration <seconds> \
-  [--recipe douyin-ai-explainer]
+  --duration <seconds>
+
+# Optional: override default ~/projects/<slug>/
+#   --root "/path/to/custom-project-dir"
 
 python "$SKILL_DIR/scripts/validate_project.py" "$PROJECT_DIR"
+python "$SKILL_DIR/scripts/validate_stage.py" "$PROJECT_DIR" --stage script
 ```
 
-After init, tell the user the absolute `PROJECT_DIR`.
+Tell the user the absolute `PROJECT_DIR`. Do not mark `script` or later stages `review` until `validate_stage.py` exits 0 for that stage.
 
-## Director Model
+## Core Director Loop
 
-Every stage must answer one director question:
+For every segment and beat, make these decisions in order:
 
-| Stage | Director question | Required artifact |
-|---|---|---|
-| story | What is the audience supposed to understand next? | `script/voiceover.md`, `script/narration_beats.csv` |
-| rhythm | How long does the viewer need to hear, see, breathe, and absorb? | `audio/prosody_plan.csv`, `script/rhythm_map.json` |
-| visual sync | What exact picture proves or explains this spoken phrase? | `script/visual_sync_plan.csv`, `segments/<id>/beat_asset_plan.csv` |
-| assets | Is this material relevant, readable, legal, and safely cropped? | `assets/asset_selection_report.json`, `assets/asset_manifest.csv` |
-| motion | Which one thing owns attention at each moment? | `script/beat_timeline.json`, `assets/asset_choreography_manifest.csv` |
-| sound | What should be heard, ducked, paused, or silent? | `audio/audio_cue_sheet.json`, `audio/audio_mix_plan.json` |
+1. **Beat function:** fact, evidence, data, mechanism, scene, person, emotion, contrast, transition, or viewpoint.
+2. **Audience need:** credibility, understanding, proof, scale, emotional entry, contrast, suspense, or closure.
+3. **Visual owner:** the one asset/action that owns attention at this moment.
+4. **Material choice:** real footage/photo, UI/web/document screenshot, external chart/data source, HyperFrames-native diagram/card/text/shape/chart, SVG annotation, ambient texture, or silence/black.
+5. **Phrase binding:** map nouns, verbs, numbers, contrast words, and emotion words to visible events.
+6. **Visual world:** choose the background system, support actors, icons/cards/charts, depth layers, and ambient motion that make the frame feel alive.
+7. **Density and rhythm:** decide whether this beat should be rich, readable-dense, medium, sparse, fast, slow, or silent.
+8. **Transition anchor:** carry color, shape, text, number, position, or motion direction into the next beat when possible.
 
-Load `references/director-rhythm-system.md` whenever working on rhythm, visual sync, assets, animation, TTS, or segment implementation.
+Read `references/director-decision-system.md` before script beats, visual sync, asset selection, or revision.
 
-## Core Rules
+## Required Artifacts
 
-- **VO-first, not equal splits:** plan from script, but bind final timings to measured WAV via `segments/<id>/vo_timing.json`.
-- **Beat is not a shot:** one narration beat may contain several visual micro-events; one shot may span several beats.
-- **Readable before flashy:** evidence screenshots, UI, charts, and source cards need enough hold time to be read.
-- **One focal owner:** at any moment, one asset/action leads; secondary motion must support it.
-- **Programmatic text:** exact Chinese text must be rendered as text/SVG/HTML layers, not baked into generated images.
-- **Concrete beats need concrete media:** if a line names a person, product, document, event, UI, or action, bind `ref_*`, `stock_*`, `gen_*`, or `motion_*`, not only icons.
-- **Assets are actors:** every visible asset needs a layer, role, entrance, main behavior, exit rule, and SFX affordance.
-- **Motion explains verbs:** scan what is being checked, stamp what is rejected, connect what is related, transform what changes, hold what must be understood.
-- **Human voice rhythm:** add pauses, emphasis, breath points, pace changes, and occasional natural phrasing before TTS generation.
+Keep the project reviewable. These files are the main creative contract:
 
-## Workflow Modes
+- `script/voiceover.md`: spoken script with claim IDs for factual lines.
+- `script/narration_beats.csv`: **one row per beat** with full schema from the skill template (`narration`, `duration_sec`, `spoken_focus`, `semantic_action`, `visual_need`, `beat_type`, `information_density`, etc.). `spoken_focus` alone is not a substitute for `narration`; Review Studio and TTS read the `narration` column.
+- `script/visual_sync_plan.csv`: exact picture-to-phrase decisions for **every** `beat_id` in `narration_beats.csv`, including focal owner, must-show detail, text treatment, transition anchor, and acceptance check.
+- `assets/asset_selection_report.json`: external candidate assets scored for relevance, readability, crop safety, rights, and selected role.
+- `assets/asset_manifest.csv`: final external assets and any programmatic components that need cross-segment tracking.
+- `segments/<id>/beat_asset_plan.csv`: beat-level asset binding for **every** narration beat, including density target, focal owner, trim/crop policy, and readable hold time.
+- `script/text_manifest.json`: dynamic text units, not whole sentences as one flat caption.
+- `script/beat_timeline.json`: timestamped micro-events for visual actions, text hits, camera moves, and SFX.
+- `audio/prosody_plan.csv` and `audio/audio_cue_sheet.json`: speech rhythm, pauses, emphasis, and event-anchored sound. `prosody_plan.csv` `tts_text` must mirror `narration_beats.csv` `narration`.
 
-Infer the smallest mode from the request. Do not ask the user to name stages.
+After `init_video_project.py`, **replace all template example rows** (earthquake/App demo beats). Never leave init-template text in narration, visual sync, or prosody files.
 
-1. `plan` - create `creative_brief.md` and `.video/video.json`.
-2. `research` - source cards, claim ledger, research brief.
-3. `script` - outline, spoken voiceover, claim IDs, on-screen text.
-4. `beat-design` - phrase-level `narration_beats.csv`; include semantic action and spoken focus.
-5. `director-rhythm` - run or refine:
+## Stage Hard Gates
+
+Do not advance a stage to `review`, `approved`, `locked`, or `rendered` until validation passes.
+
+**Before every stage advance**, run:
 
 ```bash
-python "$SKILL_DIR/scripts/build_director_rhythm.py" "$PROJECT_DIR" --write-prosody
-python "$SKILL_DIR/scripts/director_rhythm_lint.py" "$PROJECT_DIR" --fail-under 80
+python "$SKILL_DIR/scripts/validate_stage.py" "$PROJECT_DIR" --stage <stage_id>
 ```
 
-6. `visual-sync` - fill `script/visual_sync_plan.csv` and segment `beat_asset_plan.csv`; run:
+`stage_gate.py` and Review Studio enforce the same checks automatically.
+
+| Stage | Hard checks (in addition to required files) |
+|-------|-----------------------------------------------|
+| `script` | `narration` column present; every beat has non-empty `narration` + timing; `voiceover.md` filled; no init-template leftovers |
+| `assets` | `beat_asset_plan.csv` beat_ids match `narration_beats.csv`; no template leftovers |
+| `director-plan` | `visual_sync_plan.csv` beat_ids match; `spoken_focus` aligned; `validation_scripts` pass |
+| `voice-and-sound` | `prosody_plan.csv` `tts_text` matches each beat `narration` |
+
+Workflow rule: finish `script` beats (with `narration` text split from `voiceover.md`) **before** `visual_sync_plan` / `beat_asset_plan` / `director_compiler.py`. Running the compiler on template rows propagates wrong timings into `beat_timeline.json`.
+
+Example:
 
 ```bash
-python "$SKILL_DIR/scripts/visual_sync_lint.py" "$PROJECT_DIR" S001 --fail-under 85
+python "$SKILL_DIR/scripts/validate_stage.py" "$PROJECT_DIR" --stage script
+python "$SKILL_DIR/scripts/stage_gate.py" "$PROJECT_DIR" --stage script --status review --note "beats + voiceover ready"
 ```
 
-7. `assets` - gather/select assets using `references/multimedia-asset-taxonomy.md`, `references/web-sourced-visual-assets.md`, and `references/visual-asset-generation.md`; run:
+## Reference Loading
 
-```bash
-python "$SKILL_DIR/scripts/asset_selection_lint.py" "$PROJECT_DIR" --fail-under 82
-python "$SKILL_DIR/scripts/beat_asset_coverage_lint.py" "$PROJECT_DIR" S001 --fail-under 90
-```
+Load only what the task needs:
 
-8. `sound-design` - generate or revise `prosody_plan`, TTS, cue sheet, mix plan.
-9. `director-compiler` - run `director_compiler.py`, then manually improve generic actions.
-10. `segment` - build HyperFrames/Remotion/Motion Canvas from `vo_timing.json`, `rhythm_map.json`, `visual_sync_plan.csv`, `micro_timing.json`, assets, choreography, and cue sheet.
-11. `assemble` - create `edit/timeline.json`, captions, mix, draft export.
-12. `qc` - run validation, rhythm, visual sync, asset, timing, aesthetic, audio, rights, and caption checks.
-13. `revise` - change the earliest upstream artifact and list downstream rebuild impact.
-14. `resume` - read `.video/state.json`, continue from the next unapproved stage.
+- **Director and material decisions:** `references/director-decision-system.md`
+- **Phrase-to-picture and dynamic text:** `references/phrase-to-picture-binding.md`
+- **Shot language, screenshot acting, density, transitions:** `references/editorial-shot-language.md`
+- **Rich HyperFrames visual world:** `references/visual-world-and-richness.md`
+- **Asset sourcing and rights:** `references/evidence-and-asset-sourcing.md`
+- **Motion, micro-events, and sound cues:** `references/motion-and-transition-grammar.md`
+- **Factual research and narrative script:** `references/factual-research-and-script.md`
+- **HyperFrames-native generation and implementation:** `references/hyperframes-implementation.md`
+- **Director QC rubric:** `references/director-quality-review.md`
+- **Voice, TTS, and mix:** `references/audio-voice-and-mix.md`
+- **Windows Chinese SVG:** `references/svg-utf8-windows.md`
 
-## Factual Script Rules
+## Factual Videos
 
-For factual videos, load:
+For news, finance, tech, public-policy, health, social, or documentary-style videos:
 
-- `references/deep-narrative-investigation.md`
-- `references/fact-linked-script-system.md`
-- `references/retention-storytelling-and-voice.md`
+1. Build `research/source_cards.jsonl`, `research/claim_ledger.csv`, and `research/factcheck_report.md`.
+2. Give each factual claim a `claim_id`.
+3. Prefer real-world assets for real-world claims: official pages, app screens, tables, product pages, charts, photos, footage, public statements, or news screenshots.
+4. If evidence is uncertain, say the uncertainty, mark the row, or cut the claim.
 
-Required:
+Load `references/factual-research-and-script.md`.
 
-- `research/source_cards.jsonl`
-- `research/claim_ledger.csv`
-- `research/factcheck_report.md`
-- claim IDs in factual voiceover lines
-- `research/thread_ledger.csv` and `script/narrative_thread_map.json` for deep narrative work
+## Visual Sync Rules
 
-Do not invent causal links. If a link lacks evidence, mark it as an open question, say the uncertainty on camera, or cut it.
+- Concrete nouns need concrete pictures. If the line names an app, company, person, price, product, document, place, or event, first look for a real asset or screenshot.
+- Use HyperFrames natively for simple generative material: dynamic text, color blocks, cards, device/browser frames, red boxes, arrows, callouts, background texture, simple charts, counters, quote cards, labels, masks, and transition shapes. Do not create these in the asset generation stage unless they must be exported/reused as standalone files.
+- A HyperFrames-native beat should still be visually rich when the content calls for it: use a designed background bed, cards/frames, icons, small charts, source stacks, cursor/focus tools, and micro-motion. "Native" does not mean "only text."
+- SVG is usually annotation, structure, connection, or transition glue. It should often be inline HyperFrames/SVG/HTML/CSS, not a separately generated asset, and should not become the default subject for real events.
+- Screenshots must perform: show full context, push into the important area, highlight with a red box/label/magnifier, hold long enough to read, then exit or shrink into an evidence stack.
+- Data must perform: number/price/percent can become the largest element; charts should build or compare, not appear as decoration.
+- Text must perform: split important words, numbers, contrast terms, quotes, and emotion lines into separate text units with size, color, position, and timing.
+- Emotion and viewpoint beats may deliberately remove visual clutter: black screen, white text, a human cutaway, night street, back view, or low-saturation quiet footage can be stronger than another chart.
 
-## Rhythm & Voice Rules
+## Rhythm Rules
 
-Load `references/director-rhythm-system.md`, `references/vo-sync-timing-protocol.md`, and `references/music-tts-voiceover.md`.
+- Plan from narration, but bind final timings to measured voice files (`segments/<id>/vo_timing.json`) after TTS.
+- Evidence, UI, tables, and charts need readable hold time and often slower speech.
+- Hooks can be visually sharp but must have one clear focal object in the first second.
+- Person/life-impact sections should breathe: fewer overlays, slower push, more real texture.
+- Transitions should use semantic continuity: shared color, shape, word, number, composition zone, or motion direction.
 
-Required order:
+## Implementation
 
-```bash
-python "$SKILL_DIR/scripts/build_director_rhythm.py" "$PROJECT_DIR" --write-prosody
-python "$SKILL_DIR/scripts/indextts2_generate.py" "$PROJECT_DIR" --segment S001 --concat
-python "$SKILL_DIR/scripts/measure_segment_vo.py" "$PROJECT_DIR" S001
-python "$SKILL_DIR/scripts/build_micro_timing.py" "$PROJECT_DIR" S001
-python "$SKILL_DIR/scripts/director_rhythm_lint.py" "$PROJECT_DIR" --segment S001 --fail-under 80
-python "$SKILL_DIR/scripts/segment_timing_lint.py" "$PROJECT_DIR" S001
-```
+Before coding a segment:
 
-Targets:
+1. Create or update a static styleframe/layout that already communicates the focal owner, background world, support actors, and hierarchy.
+2. Mark `hf_*`, `text_*`, `chart_*`, `svg_*`, and `ambient_*` items that will be generated directly in HyperFrames code instead of external asset files.
+3. Bind micro-events from `script/beat_timeline.json` to voice timing.
+4. Implement exact Chinese text as HTML/SVG/canvas text layers, not baked into generated images.
+5. Keep captions, source labels, table rows, chart axes, and UI details readable.
+6. Use sound only where it has a visual or semantic anchor: click, tick, stamp, whoosh, chime, silence, or no cue.
 
-- spoken Chinese: usually 4.2-5.8 characters/sec after pauses
-- dense evidence or UI: slower or longer visual hold
-- hook: faster visual change, not necessarily faster speech
-- proof: image appears before or with the claim, remains long enough to read
-- reveal/twist: short pre-pause or post-hold is preferred over more animation
-
-## Visual Sync & Assets
-
-Load:
-
-- `references/director-rhythm-system.md`
-- `references/multimedia-asset-taxonomy.md`
-- `references/web-sourced-visual-assets.md`
-- `references/visual-asset-generation.md`
-- `references/layered-composition-depth.md`
-
-Every beat should include:
-
-- `spoken_focus`: the phrase or idea the audience must catch
-- `visual_subject_desc`: what is visibly on screen
-- `screen_content_desc`: what the asset/frame actually contains
-- `must_show_detail`: detail that must remain uncropped/readable
-- `visual_read_time_sec`: minimum time needed to understand the frame
-- `trim_policy`: `no_trim`, `trim_to_action`, `loop_safe`, or `ken_burns_fill`
-- `crop_anchor`: face, UI button, document title, chart axis, logo, object, or none
-
-Do not full-bleed proof screenshots over captions. Place proof media inside source cards, device frames, document frames, or a clearly labeled evidence slot.
-
-## Motion & HyperFrames
-
-Load:
-
-- `references/director-compiler-os.md`
-- `references/hyperframes-director-implementation.md`
-- `references/motion-life-playbook.md`
-- `references/voice-synced-animation-design.md`
-- `references/layered-composition-depth.md`
-
-Before coding:
-
-1. Build a static styleframe/layout first.
-2. Assign each beat one focal owner.
-3. Schedule micro-events from `segments/<id>/micro_timing.json`.
-4. Use `rhythm_map.json` to add lead-in, hold, and scene-reset timing.
-5. Keep HUD captions readable and outside motion collisions.
-
-Reject:
-
-- one centered card for a full beat
-- fade-only animation
-- all elements moving with equal intensity
-- evidence shown after the line that refers to it
-- motion that hides the detail the narrator is discussing
+For HyperFrames, load `references/hyperframes-implementation.md`.
 
 ## Quality Gates
 
-Run the relevant gates before final render:
+Run the relevant checks before final render. Stage advances (`stage_gate.py --status review|approved`) **fail automatically** if these are not satisfied:
 
 ```bash
+python "$SKILL_DIR/scripts/validate_stage.py" "$PROJECT_DIR" --stage <stage_id>
 python "$SKILL_DIR/scripts/validate_project.py" "$PROJECT_DIR"
-python "$SKILL_DIR/scripts/thread_depth_lint.py" "$PROJECT_DIR" --fail-under 80
 python "$SKILL_DIR/scripts/script_claim_lint.py" "$PROJECT_DIR" --fail-under 85
-python "$SKILL_DIR/scripts/director_rhythm_lint.py" "$PROJECT_DIR" --fail-under 80
 python "$SKILL_DIR/scripts/visual_sync_lint.py" "$PROJECT_DIR" S001 --fail-under 85
-python "$SKILL_DIR/scripts/asset_selection_lint.py" "$PROJECT_DIR" --fail-under 82
+python "$SKILL_DIR/scripts/beat_asset_coverage_lint.py" "$PROJECT_DIR" S001 --fail-under 85
 python "$SKILL_DIR/scripts/beat_timeline_lint.py" "$PROJECT_DIR" --fail-under 80
-python "$SKILL_DIR/scripts/beat_asset_coverage_lint.py" "$PROJECT_DIR" S001 --fail-under 90
-python "$SKILL_DIR/scripts/segment_timing_lint.py" "$PROJECT_DIR" S001 --full
+python "$SKILL_DIR/scripts/director_quality_lint.py" "$PROJECT_DIR" --fail-under 78
 python "$SKILL_DIR/scripts/aesthetic_score.py" "$PROJECT_DIR" --fail-under 72
 python "$SKILL_DIR/scripts/audio_score.py" "$PROJECT_DIR" --fail-under 72
 ```
 
-For Douyin/Bilibili AI explainers, also run:
+Director QC must catch aesthetic failures, not only missing fields: PPT-like shots, SVG overuse, empty/plain backgrounds, text-only frames, no icons/charts/support actors, no real-world texture, unbound keywords, screenshots that do not guide attention, flat whole-sentence text, constant density, transition hard cuts with no anchor, and emotion beats overloaded with evidence.
 
-```bash
-python "$SKILL_DIR/scripts/douyin_ai_explainer_score.py" "$PROJECT_DIR" --fail-under 78
-```
+Load `references/director-quality-review.md` when diagnosing or revising.
 
-## Checkpoint Behavior
+## Revision Rule
 
-Default to checkpoint mode: finish one stage, write artifacts, run the stage validators, and summarize what changed.
+Fix the earliest responsible artifact:
 
-When revising, change the earliest responsible artifact:
+- wrong fact -> `research/claim_ledger.csv`, `source_cards.jsonl`, `voiceover.md`
+- wrong visual strategy -> `narration_beats.csv`, `visual_sync_plan.csv`
+- weak or generic external material -> `asset_selection_report.json`, `asset_manifest.csv`
+- weak HyperFrames-native material -> `text_manifest.json`, `visual_sync_plan.csv`, `beat_timeline.json`, segment code
+- flat text -> `text_manifest.json`, `beat_timeline.json`, segment code
+- chaotic or late animation -> `beat_timeline.json`, `audio_cue_sheet.json`, segment code
+- poor pacing -> `prosody_plan.csv`, `vo_timing.json`, `rhythm_map.json`
+- ugly frame -> `art_direction.md`, `tokens.json`, `shotlist.json`
 
-- voice too fast -> `voiceover.md`, `narration_beats.csv`, `prosody_plan.csv`
-- picture late/early -> `rhythm_map.json`, `visual_sync_plan.csv`, `beat_timeline.json`
-- bad or irrelevant media -> `asset_selection_report.json`, `asset_manifest.csv`
-- ugly/flat frames -> `art_direction.md`, `tokens.json`, `shotlist.json`, `asset_choreography_manifest.csv`
-- chaotic animation -> `beat_timeline.json`, `micro_timing.json`, `audio_cue_sheet.json`
-
-Never overwrite approved or locked artifacts. Create versioned siblings and update state only after approval.
-
+Never overwrite approved or locked artifacts without creating a versioned sibling or explicitly updating stage state.

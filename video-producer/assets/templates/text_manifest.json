@@ -1,26 +1,78 @@
 {
-  "version": "v001",
+  "version": "v002",
   "language": "zh-CN",
   "policy": {
     "exact_text_layers_only": true,
     "forbid_generated_raster_chinese": true,
-    "allowed_renderers": ["html", "svg", "canvas", "remotion", "motion-canvas", "hyperframes", "manim"],
+    "split_sentence_by_hierarchy": true,
+    "allowed_renderers": ["html", "svg", "canvas", "remotion", "motion-canvas", "hyperframes"],
     "proofread_required": true
   },
   "font_stack": "Noto Sans SC, Source Han Sans SC, PingFang SC, Microsoft YaHei, sans-serif",
   "items": [
     {
-      "id": "caption_001",
-      "text": "这里填写逐字校对后的中文字幕",
-      "role": "bottom_caption",
-      "segment_id": "001_hook",
-      "start_sec": 0,
-      "end_sec": 2.4,
+      "id": "text_hook_time",
+      "text": "凌晨 3:12",
+      "role": "evidence_label",
+      "segment_id": "S001",
+      "beat_id": "B001",
+      "start_sec": 0.15,
+      "end_sec": 2.2,
       "renderer": "html",
+      "position": "top_left",
+      "style_intent": "small white text on black/real footage; serious timestamp",
+      "font_weight": 700,
+      "status": "draft",
+      "proofread_by": null,
+      "notes": "Austere timestamp, not a decorative title."
+    },
+    {
+      "id": "text_ad_label",
+      "text": "广告",
+      "role": "keyword",
+      "segment_id": "S001",
+      "beat_id": "B003",
+      "start_sec": 5.55,
+      "end_sec": 8.3,
+      "renderer": "html",
+      "position": "attached_to_ad_slot",
+      "style_intent": "red bold keyword attached to the red box",
+      "font_weight": 900,
+      "status": "draft",
+      "proofread_by": null,
+      "notes": "Appears exactly when the narration says 广告."
+    },
+    {
+      "id": "text_normal_vip",
+      "text": "普通模式 / VIP",
+      "role": "contrast_label",
+      "segment_id": "S001",
+      "beat_id": "B004",
+      "start_sec": 8.8,
+      "end_sec": 12.0,
+      "renderer": "html",
+      "position": "above_table_columns",
+      "style_intent": "two labels anchored to table columns",
       "font_weight": 800,
       "status": "draft",
       "proofread_by": null,
-      "notes": "Do not bake this text into generated imagery."
+      "notes": "Labels must not cover readable table cells."
+    },
+    {
+      "id": "text_final_line",
+      "text": "危险时刻，少一点干扰。",
+      "role": "viewpoint_line",
+      "segment_id": "S001",
+      "beat_id": "B005",
+      "start_sec": 12.0,
+      "end_sec": 15.0,
+      "renderer": "html",
+      "position": "center",
+      "style_intent": "black screen, white text, final word may be red",
+      "font_weight": 800,
+      "status": "draft",
+      "proofread_by": null,
+      "notes": "Reveal line by line with a short silence."
     }
   ]
 }

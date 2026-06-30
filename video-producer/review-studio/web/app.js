@@ -1,6 +1,6 @@
 const API = "/api";
 let currentSegment = "S001";
-let activeView = "pipeline";
+let activeView = "project";
 let selectedStageId = "script";
 let selectedBeatId = null;
 let timelineData = null;
@@ -12,16 +12,18 @@ let activeBeatsTts = null;
 let lastTtsProgress = { status: "idle" };
 
 const TABS = [
-  { view: "pipeline", icon: "🎬", label: "流程" },
-  { view: "script", icon: "📝", label: "文案" },
-  { view: "beats", icon: "🎙️", label: "口播 & 配音" },
-  { view: "assets", icon: "🖼️", label: "资产" },
-  { view: "timeline", icon: "⏱️", label: "时间轴" },
-  { view: "stage", icon: "📦", label: "阶段" },
-  { view: "queue", icon: "📋", label: "待办" },
-  { view: "jobs", icon: "⚙️", label: "任务" },
+  { view: "project", icon: "🎬", label: "项目" },
+  { view: "director", icon: "🎯", label: "导演" },
+  { view: "preview", icon: "⏱️", label: "预览" },
   { view: "qc", icon: "✅", label: "质检" },
-  { view: "history", icon: "📜", label: "历史" },
+];
+
+const CHECKPOINTS = [
+  { id: "research", label: "研究", stages: ["plan", "research", "fact-lock"] },
+  { id: "script", label: "脚本", stages: ["script"] },
+  { id: "director", label: "导演计划", stages: ["design", "assets", "director-plan"] },
+  { id: "build", label: "实现", stages: ["voice-and-sound", "segments", "assemble"] },
+  { id: "ship", label: "交付", stages: ["qc", "publish"] },
 ];
 
 const ASSET_IMAGE_RE = /\.(svg|png|jpe?g|webp|gif)$/i;
@@ -284,12 +286,14 @@ function assetThumb(asset) {
   </div>`;
 }
 
-function toast(msg) {
+function toast(msg, ms) {
   const el = document.getElementById("toast");
-  el.textContent = msg;
+  const text = String(msg || "");
+  el.textContent = text.replace(/\n+/g, " · ");
   el.classList.add("show");
   clearTimeout(toast._timer);
-  toast._timer = setTimeout(() => el.classList.remove("show"), 3500);
+  const duration = ms || Math.min(9000, Math.max(3500, text.length * 35));
+  toast._timer = setTimeout(() => el.classList.remove("show"), duration);
 }
 
 function pageWrap(title, subtitle, inner) {
@@ -338,22 +342,68 @@ async function api(path, opts = {}) {
   return res.json();
 }
 
-function parseFetchError(data, fallback = "请求失败") {
+function parseFetchError(data, fallback = "请求失败", stageLabelMap = null) {
   if (!data) return fallback;
   if (typeof data === "string") {
     try {
-      return parseFetchError(JSON.parse(data), fallback);
+      return parseFetchError(JSON.parse(data), fallback, stageLabelMap);
     } catch {
-      return data || fallback;
+      return humanizeStageGateMessage(data || fallback, stageLabelMap);
     }
   }
-  if (typeof data.detail === "string") return data.detail;
+  if (typeof data.detail === "string") {
+    return humanizeStageGateMessage(data.detail, stageLabelMap);
+  }
   if (Array.isArray(data.detail)) {
-    return data.detail.map(item => item.msg || item.message || JSON.stringify(item)).join("；");
+    const lines = data.detail.map(item => {
+      if (typeof item === "string") return item;
+      return item.msg || item.message || JSON.stringify(item);
+    });
+    return humanizeStageGateMessage(lines.join("；"), stageLabelMap);
+  }
+  if (data.detail && typeof data.detail === "object") {
+    const d = data.detail;
+    if (d.hint) {
+      const head = d.message || "资源未就绪";
+      return d.expected_path ? `${head}\n${d.hint}\n路径: ${d.expected_path}` : `${head}\n${d.hint}`;
+    }
+    if (d.message) return String(d.message);
   }
   if (data.error) return String(data.error);
   if (data.message) return String(data.message);
   return fallback;
+}
+
+function formatApiError(err, stageLabelMap = null) {
+  return parseFetchError(err?.message || err, "请求失败", stageLabelMap);
+}
+
+function stageLabelMapFromStages(stages = []) {
+  const map = {};
+  for (const s of stages) map[s.id] = s.label || s.id;
+  return map;
+}
+
+function stageLabel(stageId, stages = []) {
+  const hit = stages.find(s => s.id === stageId);
+  return hit?.label || stageId;
+}
+
+function humanizeStageGateMessage(text, stageLabelMap = null) {
+  const raw = String(text || "");
+  const map = stageLabelMap || {};
+  return raw.split(/[；;]\s*/).map(line => {
+    const m = line.match(/^(\S+)\s+blocked:\s+dependency\s+(\S+)\s+is\s+(\S+),\s+needs\s+(.+)$/);
+    if (!m) return line;
+    const [, stageId, depId, depStatus] = m;
+    const stageName = map[stageId] || stageId;
+    const depName = map[depId] || depId;
+    return `无法通过「${stageName}」：上游「${depName}」仍为 ${statusZh(depStatus)}，需先通过或锁定`;
+  }).join("；");
+}
+
+function formatBlockedStages(blockedBy = [], stages = []) {
+  return blockedBy.map(b => `${stageLabel(b.stage, stages)}（${statusZh(b.status)}）`).join("、");
 }
 
 function setRefUploadUi(visible, label, pct) {
@@ -493,7 +543,7 @@ async function loadProjectMeta() {
   renderWorkspaceControls(data.workspace);
   if (data.needs_project) {
     document.getElementById("project-meta").textContent = "请先设置工作区并选择项目";
-    document.getElementById("pipeline").innerHTML = pageWrap("制作流程", "设置工作区后即可开始", `<div class="card card-no-accent"><p class="metric">在上方展开「工作区」，输入路径并扫描，再选择项目。</p></div>`);
+    document.getElementById("project").innerHTML = pageWrap("项目", "设置工作区后即可开始", `<div class="card card-no-accent"><p class="metric">在上方展开「工作区」，输入路径并扫描，再选择项目。</p></div>`);
     return data;
   }
   const title = data.video?.title || data.root;
@@ -505,18 +555,20 @@ async function loadProjectMeta() {
 
 async function refreshActiveView() {
   const map = {
-    pipeline: renderPipeline,
-    script: renderScript,
-    beats: renderBeats,
-    audio: renderBeats,
-    assets: renderAssets,
-    timeline: renderTimeline,
+    project: renderProject,
+    director: renderDirector,
     preview: renderTimeline,
-    stage: renderStageDetail,
-    queue: renderQueue,
-    jobs: renderJobs,
-    qc: renderQc,
-    history: renderHistory,
+    qc: renderQcHub,
+    // legacy aliases
+    pipeline: renderProject,
+    script: renderDirector,
+    beats: renderDirector,
+    assets: renderDirector,
+    timeline: renderTimeline,
+    stage: renderProject,
+    queue: renderQcHub,
+    jobs: renderQcHub,
+    history: renderQcHub,
   };
   if (map[activeView]) await map[activeView]();
 }
@@ -569,9 +621,14 @@ function ttsProgressLabel(prog) {
 }
 
 async function runPreset(name, extra = "") {
-  if (isTtsPreset(name)) await ensureTtsOnline();
+  let savedCount = 0;
+  if (isTtsPreset(name)) {
+    await ensureTtsOnline();
+    savedCount = await saveAllBeatNarrationsFromUi();
+    if (savedCount > 0) toast(`已保存 ${savedCount} 条口播修改并同步下游`);
+  }
   let forceExtra = "";
-  if (isTtsPreset(name) && isTtsForceRedub()) {
+  if (isTtsPreset(name) && (isTtsForceRedub() || savedCount > 0)) {
     forceExtra = "&force_tts=true";
   }
   const url = `/jobs/preset/${name}?segment=${currentSegment}${forceExtra}${extra}`;
@@ -759,48 +816,179 @@ function renderRefLibraryRows(refs) {
 }
 
 // --- Pipeline ---
-async function renderPipeline() {
+async function renderProject() {
   const { stages } = await api("/stages");
-  const approved = stages.filter(s => s.status === "approved" || s.status === "locked").length;
-  const blocked = stages.filter(s => s.blocked_by?.length).length;
-  const hero = `<div class="hero-stats">
-    <div class="stat-hero accent-blue"><span class="stat-icon">🎬</span><div class="stat-value">${stages.length}</div><div class="stat-label">总阶段数</div></div>
-    <div class="stat-hero accent-green"><span class="stat-icon">✅</span><div class="stat-value">${approved}</div><div class="stat-label">已通过</div></div>
-    <div class="stat-hero accent-orange"><span class="stat-icon">⏸️</span><div class="stat-value">${blocked}</div><div class="stat-label">阻塞中</div></div>
-    <div class="stat-hero accent-purple"><span class="stat-icon">📍</span><div class="stat-value">${currentSegment}</div><div class="stat-label">当前段落</div></div>
-  </div>`;
-  const cards = `<div class="grid">${stages.map(s => `
-    <article class="card clickable card-no-accent" onclick="openStage('${s.id}')">
-      <div class="card-icon-title"><span class="emoji">📦</span><h3>${esc(s.label || s.id)}</h3></div>
-      ${statusBadge(s.status)}
-      <p class="metric">产物进度 <strong>${s.required_ready ?? 0} / ${s.required_count ?? 0}</strong></p>
-      ${s.blocked_by?.length ? `<p class="blocked">阻塞：${s.blocked_by.map(b => `${b.stage}（${statusZh(b.status)}）`).join("、")}</p>` : ""}
+  const byId = Object.fromEntries(stages.map(s => [s.id, s]));
+  const cards = CHECKPOINTS.map(cp => {
+    const subs = cp.stages.map(id => byId[id]).filter(Boolean);
+    const approved = subs.filter(s => s.status === "approved" || s.status === "locked").length;
+    const blocked = subs.some(s => s.blocked_by?.length);
+    const ready = subs.reduce((n, s) => n + (s.required_ready ?? 0), 0);
+    const total = subs.reduce((n, s) => n + (s.required_count ?? 0), 0);
+    return `
+    <article class="card clickable card-no-accent" onclick="openCheckpoint('${cp.id}')">
+      <div class="card-icon-title"><span class="emoji">📦</span><h3>${esc(cp.label)}</h3></div>
+      <p class="metric">子阶段 <strong>${approved}/${subs.length}</strong> 已通过 · 产物 <strong>${ready}/${total}</strong></p>
+      ${blocked ? `<p class="blocked">存在阻塞依赖</p>` : statusBadge(approved === subs.length ? "approved" : "review")}
       <div class="toolbar">
-        <button class="btn btn-primary btn-compact" onclick="event.stopPropagation(); approveStage('${s.id}')">通过</button>
-        <button class="btn btn-secondary btn-compact" onclick="event.stopPropagation(); setStage('${s.id}','needs-revision')">驳回</button>
+        <button class="btn btn-secondary btn-compact" onclick="event.stopPropagation(); setActiveTab('director')">编辑</button>
+        <button class="btn btn-secondary btn-compact" onclick="event.stopPropagation(); setActiveTab('preview')">预览</button>
       </div>
-    </article>`).join("")}</div>`;
-  document.getElementById("pipeline").innerHTML = pageWrap("制作流程", `${stages.length} 个阶段 · 点击卡片进入详情`, hero + cards);
+    </article>`;
+  }).join("");
+  const hero = `<div class="hero-stats">
+    <div class="stat-hero accent-blue"><span class="stat-icon">📍</span><div class="stat-value">${currentSegment}</div><div class="stat-label">当前段落</div></div>
+    <div class="stat-hero accent-green"><span class="stat-icon">✅</span><div class="stat-value">${stages.filter(s => s.status === "approved" || s.status === "locked").length}</div><div class="stat-label">已通过阶段</div></div>
+    <div class="stat-hero accent-orange"><span class="stat-icon">⏸️</span><div class="stat-value">${stages.filter(s => s.blocked_by?.length).length}</div><div class="stat-label">阻塞中</div></div>
+  </div>`;
+  document.getElementById("project").innerHTML = pageWrap(
+    "项目总览",
+    "5 个检查点 · 日常流程：导演 → 预览 → 质检",
+    hero + `<div class="grid">${cards}</div><div id="project-stage-detail" class="card card-no-accent hidden"></div>`
+  );
+}
+
+window.openCheckpoint = async (checkpointId) => {
+  const cp = CHECKPOINTS.find(c => c.id === checkpointId);
+  if (!cp) return;
+  selectedStageId = cp.stages[0];
+  const host = document.getElementById("project-stage-detail");
+  if (!host) return;
+  host.classList.remove("hidden");
+  const { stages } = await api("/stages");
+  const stage = stages.find(s => cp.stages.includes(s.id)) || stages.find(s => s.id === selectedStageId);
+  if (stage) selectedStageId = stage.id;
+  const { artifacts } = await api(`/stages/${selectedStageId}/artifacts?segment=${currentSegment}`);
+  const stageOpts = stages.filter(s => cp.stages.includes(s.id))
+    .map(s => `<option value="${s.id}" ${s.id === selectedStageId ? "selected" : ""}>${s.label || s.id}</option>`).join("");
+  host.innerHTML = `
+    <h3>${esc(cp.label)} · ${esc(stage?.label || selectedStageId)}</h3>
+    ${statusBadge(stage?.status)}
+    <div class="field-row" style="margin:12px 0">
+      <label class="field-label" for="cp-stage-select">子阶段</label>
+      <select id="cp-stage-select" class="ios-select" onchange="selectedStageId=this.value;openCheckpoint('${checkpointId}')">${stageOpts}</select>
+    </div>
+    <div class="toolbar">
+      <button class="btn btn-primary btn-compact" onclick="approveStage('${selectedStageId}')">通过</button>
+      <button class="btn btn-secondary btn-compact" onclick="validateStage('${selectedStageId}')">运行校验</button>
+    </div>
+    ${tableWrap(`<thead><tr><th>必需</th><th>产物</th><th>状态</th><th></th></tr></thead>
+      <tbody>${artifacts.map(a => `<tr>
+        <td>${a.required ? "✓" : ""}</td>
+        <td>${esc(a.path)}</td>
+        <td>${a.exists ? "有" : "缺失"} ${statusBadge(a.review_status)}</td>
+        <td>${a.exists ? `<button class="btn btn-secondary btn-compact" onclick="editArtifact('${a.path.replace(/'/g, "\\'")}')">编辑</button>` : ""}</td>
+      </tr>`).join("")}</tbody>`)}
+    <div id="artifact-editor" class="editor-host"></div>`;
+};
+
+async function renderDirector() {
+  await renderBeats("director");
+  try {
+    const { beats } = await api(`/director/beats?segment=${currentSegment}`);
+    const host = document.getElementById("director");
+    if (!host) return;
+    const existing = host.innerHTML;
+    const directorTable = tableWrap(`<thead><tr>
+      <th>Beat</th><th>类型</th><th>口播焦点</th><th>视觉需求</th><th>Owner</th><th>主资产</th><th>密度</th>
+    </tr></thead><tbody>${beats.map(b => `<tr>
+      <td><a href="#" onclick="openBeatDetail('${b.beat_id}');return false">${b.beat_id}</a></td>
+      <td>${esc(b.beat_type || "-")}</td>
+      <td>${esc(b.spoken_focus || b.visual_sync?.spoken_focus || "-")}</td>
+      <td>${esc(b.visual_need || "-")}</td>
+      <td>${esc(b.focal_owner || b.visual_sync?.focal_owner || "-")}</td>
+      <td>${esc(b.primary_asset || "-")}</td>
+      <td>${esc(b.density_target || b.information_density || "-")}</td>
+    </tr>`).join("")}</tbody>`);
+    const assetsSection = await renderExternalAssetsSection();
+    host.innerHTML = existing + `
+      <div class="card card-no-accent" style="margin-top:16px">
+        <div class="card-icon-title"><span class="emoji">🎯</span><h3>导演决策</h3></div>
+        ${directorTable}
+      </div>
+      ${assetsSection}`;
+    initCollapsiblePanel("vo-settings-toggle", "vo-settings-panel", "rs-vo-settings-collapsed", true);
+    bindTtsForceRedubCheckbox();
+    bindRefUploadInput();
+  } catch { /* beats section is enough */ }
+}
+
+async function renderExternalAssetsSection() {
+  const { assets } = await api(`/assets?segment=${currentSegment}`);
+  const external = assets.filter(a => {
+    const t = (a.type || "").toLowerCase();
+    const p = (a.path_or_url || "").toLowerCase();
+    if (t.includes("hyperframes") || t.includes("text_layer")) return false;
+    if (p === "programmatic" || p.includes("text_manifest")) return false;
+    if ((a.asset_id || "").match(/^(hf_|text_|chart_|ambient_)/)) return false;
+    return ASSET_PREVIEW_RE.test(a.path_or_url || "") || a.exists;
+  });
+  const programmatic = assets.filter(a => !external.includes(a));
+  return `
+  <div class="card card-no-accent" style="margin-top:16px">
+    <div class="card-icon-title"><span class="emoji">🖼️</span><h3>外部证据资产</h3></div>
+    <p class="metric">可预览 ${external.length} 项 · HyperFrames 原生 ${programmatic.length} 项（代码内生成，不标缺失）</p>
+    <div class="asset-grid">${external.map(a => {
+      const path = a.media_path || a.path_or_url || "";
+      return `<article class="card asset-card card-no-accent${a.exists ? "" : " asset-card-missing"}">
+        ${assetThumb(a)}
+        <h3>${a.asset_id}</h3>
+        ${statusBadge(a.review_status || "review")}
+        <div class="toolbar">
+          <button class="btn btn-primary btn-compact" onclick="reviewAsset('${a.asset_id}','approved')" ${a.exists ? "" : "disabled"}>通过</button>
+          <button class="btn btn-secondary btn-compact" onclick="rejectAsset('${a.asset_id}')">驳回</button>
+          <button class="btn btn-secondary btn-compact" onclick="openAssetLightbox('${escAttr(path)}','${escAttr(a.asset_id)}')" ${a.exists ? "" : "disabled"}>预览</button>
+        </div>
+      </article>`;
+    }).join("") || `<p class="metric">暂无外部资产</p>`}</div>
+  </div>`;
+}
+
+async function renderPipeline() {
+  return renderProject();
 }
 
 window.openStage = async (stageId) => {
   selectedStageId = stageId;
-  activeView = "stage";
-  setActiveTab("stage");
-  await renderStageDetail();
+  activeView = "project";
+  setActiveTab("project");
+  const cp = CHECKPOINTS.find(c => c.stages.includes(stageId));
+  if (cp) await openCheckpoint(cp.id);
 };
 
 async function approveStage(stageId) {
-  await api(`/stages/${stageId}/status`, { method: "POST", body: JSON.stringify({ status: "approved", note: "UI approve" }) });
-  toast(`已通过：${stageId}`);
-  await renderPipeline();
+  let stages = [];
+  try {
+    ({ stages } = await api("/stages"));
+    const stage = stages.find(s => s.id === stageId);
+    if (stage?.blocked_by?.length) {
+      toast(`无法通过：需先完成 ${formatBlockedStages(stage.blocked_by, stages)}`);
+      return;
+    }
+    await api(`/stages/${stageId}/status`, { method: "POST", body: JSON.stringify({ status: "approved", note: "UI approve" }) });
+    toast(`已通过：${stageLabel(stageId, stages)}`);
+    if (activeView === "project") await renderProject();
+    else await refreshActiveView();
+  } catch (err) {
+    toast(formatApiError(err, stageLabelMapFromStages(stages)));
+  }
 }
 
 async function setStage(stageId, status) {
-  await api(`/stages/${stageId}/status`, { method: "POST", body: JSON.stringify({ status, note: "UI update" }) });
-  toast(`${stageId} → ${status}`);
-  await renderPipeline();
+  let stages = [];
+  try {
+    ({ stages } = await api("/stages"));
+    await api(`/stages/${stageId}/status`, { method: "POST", body: JSON.stringify({ status, note: "UI update" }) });
+    toast(`${stageLabel(stageId, stages)} → ${statusZh(status)}`);
+    if (activeView === "project") await renderProject();
+    else await refreshActiveView();
+  } catch (err) {
+    toast(formatApiError(err, stageLabelMapFromStages(stages)));
+  }
 }
+
+window.approveStage = approveStage;
+window.setStage = setStage;
 
 // --- Script Lab ---
 async function renderScript() {
@@ -879,7 +1067,7 @@ function renderBeatTableRows(beats, prog) {
   }).join("");
 }
 
-async function renderBeats() {
+async function renderBeats(targetId = "director") {
   let prog = lastTtsProgress;
   try {
     prog = await api("/tts/progress");
@@ -903,9 +1091,15 @@ async function renderBeats() {
   const selectedRefName = (selectedRef || "").split("/").pop() || "未设置";
   const settingsHint = `${selectedRefName} · ${cfg.base_url || "未配置"}`;
 
-  document.getElementById("beats").innerHTML = pageWrap(
-    "口播 & 配音",
-    `${currentSegment} · ${beats.length} 条 beat · 编辑口播、IndexTTS 配音与时长对齐`,
+  const beatsEl = document.getElementById(targetId);
+  if (!beatsEl) return;
+  const pageTitle = targetId === "director" ? "导演审核" : "口播 & 配音";
+  const pageSub = targetId === "director"
+    ? `${currentSegment} · 口播编辑、配音与导演决策`
+    : `${currentSegment} · ${beats.length} 条 beat · 编辑口播、IndexTTS 配音与时长对齐`;
+  beatsEl.innerHTML = pageWrap(
+    pageTitle,
+    pageSub,
     `
     <div class="card card-no-accent vo-summary-card">
       <div class="vo-summary-metrics">
@@ -1084,7 +1278,7 @@ window.openBeatDetail = async (beatId) => {
 window.saveBeatFromDrawer = async (beatId) => {
   const narration = document.getElementById("drawer-narration").value;
   await api(`/beats/${beatId}?segment=${currentSegment}`, { method: "PATCH", body: JSON.stringify({ narration }) });
-  toast(`${beatId} 已保存`);
+  toast(`${beatId} 已保存 · 已同步 prosody 与 voiceover`);
   await renderBeats();
 };
 
@@ -1102,8 +1296,49 @@ window.patchBeatDuration = async (beatId) => {
 async function saveBeat(beatId) {
   const narration = document.getElementById(`n-${beatId}`).value;
   await api(`/beats/${beatId}?segment=${currentSegment}`, { method: "PATCH", body: JSON.stringify({ narration }) });
-  toast(`${beatId} 已保存 · 下游已过期`);
+  toast(`${beatId} 已保存 · 已同步 prosody 与 voiceover`);
   await renderBeats();
+}
+
+function getBeatNarrationFromUi(beatId) {
+  const tableEl = document.getElementById(`n-${beatId}`);
+  if (tableEl) return tableEl.value;
+  if (selectedBeatId === beatId) {
+    const drawerEl = document.getElementById("drawer-narration");
+    if (drawerEl) return drawerEl.value;
+  }
+  return null;
+}
+
+async function ensureBeatNarrationSaved(beatId) {
+  const narration = getBeatNarrationFromUi(beatId);
+  if (narration == null) return false;
+  const beats = window.__beatsAllRows || [];
+  const beat = beats.find(b => b.beat_id === beatId);
+  if (beat && (beat.narration || "") === narration) return false;
+  await api(`/beats/${beatId}?segment=${currentSegment}`, { method: "PATCH", body: JSON.stringify({ narration }) });
+  if (beat) beat.narration = narration;
+  return true;
+}
+
+async function saveAllBeatNarrationsFromUi() {
+  const beats = window.__beatsAllRows || [];
+  const pending = [];
+  for (const beat of beats) {
+    const el = document.getElementById(`n-${beat.beat_id}`);
+    if (!el) continue;
+    const narration = el.value;
+    if (narration !== (beat.narration || "")) {
+      pending.push({ beat_id: beat.beat_id, narration });
+      beat.narration = narration;
+    }
+  }
+  if (!pending.length) return 0;
+  const res = await api(`/beats/sync-narrations?segment=${currentSegment}`, {
+    method: "POST",
+    body: JSON.stringify({ beats: pending }),
+  });
+  return res.updated ?? pending.length;
 }
 
 window.regenBeatTts = async (beatId, align = true) => {
@@ -1113,6 +1348,8 @@ window.regenBeatTts = async (beatId, align = true) => {
     toast(String(err.message || err));
     return;
   }
+  const saved = await ensureBeatNarrationSaved(beatId);
+  if (saved) toast(`${beatId} 口播已保存并同步下游`);
   const preset = align ? "indextts_beats_align" : "indextts_beats";
   await fetch(`${API}/jobs/preset/${preset}?segment=${currentSegment}&beats=${beatId}`, { method: "POST" })
     .then(r => r.json())
@@ -1264,10 +1501,10 @@ async function enqueueAsset(assetId) {
     method: "POST",
     body: JSON.stringify({
       target_artifact_id: `asset:${assetId}`,
-      action: "regenerate_svg",
+      action: "regenerate_asset",
       reason: "Rejected in Review Studio",
       commands_suggested: [
-        `edit segments/${currentSegment}/assets/${assetId}.svg`,
+        `review assets/asset_manifest.csv and segments/${currentSegment}/beat_asset_plan.csv`,
         `python scripts/build_${currentSegment.toLowerCase()}_composition.py`,
       ],
     }),
@@ -1284,11 +1521,15 @@ async function renderTimeline() {
   }
   timelineData = await api(`/timeline?segment=${currentSegment}`);
   let project = { render_blocked: null };
+  let stages = [];
   try {
     project = await api("/project");
   } catch { /* optional */ }
+  try {
+    ({ stages } = await api("/stages"));
+  } catch { /* optional */ }
   const total = Number(timelineData.total_sec || 211);
-  document.getElementById("timeline").innerHTML = pageWrap(
+  document.getElementById("preview").innerHTML = pageWrap(
     "时间轴",
     `${currentSegment} · ${total.toFixed(1)} 秒 · 预览与编辑（OpenCut 式 transport + 缩放）`,
     `<div id="timeline-editor-host"></div>`
@@ -1309,7 +1550,9 @@ async function renderTimeline() {
     },
     onBeatOpen: (beatId) => openBeatDetail(beatId),
     onRefresh: renderTimeline,
-    renderBlocked: project.render_blocked ? String(project.render_blocked) : "",
+    renderBlocked: project.render_blocked
+      ? humanizeStageGateMessage(String(project.render_blocked), stageLabelMapFromStages(stages))
+      : "",
     runPreset,
     pollJob,
     toast,
@@ -1323,6 +1566,9 @@ async function renderStageDetail() {
   if (stage) selectedStageId = stage.id;
   const { artifacts } = await api(`/stages/${selectedStageId}/artifacts?segment=${currentSegment}`);
   const stageOpts = stages.map(s => `<option value="${s.id}" ${s.id === selectedStageId ? "selected" : ""}>${s.label || s.id}</option>`).join("");
+  const blockedHint = stage?.blocked_by?.length ? formatBlockedStages(stage.blocked_by, stages) : "";
+  const approveDisabled = blockedHint ? "disabled" : "";
+  const approveTitle = blockedHint ? `需先通过：${blockedHint}` : "标记为已通过";
   const artRows = artifacts.map(a => `
     <tr>
       <td>${a.required ? "✓" : ""}</td>
@@ -1340,8 +1586,9 @@ async function renderStageDetail() {
         </div>
       </div>
       <p>${statusBadge(stage?.status)}</p>
+      ${blockedHint ? `<p class="blocked">阻塞：${esc(blockedHint)}</p>` : ""}
       <div class="toolbar">
-        <button class="btn btn-primary btn-compact" onclick="approveStage('${selectedStageId}')">通过</button>
+        <button class="btn btn-primary btn-compact" ${approveDisabled} title="${escAttr(approveTitle)}" onclick="approveStage('${selectedStageId}')">通过</button>
         <button class="btn btn-secondary btn-compact" onclick="validateStage('${selectedStageId}')">运行校验</button>
       </div>
       ${tableWrap(`<thead><tr><th>必需</th><th>产物路径</th><th>存在</th><th>审核</th><th></th></tr></thead>
@@ -1351,9 +1598,13 @@ async function renderStageDetail() {
 }
 
 window.validateStage = async (stageId) => {
-  const res = await api(`/stages/${stageId}/validate?segment=${currentSegment}`, { method: "POST" });
-  toast(res.skipped ? "此阶段无校验脚本" : `已启动 ${res.jobs?.length || 0} 个校验任务`);
-  await renderJobs();
+  try {
+    const res = await api(`/stages/${stageId}/validate?segment=${currentSegment}`, { method: "POST" });
+    toast(res.skipped ? "此阶段无校验脚本" : `已启动 ${res.jobs?.length || 0} 个校验任务`);
+    await renderJobs();
+  } catch (err) {
+    toast(formatApiError(err));
+  }
 };
 
 window.editArtifact = async (path) => {
@@ -1409,21 +1660,54 @@ async function renderJobs() {
   </div>`);
 }
 
-async function renderQc() {
+async function renderQcHub() {
   const files = [
-    `segments/${currentSegment}/timing_qc_report.md`,
+    "edit/director_quality_report.md",
     "edit/aesthetic_report.md",
+    "edit/audio_qc_report.md",
     "edit/qc_report.md",
+    `segments/${currentSegment}/timing_qc_report.md`,
   ];
   const parts = await Promise.all(files.map(async f => {
     try {
       const res = await fetch(`/api/media/${f}`);
       if (!res.ok) return "";
       const text = await res.text();
-      return `<div class="card"><h3>${f}</h3><pre>${esc(text.slice(0, 4000))}</pre></div>`;
+      return `<div class="card card-no-accent"><h3>${f}</h3><pre>${esc(text.slice(0, 4000))}</pre></div>`;
     } catch { return ""; }
   }));
-  document.getElementById("qc").innerHTML = pageWrap("质量检查", "时长 / 美学 / 综合 QC 报告", `<div class="grid">${parts.join("")}</div>`);
+  const { jobs } = await api("/jobs?limit=15");
+  const { events } = await api("/history?limit=30");
+  const queue = await api("/regen-queue").catch(() => ({ items: [] }));
+  document.getElementById("qc").innerHTML = pageWrap(
+    "质检与日志",
+    "导演质检 · 报告 · 任务 · 历史",
+    `<div class="card card-no-accent">
+      <div class="toolbar">
+        <button class="btn btn-primary" onclick="runPreset('director_qc').catch(e=>toast(e.message))">校验项目</button>
+        <button class="btn btn-secondary" onclick="runPreset('director_quality').catch(e=>toast(e.message))">导演质量 lint</button>
+        <button class="btn btn-secondary" onclick="runPreset('segment_timing_lint').catch(e=>toast(e.message))">时长 lint</button>
+      </div>
+    </div>
+    <div class="grid">${parts.join("") || '<div class="card card-no-accent"><p class="metric">暂无报告 — 点击上方按钮运行质检</p></div>'}</div>
+    <div class="card card-no-accent" style="margin-top:16px">
+      <h3>待办队列</h3>
+      ${tableWrap(`<tbody>${(queue.items || []).map(i => `<tr><td>${i.id}</td><td>${i.target_artifact_id}</td><td>${statusZh(i.status)}</td></tr>`).join("") || "<tr><td colspan=3>无</td></tr>"}</tbody>`)}
+    </div>
+    <div class="card card-no-accent" style="margin-top:16px">
+      <h3>最近任务</h3>
+      ${tableWrap(`<thead><tr><th>任务</th><th>状态</th><th>退出码</th></tr></thead>
+        <tbody>${jobs.map(j => `<tr><td>${esc(j.label || j.script)}</td><td>${statusZh(j.status)}</td><td>${j.exit_code ?? "-"}</td></tr>`).join("")}</tbody>`)}
+    </div>
+    <details class="card card-no-accent" style="margin-top:16px">
+      <summary>操作历史</summary>
+      <pre>${esc(JSON.stringify(events, null, 2))}</pre>
+    </details>`
+  );
+}
+
+async function renderQc() {
+  return renderQcHub();
 }
 
 async function renderHistory() {
@@ -1461,7 +1745,7 @@ document.getElementById("sheet-backdrop")?.addEventListener("click", closeSheet)
   await refreshSegment();
   await loadProjectMeta();
   if (!document.getElementById("project-meta").textContent.startsWith("请先")) {
-    await renderPipeline();
+    await renderProject();
   }
   try {
     const ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/api/events`);

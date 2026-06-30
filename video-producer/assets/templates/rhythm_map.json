@@ -1,28 +1,45 @@
 {
-  "version": "v001",
+  "version": "v002",
   "timebase": "seconds",
   "policy": {
     "voice_first": true,
     "rhythm_is_comprehension_time": true,
     "one_focal_owner_per_moment": true,
+    "density_varies_by_beat_function": true,
     "evidence_needs_read_time": true
   },
   "beats": [
     {
       "beat_id": "B001",
       "segment_id": "S001",
-      "narration": "示例：先把问题摆出来。",
-      "spoken_focus": "问题本身",
-      "beat_type": "hook",
+      "narration": "示例：那一刻，房间里的吊灯先晃了起来。",
+      "spoken_focus": "吊灯晃起来",
+      "beat_type": "event",
       "information_density": "medium",
-      "planned_duration_sec": 2.4,
-      "min_visual_read_time_sec": 0.8,
-      "visual_lead_in_sec": 0.0,
-      "post_hold_sec": 0.16,
+      "planned_duration_sec": 2.2,
+      "min_visual_read_time_sec": 1.0,
+      "visual_lead_in_sec": 0.1,
+      "post_hold_sec": 0.2,
       "pace": "normal",
-      "focal_owner": "title_problem_card",
+      "focal_owner": "motion_shaking_lamp",
       "scene_reset": false,
-      "director_note": "标题卡先抓住注意力，背景只做轻微生命感。"
+      "director_note": "真实素材先建立危险感，文字只做时间提示。"
+    },
+    {
+      "beat_id": "B003",
+      "segment_id": "S001",
+      "narration": "争议点在这里：预警页下方出现了广告。",
+      "spoken_focus": "广告",
+      "beat_type": "evidence",
+      "information_density": "readable_dense",
+      "planned_duration_sec": 3.3,
+      "min_visual_read_time_sec": 1.6,
+      "visual_lead_in_sec": 0.05,
+      "post_hold_sec": 0.4,
+      "pace": "slow",
+      "focal_owner": "ref_app_ad_slot",
+      "scene_reset": false,
+      "director_note": "先展示页面上下文，再推近广告位；红框在关键词出口时锁定。"
     }
   ]
 }

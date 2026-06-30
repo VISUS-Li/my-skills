@@ -146,18 +146,22 @@ def validate_stage_dependencies(
 
 
 def validate_gates(root: Path) -> list[str]:
-    """CI gate: any progressed stage with unapproved upstream deps fails."""
+    """CI gate: progressed stages need approved upstream deps and stage readiness."""
+    from stage_validation import default_segment, validate_stage_complete
+
     manifest = load_stage_manifest(root)
     state = load_state(root)
     stages = state.get("stages", {})
     errors: list[str] = []
     progressed = {"review", "approved", "locked", "rendered", "needs-revision"}
+    segment = default_segment(root)
     for stage_id in manifest.get("stages", {}):
         meta = stages.get(stage_id, {})
         status = meta.get("status", "draft")
         if status not in progressed:
             continue
         errors.extend(validate_stage_dependencies(root, stage_id))
+        errors.extend(validate_stage_complete(root, stage_id, segment=segment, run_scripts=False))
     return errors
 
 

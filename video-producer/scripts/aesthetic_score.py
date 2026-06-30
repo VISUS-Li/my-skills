@@ -205,7 +205,7 @@ def score_assets(rows: list[dict[str, str]], segment_count: int) -> tuple[int, l
         tips.append(
             f"Add web-sourced proof media: aim for at least {max(3, segment_count * 2)} "
             f"photo/screenshot/broll rows in asset_manifest (currently {proof_count}). "
-            "See references/web-sourced-visual-assets.md."
+            "See references/evidence-and-asset-sourcing.md."
         )
     min_planned = max(12, segment_count * 4)
     if len(usable) >= min_planned:

@@ -1,27 +1,40 @@
 {
-  "version": "v002",
-  "notes": "Generated or refined from storyboard. Each shot must have a reason to exist.",
+  "version": "v003",
+  "notes": "Generated or refined from storyboard. Each shot must have a reason to exist and a focal owner.",
   "shots": [
     {
-      "shot_id": "001A",
-      "segment_id": "001_hook",
-      "duration_sec": 4,
-      "shot_size": "medium close-up",
-      "camera_angle": "eye-level",
+      "shot_id": "S001_A",
+      "segment_id": "S001",
+      "duration_sec": 2.2,
+      "shot_size": "establishing real scene",
+      "camera_angle": "eye-level or surveillance-like",
       "camera_move": "slow_push_in",
-      "composition": "rule_of_thirds",
-      "foreground": "caption/edge overlay",
-      "midground": "subject or main graphic",
-      "background": "texture/gradient",
-      "depth_cues": [
-        "parallax",
-        "shadow",
-        "blur"
-      ],
-      "focal_element": "speaker/claim",
-      "text_area_percent": 20,
-      "asset_ids": [],
-      "edit_intent": "human anchor"
+      "composition": "real footage owns the frame; HyperFrames timestamp stays top-left",
+      "foreground": "HyperFrames small timestamp text",
+      "midground": "shaking lamp or room object",
+      "background": "real room texture plus subtle native dark grade",
+      "depth_cues": ["real lens motion", "shadow", "subtle grain"],
+      "focal_element": "motion_shaking_lamp",
+      "text_area_percent": 6,
+      "asset_ids": ["motion_shaking_lamp", "text_hook_time", "hf_ambient_dark_room"],
+      "edit_intent": "establish reality and stakes"
+    },
+    {
+      "shot_id": "S001_B",
+      "segment_id": "S001",
+      "duration_sec": 3.3,
+      "shot_size": "proof insert",
+      "camera_angle": "front-on phone frame",
+      "camera_move": "push_to_detail",
+      "composition": "App screenshot centered in a HyperFrames phone frame; ad slot moves toward lower-third focus zone",
+      "foreground": "HyperFrames red box and keyword label",
+      "midground": "App screenshot in phone frame",
+      "background": "HyperFrames soft neutral shadow",
+      "depth_cues": ["phone shadow", "annotation above proof", "background softness"],
+      "focal_element": "ref_app_ad_slot",
+      "text_area_percent": 12,
+      "asset_ids": ["ref_app_ad_slot", "hf_phone_frame", "hf_red_box", "text_ad_label", "hf_soft_shadow"],
+      "edit_intent": "direct the screenshot so the viewer sees the exact disputed detail"
     }
   ]
 }

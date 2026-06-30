@@ -2,9 +2,8 @@
 
 ## Topic
 
-## User input (raw — not section order)
-
-One event or many bullets; agent auto-picks `story_scope`:
+## User Input
+Paste the raw prompt, source link, notes, article, or transcript. Do not force it into final video order yet.
 
 1.
 2.
@@ -12,32 +11,49 @@ One event or many bullets; agent auto-picks `story_scope`:
 
 ## Audience
 
-## Platform and Format
+## Platform And Format
 
 ## Core Promise
+What will the viewer understand, feel, or notice that they would miss from a headline or summary?
 
-What **arc or hidden mechanism** will viewers understand — beyond headline / bullet summaries?
-
-## Contrarian / Fresh Angle
+## Fresh Angle
 
 ## Emotional Arc
 - Opening feeling:
 - Midpoint feeling:
 - Ending feeling:
 
-## What the viewer should know after watching
-1.
-2.
-3.
+## Story Functions Needed
+Choose only what this topic needs:
+- Hook:
+- Event/site:
+- Evidence:
+- Data/scale:
+- Mechanism:
+- Human impact:
+- Counterpoint/clarification:
+- Viewpoint:
 
 ## Visual Promise
+Name the concrete materials the video should use: real footage/photos, UI/web screenshots, documents, tables, external charts, HyperFrames-native charts/cards/text/frames, comments, or human B-roll.
+
+## HyperFrames-Native Opportunities
+List visual material that should be generated directly in HyperFrames instead of the asset stage:
+- Background world: off-white grid, grain, light sweep, soft shadows, desk/map/UI grid
+- Text/keyword/number moments:
+- Cards/frames/labels:
+- Icons/chips/badges:
+- Simple charts/data cards:
+- Red boxes/arrows/masks:
+- Ambient CSS/texture:
+- Transition anchors:
 
 ## Style Keywords
 
-## Depth (automatic — do not ask user)
-- Single event: 前尘 → 博弈 → 转折 → 后果 + one verified 秘辛
-- Multi-point: master thread weaving verified links
-- Spoken 调研型口播（证据锚点 + 节奏，禁止 你想啊/其实吧 类主观口水）
-- Opt-out only if user says 只要大纲 / 不要调研
+## Must Not Happen
+- Do not become a PPT slide sequence.
+- Do not replace concrete real-world claims with generic icons.
+- Do not use screenshots as unreadable wallpaper.
+- Do not keep the same visual density for every beat.
 
 ## Open Questions

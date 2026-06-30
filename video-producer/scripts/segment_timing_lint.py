@@ -156,7 +156,7 @@ def lint_segment(
                     })
                 if evidence_stills < 3:
                     issues.append({
-                        "message": f"only {evidence_stills} ref/stock stills in processed/ (min 3; see multimedia-asset-taxonomy.md)",
+                        "message": f"only {evidence_stills} ref/stock stills in processed/ (min 3; see evidence-and-asset-sourcing.md)",
                         "penalty": min(14, 6 + max(0, 3 - evidence_stills) * 3),
                     })
                 if motion_count < 1:

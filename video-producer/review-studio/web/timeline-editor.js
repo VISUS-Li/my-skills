@@ -1,5 +1,6 @@
 /**
- * Timeline editor — preview (composition / MP4 / Studio) + waveform + scrub/zoom/edit.
+ * Review Studio TimelineEditor — composition seek via window.__timelines.
+ * WaveSurfer optional fallback when per-beat WAV clips are unavailable.
  */
 (function (global) {
   "use strict";
@@ -19,6 +20,11 @@
 
   function clamp(v, lo, hi) {
     return Math.min(hi, Math.max(lo, v));
+  }
+
+  function escShort(s) {
+    const t = String(s || "");
+    return t.length > 14 ? `${t.slice(0, 12)}…` : t;
   }
 
   function destroyActive() {
@@ -73,6 +79,65 @@
     return "audio";
   }
 
+  function escAttr(s) {
+    return String(s || "").replace(/[&<>"']/g, ch => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    }[ch]));
+  }
+
+  function parseResolution(raw) {
+    if (!raw) return null;
+    if (typeof raw === "object") {
+      const width = Number(raw.width || raw.w);
+      const height = Number(raw.height || raw.h);
+      return width > 0 && height > 0 ? { width, height } : null;
+    }
+    const m = String(raw).match(/(\d+(?:\.\d+)?)\s*[xX\u00d7]\s*(\d+(?:\.\d+)?)/);
+    if (!m) return null;
+    const width = Number(m[1]);
+    const height = Number(m[2]);
+    return width > 0 && height > 0 ? { width, height } : null;
+  }
+
+  function parseRatio(raw) {
+    const text = String(raw || "").trim();
+    const pair = text.match(/(\d+(?:\.\d+)?)\s*[:/]\s*(\d+(?:\.\d+)?)/);
+    if (pair) {
+      const width = Number(pair[1]);
+      const height = Number(pair[2]);
+      if (width > 0 && height > 0) return { width, height, value: width / height };
+    }
+    const numeric = Number(text);
+    if (numeric > 0) return { width: numeric, height: 1, value: numeric };
+    return { width: 16, height: 9, value: 16 / 9 };
+  }
+
+  function previewGeometry(ratioRaw, resolutionRaw) {
+    const resolution = parseResolution(resolutionRaw);
+    if (resolution) {
+      return {
+        width: Math.round(resolution.width),
+        height: Math.round(resolution.height),
+        ratioValue: resolution.width / resolution.height,
+        ratioLabel: `${Math.round(resolution.width)}:${Math.round(resolution.height)}`,
+      };
+    }
+    const ratio = parseRatio(ratioRaw);
+    const baseLongEdge = 1920;
+    const width = ratio.value >= 1 ? baseLongEdge : Math.round(baseLongEdge * ratio.value);
+    const height = ratio.value >= 1 ? Math.round(baseLongEdge / ratio.value) : baseLongEdge;
+    return {
+      width,
+      height,
+      ratioValue: ratio.value,
+      ratioLabel: `${ratio.width}:${ratio.height}`,
+    };
+  }
+
   function formatApiError(err) {
     const raw = String(err?.message || err || "");
     try {
@@ -106,6 +171,7 @@
     const totalSec = Math.max(0.5, Number(data.total_sec) || 1);
     let beats = (data.beats || []).map(b => ({ ...b, vo: { ...(b.vo || {}) } }));
     const microEvents = (data.micro_events || []).slice(0, 500);
+    const timelineTracks = data.tracks || [];
     const media = data.media || {};
     const preview = data.preview || {};
 
@@ -117,6 +183,8 @@
       || (preview.studio_url ? `${preview.studio_url}/#project/${segment}` : null);
 
     const SPEED_PRESETS = [0.5, 0.75, 1, 1.25, 1.5, 2];
+
+    const geometry = previewGeometry(data.ratio || options.ratio || "16:9", data.resolution || options.resolution);
 
     const state = {
       totalSec,
@@ -144,13 +212,17 @@
           </div>
           <details class="tl-studio-details">
             <summary class="metric">Studio 热重载（高级）</summary>
+            ${preview.composition_ready
+              ? ""
+              : `<p class="blocked">合成页尚未生成 — 请先点击下方「重建合成」，或运行「对齐 + 重建画面」</p>`}
             <div class="tl-studio-actions">
-              <button type="button" class="btn btn-secondary btn-compact" id="tl-btn-studio-start" ${preview.studio_running ? "disabled" : ""}>启动 Studio</button>
+              <button type="button" class="btn btn-secondary btn-compact" id="tl-btn-studio-start" ${preview.studio_running || !preview.composition_ready ? "disabled" : ""} title="${preview.composition_ready ? "启动 HyperFrames Studio" : "需先生成 segments/S001/index.html"}">启动 Studio</button>
               <button type="button" class="btn btn-secondary btn-compact" id="tl-btn-studio-stop" ${preview.studio_running ? "" : "disabled"}>停止 Studio</button>
             </div>
           </details>
+          <div class="tl-preview-frame" id="tl-preview-frame" data-ratio="${escAttr(geometry.ratioLabel)}" style="--preview-aspect:${geometry.width} / ${geometry.height}; --preview-ratio-value:${geometry.ratioValue}; --preview-source-width:${geometry.width}px; --preview-source-height:${geometry.height}px; --preview-scale:1">
           <div class="tl-preview-stage" id="tl-preview-stage">
-            <iframe id="tl-preview-composition" class="tl-preview-iframe hidden" title="HyperFrames 合成预览" sandbox="allow-scripts allow-same-origin"></iframe>
+            <iframe id="tl-preview-composition" class="tl-preview-iframe tl-preview-composition-iframe hidden" title="HyperFrames 合成预览" sandbox="allow-scripts allow-same-origin"></iframe>
             <iframe id="tl-preview-studio" class="tl-preview-iframe hidden" title="HyperFrames Studio" sandbox="allow-scripts allow-same-origin allow-popups"></iframe>
             <video id="tl-preview-video" class="tl-preview-video hidden" playsinline preload="metadata"></video>
             <audio id="tl-master-audio" class="hidden" preload="auto"></audio>
@@ -158,6 +230,7 @@
               <p class="metric">口播预览 · 使用播放按钮或拖拽下方波形</p>
             </div>
             <div id="tl-preview-empty" class="tl-preview-placeholder hidden"><span>暂无预览媒体</span></div>
+          </div>
           </div>
           <div class="tl-transport">
             <button type="button" class="btn btn-secondary btn-icon" id="tl-btn-start" title="回到开头">⏮</button>
@@ -194,17 +267,9 @@
           </div>
         </div>
         <div class="card card-no-accent tl-tracks-card">
-          <p class="metric">波形=口播片段 · 灰=计划 · 蓝=实测 · 橙=微事件 · 右键片段：速度/删除 · Del 删除选中 · 拖拽右缘 trim</p>
+          <p class="metric">统一时间轴 · 口播波形与片段同轨 · 灰=计划 · 橙=微事件 · 右键片段可调速度</p>
           <div class="tl-scroll" id="tl-scroll">
-            <div class="tl-scroll-inner" id="tl-scroll-inner">
-              <div class="tl-waveform-row" id="tl-waveform-row" style="width:${state.totalSec * state.pxPerSec}px">
-                <div class="tl-track-label">波形</div>
-                <div id="tl-waveform" class="tl-waveform"></div>
-              </div>
-            </div>
-          </div>
-          <div class="tl-scroll tl-scroll-tracks" id="tl-scroll-tracks">
-            <div class="tl-scroll-inner" id="tl-scroll-tracks-inner"></div>
+            <div class="tl-scroll-inner" id="tl-scroll-inner"></div>
           </div>
           <div class="toolbar">
             <button type="button" class="btn btn-primary" id="tl-btn-lint">时长检查</button>
@@ -218,11 +283,10 @@
       </div>
       <div id="tl-context-menu" class="tl-context-menu hidden" role="menu"></div>`;
 
-    const scrollEl = host.querySelector("#tl-scroll-tracks");
-    const innerEl = host.querySelector("#tl-scroll-tracks-inner");
-    const waveformRow = host.querySelector("#tl-waveform-row");
-    const waveformEl = host.querySelector("#tl-waveform");
-    const waveformScroll = host.querySelector("#tl-scroll");
+    const scrollEl = host.querySelector("#tl-scroll");
+    const innerEl = host.querySelector("#tl-scroll-inner");
+    const previewFrame = host.querySelector("#tl-preview-frame");
+    const previewStage = host.querySelector("#tl-preview-stage");
     const compIframe = host.querySelector("#tl-preview-composition");
     const studioIframe = host.querySelector("#tl-preview-studio");
     const video = host.querySelector("#tl-preview-video");
@@ -247,6 +311,7 @@
     let waveformVoSrc = "";
     let lastCompSeekMs = 0;
     let lastAutoScrollMs = 0;
+    let activeUiBeatId = null;
     let persistTimer = null;
     let rebuildVoTimer = null;
     let masterSettingsTimer = null;
@@ -263,14 +328,38 @@
 
     function ensureBeatEditFields(b) {
       const vo = b.vo || {};
+      const wavDur = Number(b.wav_duration_sec || vo.wav_duration_sec || 0);
       if (!b.source_duration_sec && !vo.source_duration_sec) {
-        const dur = Number(vo.duration_sec || b.actual_sec || b.duration_sec || 0);
-        const rate = clampRate(b.playback_rate || vo.playback_rate || 1);
-        b.source_duration_sec = dur * rate;
+        if (wavDur > 0) {
+          b.source_duration_sec = wavDur;
+        } else {
+          const dur = Number(vo.duration_sec || b.actual_sec || b.duration_sec || 0);
+          const rate = clampRate(b.playback_rate || vo.playback_rate || 1);
+          b.source_duration_sec = dur * rate;
+        }
+      } else if (wavDur > 0) {
+        b.source_duration_sec = Number(b.source_duration_sec || vo.source_duration_sec || wavDur);
       }
       b.playback_rate = clampRate(b.playback_rate ?? vo.playback_rate ?? 1);
       b.disabled = Boolean(b.disabled ?? vo.disabled);
       return b;
+    }
+
+    function syncTimelineFromServer() {
+      for (const raw of beats) ensureBeatEditFields(raw);
+      const fromApi = Number(data.total_sec || 0);
+      if (fromApi > 0) {
+        state.totalSec = fromApi;
+      } else {
+        let t = 0;
+        for (const b of beats) {
+          if (b.disabled) continue;
+          t += beatDur(b);
+        }
+        state.totalSec = Math.max(0.5, round3(t));
+      }
+      timeDisplay.textContent = `${formatTime(state.currentTime)} / ${formatTime(state.totalSec)}`;
+      if (audioEngine) audioEngine.setTotalSec(state.totalSec);
     }
 
     function recomputeLocalTimeline() {
@@ -287,9 +376,10 @@
           b.actual_sec = 0;
           continue;
         }
-        const src = Number(b.source_duration_sec || vo.source_duration_sec || b.actual_sec || 1);
+        const currentDur = Number(vo.duration_sec || b.duration_sec || b.actual_sec || 0);
+        const src = Number(b.source_duration_sec || vo.source_duration_sec || b.wav_duration_sec || currentDur || 1);
         const rate = clampRate(b.playback_rate);
-        const dur = src / rate;
+        const dur = currentDur > 0 ? currentDur : src / rate;
         vo.start_sec = round3(t);
         vo.duration_sec = round3(dur);
         vo.end_sec = round3(t + dur);
@@ -321,6 +411,7 @@
             start_sec: beatStart(b),
             duration_sec: beatDur(b),
             playback_rate: clampRate(b.playback_rate),
+            wav_duration_sec: Number(b.wav_duration_sec || b.vo?.source_duration_sec || 0) || undefined,
             vo_wav_url: mediaUrl(b.vo_wav),
           };
         })
@@ -336,6 +427,7 @@
       if (audioEngine) {
         audioEngine.setTotalSec(state.totalSec);
         audioEngine.refreshRates();
+        void audioEngine.warmupAll?.();
         if (!state.playing) audioEngine.seek(state.currentTime);
       }
     }
@@ -375,7 +467,7 @@
         try {
           await api(`/timeline/rebuild-vo?segment=${segment}`, { method: "POST" });
           waveformVoSrc = "";
-          renderWaveformSegments();
+          drawAudioWaveforms();
         } catch { /* optional background rebuild */ }
       }, 1400);
     }
@@ -415,24 +507,25 @@
         },
       });
       audioEngine.setTotalSec(state.totalSec);
+      void audioEngine.warmupAll?.();
     }
 
     function updatePlayheadUI(t) {
       state.currentTime = clamp(t, 0, state.totalSec);
       const playhead = innerEl?.querySelector("#tl-playhead");
-      if (playhead) playhead.style.left = `${secToPx(state.currentTime)}px`;
+      if (playhead) playhead.style.left = `${timeToPlayheadPx(state.currentTime)}px`;
       timeDisplay.textContent = `${formatTime(state.currentTime)} / ${formatTime(state.totalSec)}`;
-      innerEl?.querySelectorAll(".tl-block:not(.planned)").forEach(el => {
-        const start = parseFloat(el.dataset.start || "0");
-        const dur = parseFloat(el.dataset.dur || "0");
-        el.classList.toggle("tl-block-active", state.currentTime >= start && state.currentTime < start + dur);
-      });
+      const nextBeatId = activeBeatIdAt(state.currentTime);
+      if (nextBeatId === activeUiBeatId) return;
+      innerEl?.querySelectorAll(".tl-block-active").forEach(el => el.classList.remove("tl-block-active"));
+      if (nextBeatId) queryBeatBlock(nextBeatId)?.classList.add("tl-block-active");
+      activeUiBeatId = nextBeatId;
     }
 
     function syncCompositionVisual(t) {
       if (state.previewMode !== "composition" || !state.playing) return;
       const now = performance.now();
-      if (now - lastCompSeekMs < 80) return;
+      if (now - lastCompSeekMs < 250) return;
       lastCompSeekMs = now;
       seekComposition(t, { pause: false });
     }
@@ -492,6 +585,42 @@
       return px / state.pxPerSec;
     }
 
+    /** Left gutter for track labels — must match .tl-scroll-inner padding-left. */
+    function labelGutterPx() {
+      if (!innerEl) return 52;
+      const v = parseFloat(getComputedStyle(innerEl).paddingLeft);
+      return Number.isFinite(v) ? v : 52;
+    }
+
+    /** Playhead / scroll hit-test X: gutter + timeline content pixels. */
+    function timeToPlayheadPx(sec) {
+      return labelGutterPx() + secToPx(sec);
+    }
+
+    function playheadPxToTime(px) {
+      return pxToSec(px - labelGutterPx());
+    }
+
+    function pointerXInInner(ev) {
+      const innerRect = innerEl.getBoundingClientRect();
+      return ev.clientX - innerRect.left + scrollEl.scrollLeft;
+    }
+
+    function activeBeatIdAt(t) {
+      for (const b of beats) {
+        if (b.disabled) continue;
+        const start = beatStart(b);
+        const end = start + beatDur(b);
+        if (t >= start && t < end) return b.beat_id;
+      }
+      return null;
+    }
+
+    function queryBeatBlock(beatId) {
+      const id = global.CSS?.escape ? global.CSS.escape(String(beatId)) : String(beatId).replace(/"/g, '\\"');
+      return innerEl?.querySelector(`.tl-audio-clip[data-beat="${id}"]:not(.tl-block-disabled)`) || null;
+    }
+
     function updatePreviewHint() {
       const hints = {
         composition: "合成页画面 + 分片段口播预览 · 右键片段可调速度/删除 · 整体速度在 transport",
@@ -500,6 +629,23 @@
         studio: "Studio 画面 + 分片段口播 · 合成内音频静音",
       };
       hintEl.textContent = hints[state.previewMode] || "";
+    }
+
+    function updateCompositionScale() {
+      if (!previewStage || !previewFrame) return;
+      const frameRect = previewFrame.getBoundingClientRect();
+      const maxStageHeight = Math.min(global.innerHeight * 0.52, 480);
+      const ratioValue = geometry.width / geometry.height;
+      const stageWidth = Math.min(frameRect.width || geometry.width, maxStageHeight * ratioValue);
+      const stageHeight = stageWidth / ratioValue;
+      if (stageWidth > 0 && stageHeight > 0) {
+        previewStage.style.width = `${stageWidth}px`;
+        previewStage.style.height = `${stageHeight}px`;
+      }
+      const rect = previewStage.getBoundingClientRect();
+      if (!rect.width || !rect.height || !geometry.width || !geometry.height) return;
+      const scale = Math.min(rect.width / geometry.width, rect.height / geometry.height);
+      previewFrame.style.setProperty("--preview-scale", String(Math.max(0.01, scale)));
     }
 
     function hideAllPreview() {
@@ -521,6 +667,7 @@
         if (!compIframe.src || !compIframe.src.includes("/api/preview/composition/")) {
           compIframe.src = `${compositionUrl}?v=${Date.now()}`;
         }
+        updateCompositionScale();
       } else if (state.previewMode === "mp4" && mp4Src) {
         video.classList.remove("hidden");
         if (video.src !== mp4Src) video.src = mp4Src;
@@ -573,23 +720,12 @@
     }
 
     function scrollTimeIntoView(t) {
-      const x = secToPx(t);
-      [scrollEl, waveformScroll].forEach(el => {
-        if (!el) return;
-        const pad = el.clientWidth * 0.25;
-        if (x < el.scrollLeft + pad || x > el.scrollLeft + el.clientWidth - pad) {
-          el.scrollLeft = Math.max(0, x - el.clientWidth * 0.35);
-        }
-      });
-    }
-
-    function syncWaveform() {
-      if (!wavesurfer || !state.totalSec || state.playing) return;
-      syncingWave = true;
-      try {
-        wavesurfer.setTime(state.currentTime);
-      } catch { /* ignore */ }
-      syncingWave = false;
+      const x = timeToPlayheadPx(t);
+      if (!scrollEl) return;
+      const pad = scrollEl.clientWidth * 0.25;
+      if (x < scrollEl.scrollLeft + pad || x > scrollEl.scrollLeft + scrollEl.clientWidth - pad) {
+        scrollEl.scrollLeft = Math.max(0, x - scrollEl.clientWidth * 0.35);
+      }
     }
 
     function setCurrentTime(t, { fromMedia = false } = {}) {
@@ -611,78 +747,108 @@
 
     function renderTracks() {
       const width = secToPx(state.totalSec);
-      if (waveformRow) waveformRow.style.width = `${width}px`;
 
       const plannedBlocks = beats.map(b => {
         const pStart = plannedStart(b);
         const pDur = plannedDur(b);
         return `<div class="tl-block planned" style="left:${secToPx(pStart)}px;width:${Math.max(secToPx(pDur), 2)}px" title="planned ${b.beat_id}"></div>`;
       }).join("");
-      const actualBlocks = beats.map(b => {
+
+      const audioBlocks = beats.map(b => {
         if (b.disabled) {
-          return `<div class="tl-block tl-block-disabled" data-beat="${b.beat_id}" title="${b.beat_id} 已删除（可恢复）">${b.beat_id}</div>`;
+          return `<div class="tl-block tl-block-disabled tl-audio-clip" data-beat="${b.beat_id}" title="${b.beat_id} 已删除（可恢复）">${b.beat_id}</div>`;
         }
         const start = beatStart(b);
         const dur = beatDur(b);
         const sel = state.selectedBeatId === b.beat_id ? " selected" : "";
         const rate = clampRate(b.playback_rate || 1);
         const rateBadge = Math.abs(rate - 1) > 0.01 ? `<span class="tl-rate-badge">${rate.toFixed(2)}×</span>` : "";
-        return `<div class="tl-block${sel}" data-beat="${b.beat_id}" data-start="${start}" data-dur="${dur}"
-          style="left:${secToPx(start)}px;width:${Math.max(secToPx(dur), 4)}px" title="${b.beat_id} ${dur.toFixed(2)}s @ ${rate.toFixed(2)}×">${b.beat_id}${rateBadge}</div>`;
+        const wavWarn = b.wav_duration_sec && Math.abs(Number(b.source_duration_sec || 0) - Number(b.wav_duration_sec)) > 0.08
+          ? " tl-wav-mismatch" : "";
+        return `<div class="tl-block tl-audio-clip${sel}${wavWarn}" data-beat="${b.beat_id}" data-start="${start}" data-dur="${dur}"
+          style="left:${secToPx(start)}px;width:${Math.max(secToPx(dur), 4)}px" title="${b.beat_id} ${dur.toFixed(2)}s @ ${rate.toFixed(2)}×">
+          <canvas class="tl-wav-canvas" data-beat-canvas="${b.beat_id}" height="48"></canvas>
+          <span class="tl-clip-label">${b.beat_id}${rateBadge}</span>
+        </div>`;
       }).join("");
+
       const micro = microEvents.map(ev => {
         const t = Number(ev.t || 0);
         const eid = ev.id || ev.event_id || "";
         return `<span class="tl-micro" data-event="${eid}" data-t="${t}" style="left:${secToPx(t)}px" title="${eid} @ ${t}s"></span>`;
       }).join("");
 
+      const trackById = Object.fromEntries(timelineTracks.map(tr => [tr.id, tr]));
+      const videoTrack = trackById.V1;
+      const assetTrack = trackById.V2;
+      const eventTrack = trackById.E1;
+
+      const videoBlocks = (videoTrack?.clips || []).map(c => {
+        const w = Math.max(secToPx(Number(c.end) - Number(c.start)), 4);
+        return `<div class="tl-block tl-scene-clip" data-beat="${c.beat_id || ""}" data-start="${c.start}" data-dur="${Number(c.end) - Number(c.start)}"
+          style="left:${secToPx(c.start)}px;width:${w}px" title="${c.label || c.beat_id}">${escShort(c.label || c.beat_id)}</div>`;
+      }).join("");
+
+      const assetBlocks = (assetTrack?.clips || []).map(c => {
+        const w = Math.max(secToPx(Number(c.end) - Number(c.start)), 3);
+        const cls = c.programmatic ? "tl-asset-clip tl-asset-programmatic" : "tl-asset-clip";
+        return `<div class="${cls}" data-asset="${c.id}" style="left:${secToPx(c.start)}px;width:${w}px" title="${c.id} · ${c.role || ""}">${escShort(c.id)}</div>`;
+      }).join("");
+
+      const eventBlocks = (eventTrack?.clips || []).map(c => {
+        const w = Math.max(secToPx(Number(c.end) - Number(c.start)), 3);
+        return `<div class="tl-event-clip" data-event="${c.id}" data-t="${c.start}" style="left:${secToPx(c.start)}px;width:${w}px" title="${c.visual_action || c.id}">${escShort(c.id)}</div>`;
+      }).join("");
+
       innerEl.innerHTML = `
         ${buildRulerTicks(state.totalSec, state.pxPerSec)}
         <div class="tl-track tl-track-planned" style="width:${width}px"><div class="tl-track-label">计划</div>${plannedBlocks}</div>
-        <div class="tl-track tl-track-beats" style="width:${width}px"><div class="tl-track-label">实测</div>${actualBlocks}</div>
-        <div class="tl-track tl-track-micro" style="width:${width}px"><div class="tl-track-label">微事件</div>${micro}</div>
-        <div class="tl-playhead" id="tl-playhead" style="left:${secToPx(state.currentTime)}px"></div>`;
+        <div class="tl-track tl-track-audio" style="width:${width}px"><div class="tl-track-label">口播</div>${audioBlocks}</div>
+        ${videoBlocks ? `<div class="tl-track tl-track-video" style="width:${width}px"><div class="tl-track-label">画面</div>${videoBlocks}</div>` : ""}
+        ${assetBlocks ? `<div class="tl-track tl-track-assets" style="width:${width}px"><div class="tl-track-label">素材</div>${assetBlocks}</div>` : ""}
+        ${eventBlocks ? `<div class="tl-track tl-track-events" style="width:${width}px"><div class="tl-track-label">事件</div>${eventBlocks}</div>` : ""}
+        ${!eventBlocks ? `<div class="tl-track tl-track-micro" style="width:${width}px"><div class="tl-track-label">微事件</div>${micro}</div>` : ""}
+        <div class="tl-playhead" id="tl-playhead" style="left:${timeToPlayheadPx(state.currentTime)}px"></div>`;
 
+      activeUiBeatId = null;
       bindTrackEvents();
+      drawAudioWaveforms();
       if (state.playing) updatePlayheadUI(state.currentTime);
       else setCurrentTime(state.currentTime);
-      renderWaveformSegments();
     }
 
-    function renderWaveformSegments() {
-      if (!waveformEl) return;
-      if (useClipEngine && global.TimelineWaveform) {
-        if (wavesurfer) {
-          try { wavesurfer.destroy(); } catch { /* ignore */ }
-          wavesurfer = null;
-        }
-        waveformEl.innerHTML = "";
-        waveformEl.classList.add("tl-waveform-segments");
-        const enabled = beats.filter(b => !b.disabled && b.vo_wav);
-        for (const b of enabled) {
-          ensureBeatEditFields(b);
-          const start = beatStart(b);
-          const dur = beatDur(b);
-          const seg = document.createElement("div");
-          seg.className = "tl-wav-seg";
-          seg.style.left = `${secToPx(start)}px`;
-          seg.style.width = `${Math.max(secToPx(dur), 2)}px`;
-          seg.dataset.beat = b.beat_id;
-          const canvas = document.createElement("canvas");
-          canvas.className = "tl-wav-canvas";
-          canvas.height = 56;
-          canvas.width = Math.max(24, Math.floor(Math.max(secToPx(dur), 2)));
-          seg.appendChild(canvas);
-          waveformEl.appendChild(seg);
-          global.TimelineWaveform.drawClipWaveform(canvas, mediaUrl(b.vo_wav), {
-            color: state.selectedBeatId === b.beat_id
-              ? "rgba(10, 132, 255, 0.85)"
-              : "rgba(10, 132, 255, 0.42)",
-          });
-        }
-        return;
-      }
-      initOrUpdateWaveformFallback();
+    function drawAudioWaveforms() {
+      if (!useClipEngine || !global.TimelineWaveform) return;
+      if (state.playing) return;
+      innerEl.querySelectorAll("canvas[data-beat-canvas]").forEach(canvas => {
+        const beatId = canvas.dataset.beatCanvas;
+        const b = beatById(beatId);
+        if (!b?.vo_wav) return;
+        const block = canvas.closest(".tl-audio-clip");
+        const w = Math.max(24, Math.floor(block?.offsetWidth || secToPx(beatDur(b))));
+        canvas.width = w;
+        canvas.height = 48;
+        global.TimelineWaveform.drawClipWaveform(canvas, mediaUrl(b.vo_wav), {
+          color: state.selectedBeatId === beatId
+            ? "rgba(10, 132, 255, 0.85)"
+            : "rgba(10, 132, 255, 0.42)",
+        });
+      });
+    }
+
+    function syncWaveform() {
+      if (!wavesurfer || !state.totalSec || state.playing) return;
+      syncingWave = true;
+      try {
+        wavesurfer.setTime(state.currentTime);
+      } catch { /* ignore */ }
+      syncingWave = false;
+    }
+
+    /** Optional WaveSurfer fallback when clip engine is unavailable. */
+    function initOrUpdateWaveformFallback() {
+      if (!voSrc || !global.WaveSurfer || !innerEl || !masterAudio) return;
+      void wavesurfer;
     }
 
     function bindWaveformEvents() {
@@ -698,48 +864,9 @@
       });
     }
 
-    function initOrUpdateWaveformFallback() {
-      if (!voSrc || !global.WaveSurfer || !waveformEl || !masterAudio) return;
-
-      if (!wavesurfer || waveformVoSrc !== voSrc) {
-        if (wavesurfer) {
-          try { wavesurfer.destroy(); } catch { /* ignore */ }
-          wavesurfer = null;
-        }
-        masterAudio.src = voSrc;
-        waveformVoSrc = voSrc;
-        wavesurfer = global.WaveSurfer.create({
-          container: waveformEl,
-          media: masterAudio,
-          height: 56,
-          waveColor: "rgba(10, 132, 255, 0.35)",
-          progressColor: "rgba(10, 132, 255, 0.85)",
-          cursorColor: "#ff453a",
-          barWidth: 2,
-          barGap: 1,
-          minPxPerSec: state.pxPerSec,
-          fillParent: false,
-          width: secToPx(state.totalSec),
-          interact: true,
-          hideScrollbar: true,
-        });
-        bindWaveformEvents();
-        if (active) active.wavesurfer = wavesurfer;
-        return;
-      }
-
-      try {
-        if (typeof wavesurfer.zoom === "function") {
-          wavesurfer.zoom(state.pxPerSec);
-        } else {
-          wavesurfer.setOptions?.({ minPxPerSec: state.pxPerSec, width: secToPx(state.totalSec) });
-        }
-      } catch { /* ignore */ }
-    }
-
     function fitZoom() {
       if (!scrollEl) return;
-      const w = Math.max(scrollEl.clientWidth - 48, 200);
+      const w = Math.max(scrollEl.clientWidth - labelGutterPx() - 8, 200);
       state.pxPerSec = clamp(w / state.totalSec, MIN_PX_PER_SEC, MAX_PX_PER_SEC);
       zoomSlider.value = String(Math.round(state.pxPerSec));
       renderTracks();
@@ -837,19 +964,18 @@
     function onDocMove(ev) {
       if (!active?.drag) return;
       const d = active.drag;
-      const innerRect = innerEl.getBoundingClientRect();
-      const xInInner = ev.clientX - innerRect.left + scrollEl.scrollLeft;
+      const xInInner = pointerXInInner(ev);
 
       if (d.type === "beat-resize") {
-        const newDur = Math.max(0.2, pxToSec(xInInner - secToPx(d.startSec)));
+        const newDur = Math.max(0.2, playheadPxToTime(xInInner) - d.startSec);
         d.newDur = newDur;
         d.block.style.width = `${Math.max(secToPx(newDur), 4)}px`;
       } else if (d.type === "micro-drag") {
-        const newT = clamp(pxToSec(xInInner), 0, state.totalSec);
+        const newT = clamp(playheadPxToTime(xInInner), 0, state.totalSec);
         d.newT = newT;
         d.el.style.left = `${secToPx(newT)}px`;
       } else if (d.type === "playhead") {
-        setCurrentTime(pxToSec(xInInner));
+        setCurrentTime(playheadPxToTime(xInInner));
         scrollTimeIntoView(state.currentTime);
       }
     }
@@ -865,8 +991,12 @@
           const b = beatById(d.beatId);
           if (b && !b.disabled) {
             ensureBeatEditFields(b);
-            const src = Number(b.source_duration_sec || beatDur(b));
-            b.playback_rate = clampRate(src / d.newDur);
+            const vo = b.vo || {};
+            vo.duration_sec = round3(d.newDur);
+            vo.end_sec = round3(Number(vo.start_sec || b.start_sec || 0) + d.newDur);
+            b.vo = vo;
+            b.duration_sec = round3(d.newDur);
+            b.actual_sec = round3(d.newDur);
             applyTimelineLocally();
             schedulePersistBeat(d.beatId, { duration_sec: d.newDur, locked: true });
             toast(`${d.beatId} → ${d.newDur.toFixed(2)}s（实时预览）· 重建合成以更新画面`);
@@ -948,7 +1078,7 @@
     }
 
     function bindTrackEvents() {
-      innerEl.querySelectorAll(".tl-block:not(.planned)").forEach(block => {
+      innerEl.querySelectorAll(".tl-audio-clip:not(.planned)").forEach(block => {
         block.addEventListener("mousedown", (ev) => {
           if (ev.button !== 0) return;
           const beatId = block.dataset.beat;
@@ -978,7 +1108,7 @@
           setCurrentTime(start);
           scrollTimeIntoView(start);
           updateClipInspector();
-          renderWaveformSegments();
+          drawAudioWaveforms();
           if (onBeatSelect) onBeatSelect(beatId);
           ev.preventDefault();
         });
@@ -986,6 +1116,16 @@
         block.addEventListener("dblclick", (ev) => {
           if (onBeatOpen) onBeatOpen(block.dataset.beat);
           ev.preventDefault();
+        });
+      });
+
+      innerEl.querySelectorAll(".tl-event-clip, .tl-asset-clip").forEach(el => {
+        el.addEventListener("click", (ev) => {
+          const t = parseFloat(el.dataset.t || el.style.left) || 0;
+          const start = el.dataset.t != null ? parseFloat(el.dataset.t) : pxToSec(parseFloat(el.style.left) || 0);
+          setCurrentTime(start);
+          scrollTimeIntoView(start);
+          ev.stopPropagation();
         });
       });
 
@@ -1007,9 +1147,7 @@
         if (ev.target.closest(".tl-block") || ev.target.closest(".tl-micro")) return;
         if (state.playing) pauseAll();
         hideContextMenu();
-        const innerRect = innerEl.getBoundingClientRect();
-        const xInInner = ev.clientX - innerRect.left + scrollEl.scrollLeft;
-        setCurrentTime(pxToSec(xInInner));
+        setCurrentTime(playheadPxToTime(pointerXInInner(ev)));
         active.drag = { type: "playhead" };
         document.body.classList.add("tl-dragging");
         ev.preventDefault();
@@ -1058,9 +1196,11 @@
       if (state.selectedBeatId) setBeatDisabled(state.selectedBeatId, false);
     });
 
-    document.addEventListener("click", (ev) => {
+    function onDocumentClick(ev) {
       if (!contextMenu?.contains(ev.target)) hideContextMenu();
-    });
+    }
+
+    document.addEventListener("click", onDocumentClick);
     host.addEventListener("keydown", (ev) => {
       if (ev.key === "Delete" && state.selectedBeatId) {
         const b = beatById(state.selectedBeatId);
@@ -1071,17 +1211,6 @@
       }
     });
     host.setAttribute("tabindex", "0");
-
-    waveformScroll?.addEventListener("mousedown", (ev) => {
-      if (!useClipEngine) return;
-      if (state.playing) pauseAll();
-      const rowRect = waveformRow.getBoundingClientRect();
-      const x = ev.clientX - rowRect.left + waveformScroll.scrollLeft;
-      setCurrentTime(pxToSec(x));
-      active.drag = { type: "playhead" };
-      document.body.classList.add("tl-dragging");
-      ev.preventDefault();
-    });
 
     host.querySelectorAll(".tl-mode-btn").forEach(btn => {
       btn.addEventListener("click", () => {
@@ -1095,7 +1224,6 @@
     host.querySelector("#tl-btn-start").addEventListener("click", () => {
       setCurrentTime(0);
       scrollEl.scrollLeft = 0;
-      waveformScroll.scrollLeft = 0;
       pauseAll();
     });
     zoomSlider.addEventListener("input", () => setZoom(parseFloat(zoomSlider.value)));
@@ -1103,20 +1231,6 @@
     host.querySelector("#tl-btn-zoom-in").addEventListener("click", () => setZoom(state.pxPerSec * ZOOM_STEP));
     host.querySelector("#tl-btn-zoom-out").addEventListener("click", () => setZoom(state.pxPerSec / ZOOM_STEP));
     host.querySelector("#tl-btn-reload-preview").addEventListener("click", reloadPreview);
-
-    let scrollSync = false;
-    scrollEl.addEventListener("scroll", () => {
-      if (scrollSync) return;
-      scrollSync = true;
-      waveformScroll.scrollLeft = scrollEl.scrollLeft;
-      scrollSync = false;
-    });
-    waveformScroll.addEventListener("scroll", () => {
-      if (scrollSync) return;
-      scrollSync = true;
-      scrollEl.scrollLeft = waveformScroll.scrollLeft;
-      scrollSync = false;
-    });
 
     scrollEl.addEventListener("wheel", (ev) => {
       if (ev.ctrlKey || ev.metaKey) {
@@ -1127,6 +1241,13 @@
 
     compIframe.addEventListener("load", () => {
       muteIframeMedia(compIframe);
+      try {
+        const doc = compIframe.contentDocument;
+        if (doc?.documentElement) {
+          doc.documentElement.style.overflow = "hidden";
+          if (doc.body) doc.body.style.overflow = "hidden";
+        }
+      } catch { /* ignore */ }
       seekComposition(state.currentTime);
     });
     studioIframe.addEventListener("load", () => {
@@ -1187,6 +1308,8 @@
     });
     host.querySelector("#tl-btn-build").addEventListener("click", async () => {
       try {
+        await api(`/timeline/rebuild-vo?segment=${segment}`, { method: "POST" });
+        waveformVoSrc = "";
         const job = await runPreset("build_composition");
         await pollJob(job.id, logEl);
         reloadPreview();
@@ -1211,6 +1334,12 @@
       }
     });
 
+    const previewResizeObserver = global.ResizeObserver && previewFrame
+      ? new global.ResizeObserver(updateCompositionScale)
+      : null;
+    previewResizeObserver?.observe(previewFrame);
+    global.addEventListener("resize", updateCompositionScale);
+
     active = {
       drag: null,
       wavesurfer,
@@ -1222,18 +1351,22 @@
         clearTimeout(rebuildVoTimer);
         clearTimeout(masterSettingsTimer);
         audioEngine?.destroy();
+        previewResizeObserver?.disconnect();
+        global.removeEventListener("resize", updateCompositionScale);
         if (active?.wavesurfer) {
           try { active.wavesurfer.destroy(); } catch { /* ignore */ }
         }
         document.removeEventListener("mousemove", onDocMove);
         document.removeEventListener("mouseup", onDocUp);
+        document.removeEventListener("click", onDocumentClick);
       },
     };
     document.addEventListener("mousemove", onDocMove);
     document.addEventListener("mouseup", onDocUp);
 
     applyPreviewMode();
-    recomputeLocalTimeline();
+    updateCompositionScale();
+    syncTimelineFromServer();
     fitZoom();
     updateClipInspector();
 

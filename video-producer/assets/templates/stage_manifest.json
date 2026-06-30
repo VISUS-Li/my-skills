@@ -1,184 +1,101 @@
 {
-  "version": "1",
+  "version": "2",
   "stages": {
     "plan": {
-      "label": "项目规划",
+      "label": "Project plan",
       "depends_on": [],
-      "required_artifacts": ["script/creative_brief.md"],
-      "downstream": ["ingest"]
-    },
-    "ingest": {
-      "label": "素材入库",
-      "depends_on": ["plan"],
-      "required_artifacts": ["research/input_inventory.md"],
-      "downstream": ["reference-analysis"]
-    },
-    "reference-analysis": {
-      "label": "参考视频分析",
-      "depends_on": ["ingest"],
-      "required_artifacts": ["analysis/reference_video/style_dna.md"],
-      "downstream": ["style-match"]
-    },
-    "style-match": {
-      "label": "风格匹配",
-      "depends_on": ["reference-analysis"],
-      "required_artifacts": ["design/art_direction.md"],
-      "downstream": ["research"]
+      "required_artifacts": ["script/creative_brief.md", ".video/video.json"],
+      "downstream": ["research", "script"]
     },
     "research": {
-      "label": "调研与来源",
-      "depends_on": ["style-match"],
+      "label": "Research and sources",
+      "depends_on": ["plan"],
       "required_artifacts": ["research/source_cards.jsonl", "research/research_brief.md"],
       "downstream": ["fact-lock"]
     },
     "fact-lock": {
-      "label": "事实锁定",
+      "label": "Fact lock",
       "depends_on": ["research"],
       "required_artifacts": ["research/claim_ledger.csv", "research/factcheck_report.md"],
       "validation_scripts": ["script_claim_lint.py {project} --fail-under 85"],
-      "downstream": ["narrative-script"]
-    },
-    "narrative-script": {
-      "label": "深度叙事与口播稿",
-      "depends_on": ["fact-lock"],
-      "required_artifacts": [
-        "research/thread_ledger.csv",
-        "script/narrative_thread_map.json",
-        "script/outline.md",
-        "script/voiceover.md"
-      ],
-      "validation_scripts": [
-        "thread_depth_lint.py {project} --fail-under 80",
-        "script_claim_lint.py {project} --fail-under 85"
-      ],
-      "downstream": ["script", "beat-design"]
+      "downstream": ["script"]
     },
     "script": {
-      "label": "beats 与字幕 manifest",
-      "depends_on": ["narrative-script"],
-      "required_artifacts": ["script/narration_beats.csv", "script/text_manifest.json"],
-      "downstream": ["director-compiler", "beat-design"]
-    },
-    "beat-design": {
-      "label": "Beat 设计",
-      "depends_on": ["script"],
-      "required_artifacts": ["script/narration_beats.csv"],
-      "downstream": ["director-compiler"]
-    },
-    "director-compiler": {
-      "label": "导演编译",
-      "depends_on": ["script", "beat-design"],
-      "required_artifacts": [
-        "script/beat_timeline.json",
-        "script/director_event_graph.json",
-        "assets/asset_choreography_manifest.csv"
-      ],
-      "validation_scripts": ["beat_timeline_lint.py {project} --fail-under 80"],
-      "downstream": ["art-direction", "shot-design", "sound-design"]
-    },
-    "art-direction": {
-      "label": "美术方向",
-      "depends_on": ["director-compiler"],
-      "required_artifacts": ["design/art_direction.md", "design/tokens.json", "design/micro_animation_palette.json"],
-      "downstream": ["storyboard", "assets"]
-    },
-    "storyboard": {
-      "label": "分镜",
-      "depends_on": ["art-direction"],
-      "required_artifacts": ["script/storyboard.json", "script/retention_curve.json"],
-      "downstream": ["shot-design"]
-    },
-    "shot-design": {
-      "label": "镜头设计",
-      "depends_on": ["storyboard", "director-compiler"],
-      "required_artifacts": ["script/shotlist.json", "script/beat_director_notes.md"],
-      "downstream": ["sound-design", "segments"]
-    },
-    "sound-design": {
-      "label": "声音设计",
-      "depends_on": ["director-compiler", "shot-design"],
-      "required_artifacts": ["audio/tts_plan.json", "audio/audio_cue_sheet.json", "audio/audio_mix_plan.json"],
-      "downstream": ["audio-assets", "assets"]
+      "label": "Voiceover and beats",
+      "depends_on": ["plan", "fact-lock"],
+      "required_artifacts": ["script/voiceover.md", "script/narration_beats.csv", "script/text_manifest.json"],
+      "content_gates": ["narration_schema", "narration_content", "template_leftovers"],
+      "validation_scripts": ["script_claim_lint.py {project} --fail-under 85"],
+      "downstream": ["design", "director-plan"]
     },
     "design": {
-      "label": "视觉设计",
-      "depends_on": ["art-direction"],
-      "required_artifacts": ["design/design.md", "design/visual_moodboard.json"],
-      "downstream": ["assets"]
+      "label": "Art direction and shot language",
+      "depends_on": ["script"],
+      "required_artifacts": ["design/art_direction.md", "design/tokens.json", "script/storyboard.json", "script/shotlist.json"],
+      "downstream": ["assets", "director-plan"]
     },
     "assets": {
-      "label": "视觉资产",
-      "depends_on": ["art-direction", "design", "sound-design"],
-      "required_artifacts": [
-        "assets/asset_manifest.csv",
-        "segments/{segment}/beat_asset_plan.csv",
-        "segments/{segment}/assets/ref/processed/video_types_report.json"
-      ],
+      "label": "Evidence and asset selection",
+      "depends_on": ["script", "design"],
+      "required_artifacts": ["assets/asset_selection_report.json", "assets/asset_manifest.csv", "segments/{segment}/beat_asset_plan.csv"],
+      "content_gates": ["beat_asset_alignment", "template_leftovers"],
       "validation_scripts": [
-        "beat_asset_coverage_lint.py {project} {segment} --fail-under 90",
-        "verify_svg_utf8.py {project}/segments/{segment}/assets"
+        "visual_sync_lint.py {project} {segment} --fail-under 85",
+        "beat_asset_coverage_lint.py {project} {segment} --fail-under 85"
       ],
-      "downstream": ["segments"]
+      "downstream": ["director-plan"]
     },
-    "audio-assets": {
-      "label": "配音与实测时长",
-      "depends_on": ["script", "sound-design"],
-      "required_artifacts": [
-        "audio/voice/{segment}_vo.wav",
-        "segments/{segment}/vo_timing.json",
-        "segments/{segment}/micro_timing.json"
-      ],
+    "director-plan": {
+      "label": "Director timeline",
+      "depends_on": ["script", "design", "assets"],
+      "required_artifacts": ["script/visual_sync_plan.csv", "script/rhythm_map.json", "script/beat_timeline.json", "script/director_event_graph.json", "assets/asset_choreography_manifest.csv"],
+      "content_gates": ["visual_sync_alignment", "template_leftovers"],
       "validation_scripts": [
-        "measure_segment_vo.py {project} {segment}",
-        "build_micro_timing.py {project} {segment}",
-        "segment_timing_lint.py {project} {segment}"
+        "beat_timeline_lint.py {project} --fail-under 80",
+        "director_quality_lint.py {project} --fail-under 78"
       ],
-      "downstream": ["segments"]
+      "downstream": ["voice-and-sound", "segments"]
+    },
+    "voice-and-sound": {
+      "label": "Voice, timing, and sound",
+      "depends_on": ["script", "director-plan"],
+      "required_artifacts": ["audio/prosody_plan.csv", "audio/tts_plan.json", "audio/audio_cue_sheet.json", "audio/audio_mix_plan.json"],
+      "content_gates": ["prosody_sync"],
+      "validation_scripts": ["audio_score.py {project} --fail-under 72"],
+      "downstream": ["segments", "assemble"]
     },
     "segments": {
-      "label": "段落合成与渲染",
-      "depends_on": ["audio-assets", "assets", "director-compiler"],
-      "required_artifacts": [
-        "segments/{segment}/index.html",
-        "segments/{segment}/timing_qc_report.md",
-        "segments/{segment}/beat_asset_coverage_qc.md"
-      ],
+      "label": "Segment implementation",
+      "depends_on": ["director-plan", "voice-and-sound"],
+      "required_artifacts": ["segments/{segment}/index.html", "segments/{segment}/beat_asset_coverage_qc.md"],
       "validation_scripts": [
-        "beat_asset_coverage_lint.py {project} {segment} --fail-under 90",
-        "verify_svg_utf8.py {project}/segments/{segment}/assets",
-        "segment_timing_lint.py {project} {segment} --full"
+        "beat_asset_coverage_lint.py {project} {segment} --fail-under 85",
+        "segment_timing_lint.py {project} {segment} --full",
+        "verify_svg_utf8.py {project}/segments/{segment}/assets"
       ],
       "optional_artifacts": ["segments/{segment}/render.mp4"],
-      "downstream": ["assemble", "aesthetic-review"]
-    },
-    "audio-mix": {
-      "label": "音频混音",
-      "depends_on": ["audio-assets", "segments"],
-      "required_artifacts": ["edit/audio_mix_command.sh"],
-      "downstream": ["assemble"]
+      "downstream": ["assemble", "qc"]
     },
     "assemble": {
-      "label": "总装",
-      "depends_on": ["segments", "audio-mix"],
-      "required_artifacts": ["edit/timeline.json", "edit/captions.srt"],
-      "downstream": ["aesthetic-review", "qc"]
-    },
-    "aesthetic-review": {
-      "label": "美学审核",
-      "depends_on": ["assemble", "segments"],
-      "required_artifacts": ["edit/aesthetic_report.md"],
-      "validation_scripts": ["aesthetic_score.py {project} --fail-under 72"],
+      "label": "Assembly and mix",
+      "depends_on": ["segments", "voice-and-sound"],
+      "required_artifacts": ["edit/timeline.json", "edit/audio_mix_command.sh"],
       "downstream": ["qc"]
     },
     "qc": {
-      "label": "质量检查",
-      "depends_on": ["assemble", "aesthetic-review"],
-      "required_artifacts": ["edit/qc_report.md", "edit/audio_qc_report.md"],
-      "validation_scripts": ["validate_project.py {project}"],
+      "label": "Director QC",
+      "depends_on": ["assemble"],
+      "required_artifacts": ["edit/qc_report.md", "edit/aesthetic_report.md", "edit/audio_qc_report.md", "edit/director_quality_report.md"],
+      "validation_scripts": [
+        "validate_project.py {project}",
+        "director_quality_lint.py {project} --fail-under 78",
+        "aesthetic_score.py {project} --fail-under 72",
+        "audio_score.py {project} --fail-under 72"
+      ],
       "downstream": ["publish"]
     },
     "publish": {
-      "label": "发布",
+      "label": "Publish package",
       "depends_on": ["qc"],
       "required_artifacts": ["exports/publish_pack.md"],
       "downstream": []

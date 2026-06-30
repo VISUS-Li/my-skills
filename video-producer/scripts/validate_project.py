@@ -217,19 +217,64 @@ def _validate_gates(root: Path) -> list[str]:
         return [f"gate validation error: {exc}"]
 
 
-def validate_narration_beats(root: Path) -> list[str]:
-    path = root / "script/narration_beats.csv"
-    errors: list[str] = []
+def _validate_beat_contracts(root: Path) -> list[str]:
+    scripts_dir = Path(__file__).resolve().parent
+    import sys
+
+    if str(scripts_dir) not in sys.path:
+        sys.path.insert(0, str(scripts_dir))
     try:
-        with path.open(newline="", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            expected = {"beat_id", "segment_id", "start_sec", "end_sec", "narration", "semantic_action", "visual_response_required", "sfx_intent", "spoken_focus", "beat_type", "information_density"}
-            missing = expected - set(reader.fieldnames or [])
-            if missing:
-                errors.append(f"script/narration_beats.csv missing columns: {', '.join(sorted(missing))}")
+        from stage_validation import default_segment, validate_beat_id_alignment
+
+        seg = default_segment(root)
+        errors: list[str] = []
+        if (root / "script" / "visual_sync_plan.csv").exists():
+            errors.extend(
+                validate_beat_id_alignment(
+                    root,
+                    seg,
+                    plan_rel="script/visual_sync_plan.csv",
+                    plan_label="script/visual_sync_plan.csv",
+                )
+            )
+        plan_path = root / "segments" / seg / "beat_asset_plan.csv"
+        if plan_path.exists():
+            errors.extend(
+                validate_beat_id_alignment(
+                    root,
+                    seg,
+                    plan_rel=f"segments/{seg}/beat_asset_plan.csv",
+                    plan_label=f"segments/{seg}/beat_asset_plan.csv",
+                )
+            )
+        return errors
     except Exception as exc:  # noqa: BLE001
-        errors.append(f"invalid narration beats: {exc}")
-    return errors
+        return [f"beat contract validation error: {exc}"]
+
+
+def validate_narration_beats(root: Path) -> list[str]:
+    scripts_dir = Path(__file__).resolve().parent
+    import sys
+
+    if str(scripts_dir) not in sys.path:
+        sys.path.insert(0, str(scripts_dir))
+    try:
+        from stage_validation import (
+            default_segment,
+            detect_template_leftovers,
+            validate_narration_beats_content,
+            validate_narration_beats_schema,
+        )
+
+        errors: list[str] = []
+        errors.extend(validate_narration_beats_schema(root))
+        if not errors:
+            seg = default_segment(root)
+            errors.extend(validate_narration_beats_content(root, seg))
+            errors.extend(detect_template_leftovers(root, seg, scopes=["narration_beats", "visual_sync_plan", "prosody_plan"]))
+        return errors
+    except Exception as exc:  # noqa: BLE001
+        return [f"invalid narration beats: {exc}"]
 
 
 def validate_rhythm_map(root: Path) -> list[str]:
@@ -396,6 +441,7 @@ def main() -> int:
         errors.extend(validate_asset_manifest(root))
         errors.extend(validate_asset_selection_report(root))
         errors.extend(validate_narration_beats(root))
+        errors.extend(_validate_beat_contracts(root))
         errors.extend(validate_rhythm_map(root))
         errors.extend(validate_visual_sync_plan(root))
         errors.extend(validate_prosody_plan(root))
@@ -420,7 +466,7 @@ def main() -> int:
         return 1
 
     print("Validation passed.")
-    print("For quality gates, also run: scripts/script_claim_lint.py <project> --fail-under 85, scripts/beat_timeline_lint.py <project> --fail-under 80, scripts/aesthetic_score.py <project> --fail-under 72, and scripts/audio_score.py <project> --fail-under 72")
+    print("For quality gates, also run: scripts/script_claim_lint.py <project> --fail-under 85, scripts/beat_timeline_lint.py <project> --fail-under 80, scripts/director_quality_lint.py <project> --fail-under 78, scripts/aesthetic_score.py <project> --fail-under 72, and scripts/audio_score.py <project> --fail-under 72")
     return 0
 
 

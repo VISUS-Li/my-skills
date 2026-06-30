@@ -18,12 +18,19 @@
 - 创建版本化 draft：*.v004.md, render_draft_v2.mp4
 
 ## 完成后必须
-1. 更新 artifact → status=review（不是 approved，除非用户明确说 auto-approve）
-2. regen_queue item → completed，附 note
-3. append `.video/history.jsonl`
-4. 若涉及 VO/beat 变更，重跑 measure → build_micro_timing → beat_asset_coverage_lint → segment_timing_lint
-5. 含中文 SVG 后跑 verify_svg_utf8.py
-6. 运行 dependency stale 传播
+1. 运行 `python scripts/validate_stage.py <project> --stage <stage_id>`，**exit 0** 后才能 `stage_gate.py --status review|approved`
+2. 更新 artifact → status=review（不是 approved，除非用户明确说 auto-approve）
+3. regen_queue item → completed，附 note
+4. append `.video/history.jsonl`
+5. 若涉及 VO/beat 变更，重跑 measure → build_micro_timing → beat_asset_coverage_lint → segment_timing_lint
+6. 含中文 SVG 后跑 verify_svg_utf8.py
+7. 运行 dependency stale 传播
+
+## narration_beats 硬性要求
+- 必须使用 skill 模板完整列（含 `narration`、`duration_sec`）；不能只写 `spoken_focus` 元数据
+- `narration` 列是 Review Studio 导演页和 TTS 的唯一 beat 口播来源
+- 写完 `voiceover.md` 后，必须把全文拆进 `narration_beats.csv` 每行 `narration`
+- `visual_sync_plan.csv` / `beat_asset_plan.csv` 的 `beat_id` 必须与 `narration_beats.csv` 一一对应，不能保留 init 模板示例行
 
 ## 命令优先级（segment 视觉驳回）
 edit asset → build_composition → hyperframes lint → (人工 review) → render

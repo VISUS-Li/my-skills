@@ -24,6 +24,7 @@ SCRIPTS = ROOT / "scripts"
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
+from beat_narration_sync import sync_narration_downstream  # noqa: E402
 from review_core import (  # noqa: E402
     append_history,
     append_job_log,
@@ -42,6 +43,7 @@ from review_core import (  # noqa: E402
     utc_now,
     validate_stage_dependencies,
 )
+from stage_validation import advancing_status, default_segment, validate_stage_complete  # noqa: E402
 from jobs import JobRunner  # noqa: E402
 from workspace import is_video_project, workspace_mgr  # noqa: E402
 from artifacts import (  # noqa: E402
@@ -59,6 +61,8 @@ from timing import (  # noqa: E402
     patch_timeline_settings,
     rebuild_timeline_vo,
     resolve_timeline_media,
+    wav_duration_sec,
+    build_timeline_model,
 )
 import preview_manager as preview_mgr  # noqa: E402
 import tts as tts_api  # noqa: E402
@@ -121,6 +125,15 @@ class AssetReviewBody(BaseModel):
 class BeatPatchBody(BaseModel):
     narration: str | None = None
     semantic_action: str | None = None
+
+
+class BeatNarrationItem(BaseModel):
+    beat_id: str
+    narration: str
+
+
+class BeatNarrationsSyncBody(BaseModel):
+    beats: list[BeatNarrationItem] = Field(default_factory=list)
 
 
 class RegenQueueBody(BaseModel):
@@ -265,6 +278,14 @@ def _read_beats(segment: str) -> list[dict[str, Any]]:
             merged["cps_band"] = _cps_band(cps) if cps else "unknown"
             wav = _root() / "audio" / "stems" / "voice" / "beats" / f"{beat_id}.wav"
             merged["vo_wav"] = wav.relative_to(_root()).as_posix() if wav.exists() else None
+            wav_dur = wav_duration_sec(wav) if wav.exists() else None
+            if wav_dur is not None:
+                merged["wav_duration_sec"] = wav_dur
+                vo_src = float(vo.get("source_duration_sec") or 0)
+                if not vo_src or abs(vo_src - wav_dur) > 0.05:
+                    merged["source_duration_sec"] = wav_dur
+                    if vo:
+                        merged["vo"] = {**vo, "source_duration_sec": wav_dur}
             reg = registry_index(read_registry_lines(_root())).get(f"beat:{beat_id}", {})
             merged["review_status"] = reg.get("status", "review")
             rows.append(merged)
@@ -410,14 +431,40 @@ def _job_presets(
             root / "segments" / seg,
             "HyperFrames draft render",
         ),
+        "director_qc": (
+            sys.executable,
+            [
+                str(SCRIPTS / "validate_project.py"),
+                str(root),
+            ],
+            root,
+            "Validate project",
+        ),
+        "director_quality": (
+            sys.executable,
+            [str(SCRIPTS / "director_quality_lint.py"), str(root), "--fail-under", "78"],
+            root,
+            "Director quality lint",
+        ),
+        "full_lint": (
+            sys.executable,
+            [str(SCRIPTS / "validate_project.py"), str(root)],
+            root,
+            "Full project validate",
+        ),
     }
     return presets
 
 
 def _stage_gate(stage_id: str, status: str, note: str) -> dict[str, Any]:
     dep_errors = validate_stage_dependencies(_root(), stage_id, target_status=status)
-    if dep_errors and status in {"review", "approved", "locked", "rendered"}:
+    if dep_errors and advancing_status(status):
         raise HTTPException(status_code=409, detail=dep_errors)
+    if advancing_status(status):
+        seg = default_segment(_root())
+        stage_errors = validate_stage_complete(_root(), stage_id, segment=seg, run_scripts=True)
+        if stage_errors:
+            raise HTTPException(status_code=409, detail=stage_errors)
     state = load_state(_root())
     stages = state.setdefault("stages", {})
     stage = stages.setdefault(stage_id, {"status": "draft", "artifacts": []})
@@ -631,34 +678,68 @@ def get_beat(beat_id: str, segment: str | None = None) -> dict[str, Any]:
     raise HTTPException(status_code=404, detail=f"beat not found: {beat_id}")
 
 
+def _write_narration_beats(root: Path, rows: list[dict[str, str]], fieldnames: list[str]) -> None:
+    path = root / "script" / "narration_beats.csv"
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def _apply_beat_narration_sync(root: Path, seg: str, beat_ids: set[str]) -> dict[str, Any]:
+    sync = sync_narration_downstream(root, segment_id=seg, beat_ids=beat_ids, invalidate_vo=True)
+    if sync.get("voiceover_path"):
+        propagate_stale(
+            root,
+            sync["voiceover_path"],
+            note="voiceover synced from narration_beats",
+            segment_id=seg,
+        )
+    if sync.get("prosody_updates"):
+        propagate_stale(
+            root,
+            "audio/prosody_plan.csv",
+            note="prosody tts_text synced from narration_beats",
+            segment_id=seg,
+        )
+    return sync
+
+
 @app.patch("/api/beats/{beat_id}")
 def patch_beat(beat_id: str, body: BeatPatchBody, segment: str | None = None) -> dict[str, Any]:
     seg = segment or _default_segment()
-    path = _root() / "script" / "narration_beats.csv"
+    root = _root()
+    path = root / "script" / "narration_beats.csv"
     if not path.exists():
         raise HTTPException(status_code=404, detail="narration_beats.csv missing")
     rows: list[dict[str, str]] = []
     fieldnames: list[str] = []
     found = False
+    narration_changed = False
     with path.open(newline="", encoding="utf-8-sig") as handle:
         reader = csv.DictReader(handle)
         fieldnames = list(reader.fieldnames or [])
         for row in reader:
             if row.get("beat_id") == beat_id and row.get("segment_id") == seg:
                 if body.narration is not None:
-                    row["narration"] = body.narration
+                    new_narration = body.narration
+                    if (row.get("narration") or "") != new_narration:
+                        narration_changed = True
+                    row["narration"] = new_narration
+                    if "char_count" in fieldnames:
+                        row["char_count"] = str(len(new_narration.replace(" ", "")))
                 if body.semantic_action is not None:
                     row["semantic_action"] = body.semantic_action
                 found = True
             rows.append(dict(row))
     if not found:
         raise HTTPException(status_code=404, detail=f"beat not found: {beat_id}")
-    with path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(rows)
-    stale = propagate_stale(_root(), "script/narration_beats.csv", note=f"beat {beat_id} edited", segment_id=seg)
-    append_registry(_root(), {
+    _write_narration_beats(root, rows, fieldnames)
+    stale = propagate_stale(root, "script/narration_beats.csv", note=f"beat {beat_id} edited", segment_id=seg)
+    sync: dict[str, Any] = {}
+    if narration_changed:
+        sync = _apply_beat_narration_sync(root, seg, {beat_id})
+    append_registry(root, {
         "artifact_id": f"beat:{beat_id}",
         "artifact_type": "beat",
         "path": "script/narration_beats.csv",
@@ -671,7 +752,50 @@ def patch_beat(beat_id: str, body: BeatPatchBody, segment: str | None = None) ->
         "reviewer_note": "narration edited via Review Studio",
     })
     sync_broadcast({"type": "registry_updated", "beat_id": beat_id})
-    return {"beat_id": beat_id, "stale": stale}
+    return {"beat_id": beat_id, "stale": stale, "sync": sync}
+
+
+@app.post("/api/beats/sync-narrations")
+def post_beats_sync_narrations(body: BeatNarrationsSyncBody, segment: str | None = None) -> dict[str, Any]:
+    """Persist UI narration edits and sync downstream before bulk TTS."""
+    seg = segment or _default_segment()
+    root = _root()
+    path = root / "script" / "narration_beats.csv"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="narration_beats.csv missing")
+    if not body.beats:
+        return {"updated": 0, "sync": {}}
+
+    updates = {item.beat_id: item.narration for item in body.beats}
+    rows: list[dict[str, str]] = []
+    fieldnames: list[str] = []
+    changed_ids: set[str] = set()
+    with path.open(newline="", encoding="utf-8-sig") as handle:
+        reader = csv.DictReader(handle)
+        fieldnames = list(reader.fieldnames or [])
+        for row in reader:
+            beat_id = row.get("beat_id", "")
+            if beat_id in updates and row.get("segment_id") == seg:
+                new_narration = updates[beat_id]
+                if (row.get("narration") or "") != new_narration:
+                    changed_ids.add(beat_id)
+                    row["narration"] = new_narration
+                    if "char_count" in fieldnames:
+                        row["char_count"] = str(len(new_narration.replace(" ", "")))
+            rows.append(dict(row))
+    if not changed_ids:
+        return {"updated": 0, "sync": {}}
+
+    _write_narration_beats(root, rows, fieldnames)
+    stale = propagate_stale(
+        root,
+        "script/narration_beats.csv",
+        note=f"{len(changed_ids)} beats edited via Review Studio",
+        segment_id=seg,
+    )
+    sync = _apply_beat_narration_sync(root, seg, changed_ids)
+    sync_broadcast({"type": "registry_updated", "beat_ids": sorted(changed_ids)})
+    return {"updated": len(changed_ids), "beat_ids": sorted(changed_ids), "stale": stale, "sync": sync}
 
 
 def _segment_from_media_path(file_path: str) -> str:
@@ -892,6 +1016,45 @@ def post_job_preset(
     return {"job": job}
 
 
+@app.get("/api/director/beats")
+def get_director_beats(segment: str | None = None) -> dict[str, Any]:
+    """Merged beat view: narration + visual_sync + beat_asset_plan."""
+    seg = segment or _default_segment()
+    root = _root()
+    beats = _read_beats(seg)
+
+    sync_by_beat: dict[str, dict[str, str]] = {}
+    sync_path = root / "script" / "visual_sync_plan.csv"
+    if sync_path.exists():
+        with sync_path.open(newline="", encoding="utf-8-sig") as handle:
+            for row in csv.DictReader(handle):
+                if row.get("segment_id", "").upper() == seg.upper():
+                    sync_by_beat[row.get("beat_id", "")] = dict(row)
+
+    plan_by_beat: dict[str, dict[str, str]] = {}
+    plan_path = root / "segments" / seg / "beat_asset_plan.csv"
+    if plan_path.exists():
+        with plan_path.open(newline="", encoding="utf-8-sig") as handle:
+            for row in csv.DictReader(handle):
+                plan_by_beat[row.get("beat_id", "")] = dict(row)
+
+    enriched: list[dict[str, Any]] = []
+    for beat in beats:
+        bid = beat.get("beat_id", "")
+        item = dict(beat)
+        item["visual_sync"] = sync_by_beat.get(bid, {})
+        item["asset_plan"] = plan_by_beat.get(bid, {})
+        item["focal_owner"] = sync_by_beat.get(bid, {}).get("focal_owner", "")
+        item["primary_asset"] = plan_by_beat.get(bid, {}).get("primary_asset", "")
+        item["density_target"] = (
+            beat.get("information_density")
+            or sync_by_beat.get(bid, {}).get("density_target", "")
+            or plan_by_beat.get(bid, {}).get("density_target", "")
+        )
+        enriched.append(item)
+    return {"segment_id": seg, "beats": enriched}
+
+
 @app.get("/api/timeline")
 def get_timeline(segment: str | None = None) -> dict[str, Any]:
     seg = segment or _default_segment()
@@ -905,14 +1068,24 @@ def get_timeline(segment: str | None = None) -> dict[str, Any]:
     total = float(vo.get("total_sec") or 0)
     if not total and beats:
         total = sum(float(b.get("actual_sec") or b.get("planned_sec") or 0) for b in beats)
+    video_path = root / ".video" / "video.json"
+    ratio = "16:9"
+    resolution = ""
+    if video_path.exists():
+        video_meta = json.loads(video_path.read_text(encoding="utf-8-sig"))
+        ratio = video_meta.get("ratio") or ratio
+        resolution = video_meta.get("resolution") or ""
     return {
         "segment_id": seg,
+        "ratio": ratio,
+        "resolution": resolution,
         "total_sec": round(total, 3) if total else None,
         "master_playback_rate": float(vo.get("master_playback_rate") or 1.0),
         "beats": beats,
         "micro_events": micro_events,
         "media": resolve_timeline_media(root, seg),
         "preview": preview_mgr.hyperframes_status(root, seg),
+        **build_timeline_model(root, seg, beats, micro_events),
     }
 
 

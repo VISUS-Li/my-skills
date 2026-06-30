@@ -110,6 +110,46 @@ def load_prosody(root: Path) -> dict[str, dict[str, str]]:
         return {row.get("beat_id", ""): row for row in csv.DictReader(f) if row.get("beat_id")}
 
 
+def load_last_generated_text(root: Path) -> dict[str, str]:
+    """Latest successful TTS text per beat from generation_manifest.jsonl."""
+    path = root / "audio/stems/voice/generation_manifest.jsonl"
+    latest: dict[str, str] = {}
+    if not path.exists():
+        return latest
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if row.get("status") != "ok":
+            continue
+        beat_id = row.get("beat_id")
+        text = row.get("tts_text")
+        if beat_id and isinstance(text, str):
+            latest[str(beat_id)] = text
+    return latest
+
+
+def should_skip_existing_wav(
+    *,
+    force: bool,
+    wav_path: Path,
+    current_text: str,
+    last_generated: dict[str, str],
+    beat_id: str,
+) -> bool:
+    if force:
+        return False
+    if not wav_path.exists() or wav_path.stat().st_size <= 1000:
+        return False
+    previous_text = last_generated.get(beat_id)
+    if previous_text is None:
+        return False
+    return previous_text == current_text
+
+
 def pause_ms(row: dict[str, str], key: str) -> int:
     try:
         return max(0, int(float(row.get(key) or 0)))
@@ -225,6 +265,7 @@ def main() -> int:
 
     beats = load_beats(root, args.segment)
     prosody = load_prosody(root)
+    last_generated = load_last_generated_text(root)
     if args.beats:
         wanted = set(args.beats)
         beats = [b for b in beats if b["beat_id"] in wanted]
@@ -362,15 +403,23 @@ def main() -> int:
                 current_beat=bid,
             ))
             out = out_dir / f"{bid}.wav"
-            if not args.force and out.exists() and out.stat().st_size > 1000:
+            p = prosody.get(bid, {})
+            text = (p.get("tts_text") or row["narration"]).strip()
+            if should_skip_existing_wav(
+                force=args.force,
+                wav_path=out,
+                current_text=text,
+                last_generated=last_generated,
+                beat_id=bid,
+            ):
                 print(f"skip {bid}")
                 generated.append(out)
                 done += 1
                 beat_status[bid] = "done"
                 completed_beats.append(bid)
                 continue
-            p = prosody.get(bid, {})
-            text = (p.get("tts_text") or row["narration"]).strip()
+            if out.exists() and out.stat().st_size > 1000 and not args.force:
+                print(f"regen {bid} (text changed)")
             seg = row["segment_id"]
             max_tok = min(600, max(80, narration_char_count(row) * 3))
             pre = pause_ms(p, "pre_pause_ms")
@@ -386,7 +435,14 @@ def main() -> int:
                 except OSError:
                     pass
                 generated.append(out)
-                log.write(json.dumps({"beat_id": bid, "status": "ok", "pre_pause_ms": pre, "post_pause_ms": post}, ensure_ascii=False) + "\n")
+                log.write(json.dumps({
+                    "beat_id": bid,
+                    "status": "ok",
+                    "tts_text": text,
+                    "pre_pause_ms": pre,
+                    "post_pause_ms": post,
+                }, ensure_ascii=False) + "\n")
+                last_generated[bid] = text
                 done += 1
                 beat_status[bid] = "done"
                 completed_beats.append(bid)

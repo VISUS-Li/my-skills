@@ -21,29 +21,15 @@ if str(SCRIPT_DIR) not in sys.path:
 
 STAGES = [
     "plan",
-    "ingest",
-    "reference-analysis",
-    "style-match",
     "research",
     "fact-lock",
-    "narrative-script",
     "script",
-    "art-direction",
-    "storyboard",
-    "beat-design",
-    "director-rhythm",
-    "visual-sync",
-    "director-compiler",
-    "asset-choreography",
-    "shot-design",
     "design",
     "assets",
-    "sound-design",
-    "audio-assets",
-    "audio-mix",
+    "director-plan",
+    "voice-and-sound",
     "segments",
     "assemble",
-    "aesthetic-review",
     "qc",
     "publish",
 ]
@@ -58,6 +44,11 @@ def slugify(text: str) -> str:
 
 def skill_root() -> Path:
     return Path(__file__).resolve().parents[1]
+
+
+def default_project_root(slug: str) -> Path:
+    """Default location when --root is omitted: ~/projects/<slug>."""
+    return (Path.home() / "projects" / slug).resolve()
 
 
 def copy_template(template_name: str, target: Path, replacements: dict[str, object] | None = None, force: bool = False) -> None:
@@ -134,7 +125,11 @@ def scaffold_segment(root: Path, segment_id: str = "S001", *, force: bool = Fals
 def main() -> int:
     parser = argparse.ArgumentParser(description="Initialize a staged video production project with art direction, sound design, and quality gates.")
     parser.add_argument("--name", required=True, help="Human-readable video/project name")
-    parser.add_argument("--root", default=None, help="Project directory. Defaults to slugified --name")
+    parser.add_argument(
+        "--root",
+        default=None,
+        help="Project directory. Defaults to ~/projects/<slugified --name>",
+    )
     parser.add_argument("--input-type", default="idea", choices=["idea", "audio", "video", "youtube", "url", "pdf", "article", "raw-video", "mixed"], help="Primary input type")
     parser.add_argument("--ratio", default="9:16", help="Target aspect ratio, e.g. 9:16 or 16:9")
     parser.add_argument("--duration", type=int, default=180, help="Target duration in seconds")
@@ -148,7 +143,7 @@ def main() -> int:
     args = parser.parse_args()
 
     slug = slugify(args.name)
-    root = Path(args.root or slug).resolve()
+    root = Path(args.root).resolve() if args.root else default_project_root(slug)
     resolution = args.resolution or ("1080x1920" if args.ratio == "9:16" else "1920x1080")
     platforms = [p.strip() for p in args.platforms.split(",") if p.strip()]
     style_keywords = [s.strip() for s in args.style.split(",") if s.strip()]
@@ -311,7 +306,9 @@ def main() -> int:
     print(f"Initialized video project: {root}")
     if args.recipe == "douyin-ai-explainer":
         print("Recipe: douyin-ai-explainer. Next also run douyin_ai_explainer_score.py before rendering.")
-    print(f"Next: fill {root / 'design' / 'art_direction.md'} and {root / 'audio' / 'audio_style_guide.md'}, then run validate_project.py, aesthetic_score.py, and audio_score.py")
+    print(f"Next: fill {root / 'design' / 'art_direction.md'} and {root / 'audio' / 'audio_style_guide.md'}")
+    print(f"IMPORTANT: replace ALL template rows in narration_beats.csv, visual_sync_plan.csv, prosody_plan.csv before script stage.")
+    print(f"Then: python scripts/validate_stage.py {root} --stage script")
     return 0
 
 

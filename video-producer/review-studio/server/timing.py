@@ -2,6 +2,7 @@
 """Timing patch helpers for Review Studio."""
 from __future__ import annotations
 
+import csv
 import json
 import shutil
 import subprocess
@@ -13,6 +14,22 @@ from review_core import append_history, propagate_stale, utc_now
 
 MIN_PLAYBACK_RATE = 0.25
 MAX_PLAYBACK_RATE = 2.0
+
+
+def wav_duration_sec(path: Path) -> float | None:
+    """Read WAV duration from file header."""
+    if not path.is_file():
+        return None
+    try:
+        import wave
+
+        with wave.open(str(path), "rb") as handle:
+            rate = handle.getframerate()
+            if rate <= 0:
+                return None
+            return round(handle.getnframes() / float(rate), 3)
+    except Exception:
+        return None
 
 
 def load_vo_timing(root: Path, segment: str) -> dict[str, Any]:
@@ -46,10 +63,13 @@ def beat_timeline_duration(beat: dict[str, Any]) -> float:
     ensure_beat_edit_fields(beat)
     if beat.get("disabled"):
         return 0.0
-    src = float(beat.get("source_duration_sec") or beat.get("duration_sec") or 0)
-    rate = float(beat.get("playback_rate") or 1.0) or 1.0
+    dur = float(beat.get("duration_sec") or 0)
+    if dur > 0:
+        return round(dur, 3)
+    src = float(beat.get("source_duration_sec") or 0)
     if src <= 0:
         return 0.0
+    rate = float(beat.get("playback_rate") or 1.0) or 1.0
     return round(src / clamp_playback_rate(rate), 3)
 
 
@@ -109,7 +129,7 @@ def patch_beat_timing(
             if src <= 0:
                 src = new_dur
             beat["source_duration_sec"] = round(src, 3)
-            beat["playback_rate"] = clamp_playback_rate(src / new_dur)
+            beat["duration_sec"] = new_dur
             beat["source"] = "manual"
         if locked is not None:
             beat["locked"] = locked
@@ -187,6 +207,35 @@ def _ffmpeg_atempo(in_path: Path, out_path: Path, rate: float) -> None:
     )
 
 
+def _ffmpeg_render_timeline_clip(in_path: Path, out_path: Path, *, duration: float, rate: float) -> None:
+    """Render one beat clip for timeline concat, honoring trim duration and playback speed."""
+    rate = clamp_playback_rate(rate)
+    duration = max(0.05, float(duration))
+    source_take = max(0.05, duration * rate)
+    filters: list[str] = []
+    remaining = rate
+    while remaining > 2.0 + 1e-6:
+        filters.append("atempo=2.0")
+        remaining /= 2.0
+    while remaining < 0.5 - 1e-6:
+        filters.append("atempo=0.5")
+        remaining /= 0.5
+    if abs(remaining - 1.0) > 0.001:
+        filters.append(f"atempo={remaining:.4f}")
+    cmd = [
+        "ffmpeg",
+        "-y",
+        "-t",
+        f"{source_take:.3f}",
+        "-i",
+        str(in_path),
+    ]
+    if filters:
+        cmd.extend(["-filter:a", ",".join(filters)])
+    cmd.extend(["-ac", "1", "-ar", "48000", str(out_path)])
+    subprocess.run(cmd, check=True, capture_output=True)
+
+
 def rebuild_timeline_vo(root: Path, segment: str) -> dict[str, Any]:
     """Rebuild master VO from beat WAVs honoring disabled clips and per-beat speed."""
     data = load_vo_timing(root, segment)
@@ -205,13 +254,11 @@ def rebuild_timeline_vo(root: Path, segment: str) -> dict[str, Any]:
             if not src_wav.exists():
                 continue
             rate = float(beat.get("playback_rate") or 1.0) or 1.0
-            if abs(rate - 1.0) < 0.001:
-                concat_inputs.append(src_wav)
-            else:
-                out = tmp_path / f"{bid}_rate.wav"
-                _ffmpeg_atempo(src_wav, out, rate)
-                temp_files.append(out)
-                concat_inputs.append(out)
+            duration = beat_timeline_duration(beat)
+            out = tmp_path / f"{bid}_timeline.wav"
+            _ffmpeg_render_timeline_clip(src_wav, out, duration=duration, rate=rate)
+            temp_files.append(out)
+            concat_inputs.append(out)
         if not concat_inputs:
             raise FileNotFoundError("no enabled beat WAV files to concat")
 
@@ -331,4 +378,171 @@ def audio_summary(root: Path, segment: str) -> dict[str, Any]:
         "drift_total_sec": round(actual_total - planned_total, 3),
         "beat_count": len(beats),
         "drift_beats": drift_beats,
+    }
+
+
+PROGRAMMATIC_TYPES = frozenset({
+    "hyperframes_component",
+    "text_layer",
+    "ambient",
+})
+
+
+def _read_csv(path: Path) -> list[dict[str, str]]:
+    if not path.exists():
+        return []
+    with path.open(encoding="utf-8-sig", newline="") as handle:
+        return list(csv.DictReader(handle))
+
+
+def build_timeline_model(
+    root: Path,
+    segment: str,
+    beats: list[dict[str, Any]],
+    micro_events: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Unified multi-track timeline for Review Studio UI."""
+    seg = segment.upper()
+    vo = load_vo_timing(root, seg)
+    vo_beats = {
+        str(b["beat_id"]): b
+        for b in vo.get("beats", [])
+        if isinstance(b, dict) and b.get("beat_id")
+    }
+
+    audio_clips: list[dict[str, Any]] = []
+    video_clips: list[dict[str, Any]] = []
+    for row in beats:
+        if row.get("disabled"):
+            continue
+        beat_id = str(row.get("beat_id", ""))
+        vo_row = row.get("vo") or vo_beats.get(beat_id, {})
+        start = float(vo_row.get("start_sec") or row.get("start_sec") or 0)
+        dur = float(vo_row.get("duration_sec") or row.get("actual_sec") or row.get("duration_sec") or 0)
+        if dur <= 0:
+            continue
+        end = round(start + dur, 3)
+        audio_clips.append({
+            "id": beat_id,
+            "beat_id": beat_id,
+            "start": round(start, 3),
+            "end": end,
+            "duration_sec": round(dur, 3),
+            "wav": row.get("vo_wav"),
+            "playback_rate": float(row.get("playback_rate") or vo_row.get("playback_rate") or 1),
+            "wav_duration_sec": row.get("wav_duration_sec"),
+            "label": str(row.get("narration") or "")[:48],
+        })
+        video_clips.append({
+            "id": f"scene_{beat_id}",
+            "beat_id": beat_id,
+            "start": round(start, 3),
+            "end": end,
+            "label": row.get("spoken_focus") or row.get("beat_type") or beat_id,
+        })
+
+    manifest_rows: dict[str, dict[str, str]] = {}
+    for item in _read_csv(root / "assets" / "asset_manifest.csv"):
+        aid = item.get("asset_id", "")
+        if aid:
+            manifest_rows[aid] = item
+
+    asset_clips: list[dict[str, Any]] = []
+    for plan in _read_csv(root / "segments" / seg / "beat_asset_plan.csv"):
+        beat_id = plan.get("beat_id", "")
+        vb = vo_beats.get(beat_id)
+        if not vb:
+            continue
+        start = float(vb.get("start_sec", 0))
+        dur = float(vb.get("duration_sec", 0))
+        if dur <= 0:
+            continue
+        end = round(start + dur, 3)
+        for col in ("primary_asset", "secondary_asset", "accent_asset", "ambient_asset"):
+            asset_id = (plan.get(col) or "").strip()
+            if not asset_id or asset_id.lower() == "none":
+                continue
+            meta = manifest_rows.get(asset_id, {})
+            asset_type = meta.get("type", "")
+            path_or_url = (meta.get("path_or_url") or "").strip()
+            programmatic = (
+                path_or_url in {"", "programmatic"}
+                or asset_type in PROGRAMMATIC_TYPES
+                or asset_id.startswith(("hf_", "text_", "chart_", "svg_", "ambient_"))
+            )
+            asset_clips.append({
+                "id": asset_id,
+                "beat_id": beat_id,
+                "start": round(start, 3),
+                "end": end,
+                "kind": asset_type or "asset",
+                "path": None if programmatic else path_or_url,
+                "programmatic": programmatic,
+                "role": col.replace("_asset", ""),
+            })
+
+    micro_by_id = {
+        str(ev.get("id") or ev.get("event_id")): ev
+        for ev in micro_events
+        if isinstance(ev, dict)
+    }
+    event_clips: list[dict[str, Any]] = []
+    timeline_path = root / "script" / "beat_timeline.json"
+    if timeline_path.exists():
+        timeline = json.loads(timeline_path.read_text(encoding="utf-8-sig"))
+        for ev in timeline.get("beats", []):
+            if str(ev.get("segment_id", "")).upper() != seg:
+                continue
+            event_id = str(ev.get("beat_id", ""))
+            micro = micro_by_id.get(event_id, {})
+            start = float(micro.get("t", ev.get("start_sec", 0)))
+            planned_start = float(ev.get("start_sec", start))
+            planned_end = float(ev.get("end_sec", planned_start + 0.35))
+            planned_dur = max(0.15, planned_end - planned_start)
+            parent = str(micro.get("parent") or event_id.rsplit("_", 1)[0] if "_" in event_id else "")
+            if parent in vo_beats:
+                parent_dur = float(vo_beats[parent].get("duration_sec", 1)) or 1
+                parent_plan = _read_csv(root / "script" / "narration_beats.csv")
+                plan_dur = 1.0
+                for pr in parent_plan:
+                    if pr.get("beat_id") == parent and pr.get("segment_id", "").upper() == seg:
+                        plan_dur = float(pr.get("duration_sec") or 1) or 1
+                        break
+                scale = parent_dur / plan_dur if plan_dur else 1
+                event_dur = round(planned_dur * scale, 3)
+            else:
+                event_dur = round(planned_dur, 3)
+            event_clips.append({
+                "id": event_id,
+                "parent": parent,
+                "start": round(start, 3),
+                "end": round(start + event_dur, 3),
+                "visual_action": ev.get("visual_action", ""),
+                "assets": ev.get("assets", []),
+                "beat_type": ev.get("beat_type", ""),
+            })
+    elif micro_events:
+        for ev in micro_events:
+            if not isinstance(ev, dict):
+                continue
+            event_id = str(ev.get("id") or ev.get("event_id", ""))
+            start = float(ev.get("t", 0))
+            event_clips.append({
+                "id": event_id,
+                "parent": ev.get("parent", ""),
+                "start": round(start, 3),
+                "end": round(start + 0.35, 3),
+                "visual_action": ev.get("visual_action", ""),
+                "assets": [],
+                "beat_type": ev.get("type", ""),
+            })
+
+    return {
+        "timebase": "vo_timing",
+        "tracks": [
+            {"id": "A1", "type": "audio", "label": "口播", "clips": audio_clips},
+            {"id": "V1", "type": "video", "label": "画面", "clips": video_clips},
+            {"id": "V2", "type": "asset", "label": "素材", "clips": asset_clips},
+            {"id": "E1", "type": "event", "label": "导演事件", "clips": event_clips},
+        ],
     }
