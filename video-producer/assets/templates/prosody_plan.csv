@@ -1,0 +1,4 @@
+beat_id,segment_id,tts_text,pace,pre_pause_ms,post_pause_ms,emphasis_words,breath_after,tone,allow_disfluency,director_note
+B001,S001,示例：先把问题摆出来。,normal,0,160,问题,yes,hook,no,开场短句，语气干净，结尾留一点空间给标题卡落稳。
+B002,S001,注意，这里真正关键的是限定词。,slow,180,320,真正关键;限定词,yes,proof,no,先停一下再说“注意”，让来源卡提前出现并给限定词读图时间。
+B003,S001,所以画面要让观众看到机制怎么转起来。,normal,80,180,机制;转起来,no,mechanism,no,语气稳，配合图解模块逐步连接。

@@ -31,6 +31,8 @@ STAGES = [
     "art-direction",
     "storyboard",
     "beat-design",
+    "director-rhythm",
+    "visual-sync",
     "director-compiler",
     "asset-choreography",
     "shot-design",
@@ -235,6 +237,8 @@ def main() -> int:
     copy_template(storyboard_template, root / "script" / "storyboard.json", {"video_title": args.name, "total_duration_sec": args.duration}, args.force)
     scale_storyboard_to_duration(root / "script" / "storyboard.json", args.duration)
     copy_template("narration_beats.csv", root / "script" / "narration_beats.csv", force=args.force)
+    copy_template("rhythm_map.json", root / "script" / "rhythm_map.json", force=args.force)
+    copy_template("visual_sync_plan.csv", root / "script" / "visual_sync_plan.csv", force=args.force)
     copy_template("beat_timeline.json", root / "script" / "beat_timeline.json", force=args.force)
     copy_template("director_event_graph.json", root / "script" / "director_event_graph.json", force=args.force)
     copy_template("retention_curve.json", root / "script" / "retention_curve.json", force=args.force)
@@ -245,6 +249,7 @@ def main() -> int:
     tokens_template = "douyin_ai_explainer_tokens.json" if args.recipe == "douyin-ai-explainer" else "tokens.json"
     copy_template(tokens_template, root / "design" / "tokens.json", force=args.force)
     copy_template("asset_manifest.csv", root / "assets" / "asset_manifest.csv", force=args.force)
+    copy_template("asset_selection_report.json", root / "assets" / "asset_selection_report.json", force=args.force)
     copy_template("asset_choreography_manifest.csv", root / "assets" / "asset_choreography_manifest.csv", force=args.force)
     copy_template("text_manifest.json", root / "script" / "text_manifest.json", force=args.force)
     copy_template("micro_animation_palette.json", root / "design" / "micro_animation_palette.json", force=args.force)
@@ -254,6 +259,7 @@ def main() -> int:
     copy_template("audio_cue_sheet.json", root / "audio" / "audio_cue_sheet.json", force=args.force)
     copy_template("music_brief.md", root / "audio" / "music_brief.md", force=args.force)
     copy_template("voice_profile.md", root / "audio" / "voice_profile.md", force=args.force)
+    copy_template("prosody_plan.csv", root / "audio" / "prosody_plan.csv", force=args.force)
     copy_template("tts_plan.json", root / "audio" / "tts_plan.json", force=args.force)
     copy_template("indextts2_config.json", root / "audio" / "indextts2_config.json", force=args.force)
     copy_template("sfx_search_queries.json", root / "audio" / "sfx_search_queries.json", force=args.force)

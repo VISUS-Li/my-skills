@@ -1,4 +1,4 @@
-beat_id,segment_id,start_sec,end_sec,narration,claim_ids,semantic_action,emotion,retention_role,visual_response_required,text_ids,sfx_intent,source_visual
-B001,S001,0.00,0.70,示例旁白短句,C001,展示/对比/证明/转折,curiosity,hook,新元素出现并吸引注意,caption_001,SFX_B001 or deliberate_silence,ref_press_photo_001
-B002,S001,0.70,1.40,纯抽象机制解释（无具体实体）,C002,解释机制,calm,mechanism,diagram_build,caption_002,deliberate_silence,none
-B003,S001,1.40,2.10,提到某产品界面或操作,C003,展示界面证明,curiosity,proof,source_card内嵌截图,caption_003,SFX_B003,screenshot_product_ui
+beat_id,segment_id,start_sec,end_sec,duration_sec,narration,char_count,claim_ids,semantic_action,emotion,retention_role,beat_type,information_density,spoken_focus,visual_response_required,text_ids,sfx_intent,source_visual
+B001,S001,0.00,2.40,2.40,示例：先把问题摆出来。,12,C001,展示问题,curiosity,hook,hook,medium,问题本身,新元素出现并吸引注意,caption_001,SFX_B001_POP,none
+B002,S001,2.40,5.60,3.20,注意，这里真正关键的是限定词。,16,C002,强调限定词,focused,proof,proof,high,限定词,来源卡提前出现并高亮限定词,caption_002,deliberate_silence,ref_source_terms
+B003,S001,5.60,9.20,3.60,所以画面要让观众看到机制怎么转起来。,18,C003,解释机制,calm,mechanism,mechanism,medium,机制转起来,图解模块逐步连接,caption_003,SFX_B003_TICK,gen_mechanism_diagram

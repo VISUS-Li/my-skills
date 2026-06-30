@@ -1,2 +1,6 @@
 asset_id,type,description,source_or_prompt,rights_status,layer,first_on_sec,last_on_sec,entrance,main_motion,exit,states,reused_in_segments,sfx_affordance,implementation_notes
-ai_machine,svg_component,cartoon AI processing machine with input slot and output tray,drawn_svg,safe,midground,0.8,8.4,scale 0.92 to 1 with shadow pop,status lights blink and conveyor moves,slide to left,idle|processing|success,S01;S03,machine hum; card snap,render as grouped SVG with no baked text
+title_problem_card,svg_component,开场问题标题卡，代码文字层渲染,programmatic SVG/HTML component,self-created,midground,0.0,1.6,snap_in with small overshoot,subtle scale settle,hold unless scene resets,idle|active,S001,pop,主焦点，只在开场拥有最大运动幅度。
+ref_source_terms,screenshot,来源截图，展示限定词和来源标注,self-created browser capture,self-created,proof,1.45,3.7,slide_left into source_card,hold_readable with highlight sweep,scale down into evidence stack,idle|highlighted|stored,S001,soft tick,截图本体少动，高亮框动。
+yellow_highlight_box,svg_component,限定词高亮框,programmatic SVG,self-created,annotation,1.75,3.7,draw_stroke,highlight_sweep,fade after read hold,idle|scan|hold,S001,tick,跟随 spoken_focus 出现。
+gen_mechanism_diagram,image,机制流程图，模块和箭头说明因果流,generated plate without baked Chinese,self-created,midground,3.7,5.6,mask_reveal,line_draw and module pulse,hold into next beat,idle|building|complete,S001,data tick,模块文本走独立 text layer。
+texture_grid,texture,轻微网格背景,generated or CSS,self-created,ambient,0.0,5.6,already visible,slow drift and scan line,none,idle,S001,no_cue,只做生命感，不抢焦点。

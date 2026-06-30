@@ -1,0 +1,40 @@
+{
+  "version": "v001",
+  "policy": {
+    "select_for_relevance_readability_crop_safety": true,
+    "do_not_use_watermarked_or_unclear_assets": true,
+    "ken_burns_is_fill_not_real_footage": true
+  },
+  "assets": [
+    {
+      "asset_id": "ref_source_terms",
+      "beat_ids": ["B002"],
+      "source_url": "self-created or source URL",
+      "content_description": "来源文档截图，标题和限定词清楚可读。",
+      "relevance_score": 5,
+      "readability_score": 4,
+      "crop_safety_score": 5,
+      "rights_status": "self-created",
+      "watermark_risk": "low",
+      "trim_policy": "no_trim",
+      "crop_anchor": "document title and highlighted qualifier",
+      "selected": true,
+      "reject_reason": ""
+    },
+    {
+      "asset_id": "gen_mechanism_diagram",
+      "beat_ids": ["B003"],
+      "source_url": "generated",
+      "content_description": "机制示意图，用模块和箭头说明流程，不包含烘焙中文。",
+      "relevance_score": 4,
+      "readability_score": 5,
+      "crop_safety_score": 5,
+      "rights_status": "self-created",
+      "watermark_risk": "low",
+      "trim_policy": "loop_safe",
+      "crop_anchor": "center pipeline",
+      "selected": true,
+      "reject_reason": ""
+    }
+  ]
+}

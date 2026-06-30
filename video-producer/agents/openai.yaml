@@ -1,5 +1,5 @@
 interface:
   display_name: "Video Producer"
-  short_description: "Fact-locked director compiler for source-grounded scripts, 小白debug-style animation, asset choreography, audio cues, and anti-PPT video QC."
+  short_description: "Director-paced video workflow for factual scripts, prosody, visual sync, asset selection, motion choreography, HyperFrames segments, and QC."
   icon: "🎬"
-  color: "#7C5CFF"
+  color: "#2F6BFF"

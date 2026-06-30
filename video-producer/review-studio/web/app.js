@@ -64,6 +64,46 @@ function mediaUrl(path) {
   return `/api/media/${String(path).split(/[/\\]/).filter(Boolean).map(encodeURIComponent).join("/")}`;
 }
 
+let beatPreviewAudio = null;
+let beatPreviewBeatId = null;
+
+function ensureBeatPreviewAudio() {
+  if (beatPreviewAudio) return beatPreviewAudio;
+  beatPreviewAudio = document.createElement("audio");
+  beatPreviewAudio.preload = "none";
+  beatPreviewAudio.addEventListener("ended", () => {
+    document.querySelectorAll(".beat-audio-btn.playing").forEach(btn => btn.classList.remove("playing"));
+    beatPreviewBeatId = null;
+  });
+  beatPreviewAudio.addEventListener("pause", () => {
+    document.querySelectorAll(".beat-audio-btn.playing").forEach(btn => btn.classList.remove("playing"));
+  });
+  document.body.appendChild(beatPreviewAudio);
+  return beatPreviewAudio;
+}
+
+window.playBeatAudio = (beatId, path) => {
+  if (!path) return;
+  const audio = ensureBeatPreviewAudio();
+  const url = mediaUrl(path);
+  if (beatPreviewBeatId === beatId && !audio.paused) {
+    audio.pause();
+    beatPreviewBeatId = null;
+    return;
+  }
+  document.querySelectorAll(".beat-audio-btn.playing").forEach(btn => btn.classList.remove("playing"));
+  if (!audio.paused) audio.pause();
+  audio.src = url;
+  beatPreviewBeatId = beatId;
+  const btn = document.querySelector(`.beat-audio-btn[data-beat="${beatId}"]`);
+  audio.play().then(() => {
+    if (beatPreviewBeatId === beatId && btn) btn.classList.add("playing");
+  }).catch(err => {
+    beatPreviewBeatId = null;
+    toast(String(err.message || "无法播放音频"));
+  });
+};
+
 function assetMediaKind(path) {
   if (!path) return null;
   if (ASSET_VIDEO_RE.test(path)) return "video";
@@ -494,6 +534,17 @@ function isTtsPreset(name) {
   return /indextts|audio_chain_tts/.test(name);
 }
 
+function isTtsForceRedub() {
+  return document.getElementById("tts-force-redub")?.checked ?? false;
+}
+
+function bindTtsForceRedubCheckbox() {
+  const el = document.getElementById("tts-force-redub");
+  if (!el) return;
+  el.checked = localStorage.getItem("rs-tts-force-redub") === "1";
+  el.onchange = () => localStorage.setItem("rs-tts-force-redub", el.checked ? "1" : "0");
+}
+
 function ttsProgressPercent(prog) {
   if (!prog || prog.status === "idle") return 0;
   if (typeof prog.percent === "number" && !Number.isNaN(prog.percent)) {
@@ -519,7 +570,11 @@ function ttsProgressLabel(prog) {
 
 async function runPreset(name, extra = "") {
   if (isTtsPreset(name)) await ensureTtsOnline();
-  const url = `/jobs/preset/${name}?segment=${currentSegment}${extra}`;
+  let forceExtra = "";
+  if (isTtsPreset(name) && isTtsForceRedub()) {
+    forceExtra = "&force_tts=true";
+  }
+  const url = `/jobs/preset/${name}?segment=${currentSegment}${forceExtra}${extra}`;
   const res = await fetch(`${API}${url}`, { method: "POST" });
   const data = await res.json();
   if (!res.ok) throw new Error(JSON.stringify(data));
@@ -803,18 +858,22 @@ function renderBeatTableRows(beats, prog) {
     const driftClass = beatNeedsAttention(b) ? "beat-row-attention" : "";
     return `<tr class="${driftClass}" data-beat-row="${b.beat_id}">
       <td><a href="#" onclick="openBeatDetail('${b.beat_id}');return false">${b.beat_id}</a></td>
-      <td><textarea id="n-${b.beat_id}" class="beat-text" rows="2">${esc(b.narration || "")}</textarea></td>
+      <td><textarea id="n-${b.beat_id}" class="beat-text beat-text-main" rows="3">${esc(b.narration || "")}</textarea></td>
       <td>${b.planned_sec ?? b.duration_sec ?? "-"}s</td>
       <td>${b.actual_sec ?? "-"}s</td>
       <td>${drift}</td>
       <td><span class="${statusClass(b.cps_band)}">${cps}</span></td>
       <td>${statusBadge(b.review_status)}</td>
       <td data-tts-beat="${b.beat_id}">${beatTtsStatusHtml(b.beat_id, prog)}</td>
-      <td class="beat-audio-cell">${b.vo_wav ? `<audio controls preload="none" src="${mediaUrl(b.vo_wav)}"></audio>` : `<span class="tts-beat-idle">无</span>`}</td>
-      <td>
+      <td class="beat-audio-cell">${b.vo_wav
+        ? `<button type="button" class="btn btn-secondary btn-compact beat-audio-btn" data-beat="${b.beat_id}" title="试听 ${b.beat_id}" onclick="playBeatAudio('${b.beat_id}','${escAttr(b.vo_wav)}')">▶</button>`
+        : `<span class="tts-beat-idle">—</span>`}</td>
+      <td class="col-actions">
+        <div class="beat-actions">
         <button class="btn btn-secondary btn-compact" onclick="saveBeat('${b.beat_id}')">保存</button>
         <button class="btn btn-secondary btn-compact" onclick="regenBeatTts('${b.beat_id}', true)">配音+对齐</button>
         <button class="btn btn-secondary btn-compact" onclick="regenBeatTts('${b.beat_id}', false)">仅配音</button>
+        </div>
       </td>
     </tr>`;
   }).join("");
@@ -841,6 +900,9 @@ async function renderBeats() {
   const selectedRef = refs.selected_path || cfg.voice_reference?.path || "";
   const attentionCount = beats.filter(beatNeedsAttention).length;
 
+  const selectedRefName = (selectedRef || "").split("/").pop() || "未设置";
+  const settingsHint = `${selectedRefName} · ${cfg.base_url || "未配置"}`;
+
   document.getElementById("beats").innerHTML = pageWrap(
     "口播 & 配音",
     `${currentSegment} · ${beats.length} 条 beat · 编辑口播、IndexTTS 配音与时长对齐`,
@@ -855,37 +917,34 @@ async function renderBeats() {
         <p id="tts-progress-label" class="metric">配音进度：空闲</p>
         <div class="tts-progress-track"><div id="tts-progress-bar" class="tts-progress-bar"></div></div>
       </div>
-      <div class="toolbar vo-chain-toolbar">
-        <button class="btn btn-primary" onclick="runPreset('audio_chain_tts').catch(e=>toast(e.message))">完整链：配音→对齐</button>
-        <button class="btn btn-secondary" onclick="runPreset('indextts_segment').catch(e=>toast(e.message))">仅整段配音</button>
-        <button class="btn btn-secondary" onclick="runPreset('audio_chain').catch(e=>toast(e.message))">仅对齐（不配音）</button>
-        <button class="btn btn-secondary" onclick="runPreset('audio_chain_build').catch(e=>toast(e.message))">对齐 + 重建画面</button>
-        <button class="btn btn-secondary" onclick="runPreset('measure_vo').catch(e=>toast(e.message))">测量时长</button>
-        <button class="btn btn-secondary" onclick="runPreset('build_micro_timing').catch(e=>toast(e.message))">微事件对齐</button>
-        <button class="btn btn-secondary" onclick="checkTtsHealth().catch(e=>toast(e.message))">检测 IndexTTS</button>
+      <div class="vo-chain-row">
+        <div class="toolbar vo-chain-toolbar">
+          <button class="btn btn-primary" onclick="runPreset('audio_chain_tts').catch(e=>toast(e.message))">完整链：配音→对齐</button>
+          <button class="btn btn-secondary" onclick="runPreset('indextts_segment').catch(e=>toast(e.message))">仅整段配音</button>
+          <button class="btn btn-secondary" onclick="runPreset('audio_chain').catch(e=>toast(e.message))">仅对齐（不配音）</button>
+          <button class="btn btn-secondary" onclick="runPreset('audio_chain_build').catch(e=>toast(e.message))">对齐 + 重建画面</button>
+          <button class="btn btn-secondary" onclick="runPreset('measure_vo').catch(e=>toast(e.message))">测量时长</button>
+          <button class="btn btn-secondary" onclick="runPreset('build_micro_timing').catch(e=>toast(e.message))">微事件对齐</button>
+          <button class="btn btn-secondary" onclick="checkTtsHealth().catch(e=>toast(e.message))">检测 IndexTTS</button>
+        </div>
+        <label class="tts-force-label" title="勾选后覆盖已有 WAV；不勾选则跳过已生成的 beat，从中断处继续">
+          <input type="checkbox" id="tts-force-redub" />
+          重新配音（覆盖已有音频）
+        </label>
       </div>
       <pre id="vo-log" class="vo-log"></pre>
     </div>
-    <div class="vo-workspace">
-      <div class="vo-main">
-        <div class="card card-no-accent">
-          <div class="beats-filter-bar">
-            <label class="beats-filter-label">
-              <input type="checkbox" id="beats-filter-attention" onchange="toggleBeatsFilter()" />
-              仅显示需关注（偏差 &gt;0.3s 或 CPS 异常）
-            </label>
-            <span id="beats-filter-count" class="metric"></span>
-          </div>
-          ${tableWrap(`<thead><tr>
-            <th>Beat</th><th>口播</th><th>计划</th><th>实测</th><th>偏差</th><th>CPS</th><th>状态</th><th>配音</th><th>音频</th><th>操作</th>
-          </tr></thead><tbody id="beats-table-body">${renderBeatTableRows(beats, prog)}</tbody>`)}
-        </div>
-      </div>
-      <aside class="vo-aside">
-        <div class="card card-no-accent">
+    <div class="card card-no-accent vo-settings-card">
+      <button type="button" id="vo-settings-toggle" class="collapse-header" aria-expanded="false">
+        <span class="toggle-icon">▼</span>
+        <span class="emoji">⚙️</span>
+        <span>配音设置</span>
+        <span class="collapse-hint">${esc(settingsHint)}</span>
+      </button>
+      <div id="vo-settings-panel" class="collapse-panel collapsed vo-settings-panel">
+        <section class="vo-settings-section">
           <div class="card-icon-title"><span class="emoji">🎧</span><h3>参考音频库</h3></div>
-          <p class="metric">共 <strong>${(refs.refs || []).length}</strong> 条 · WAV / MP3</p>
-          <p class="metric">当前 <strong>${esc(selectedRef || "未设置")}</strong></p>
+          <p class="metric">共 <strong>${(refs.refs || []).length}</strong> 条 · WAV / MP3 · 当前 <strong>${esc(selectedRefName)}</strong></p>
           ${tableWrap(`<thead><tr><th>名称</th><th>大小</th><th>上传</th><th>试听</th><th>操作</th></tr></thead>
             <tbody>${renderRefLibraryRows(refs)}</tbody>`)}
           <div id="ref-upload-status" class="ref-upload-status hidden">
@@ -896,55 +955,63 @@ async function renderBeats() {
             <input id="tts-ref-upload" class="ios-input ref-upload-input" type="file" accept=".wav,.mp3,audio/wav,audio/mpeg,audio/mp3" />
             <button type="button" id="ref-upload-btn" class="btn btn-primary" onclick="uploadTtsRef().catch(e=>toast(e.message))">上传</button>
           </div>
-        </div>
-        <div class="card card-no-accent">
-          <button type="button" id="tts-config-toggle" class="collapse-header" aria-expanded="false">
-            <span class="toggle-icon">▼</span>
-            <span class="emoji">⚙️</span>
-            <span>IndexTTS 配置</span>
-            <span class="collapse-hint">${esc(cfg.base_url || "未配置")}</span>
-          </button>
-          <div id="tts-config-panel" class="collapse-panel collapsed">
-            <div class="ios-group">
-              <div class="group-caption">服务地址</div>
-              <div class="ios-group-body">
-                <div class="field-row field-row-stack">
-                  <label class="field-label" for="tts-base-url">Gradio 地址</label>
-                  <input id="tts-base-url" class="ios-input" type="url" placeholder="http://10.0.221.33:37191/" value="${escAttr(cfg.base_url || "")}" />
-                </div>
+        </section>
+        <section class="vo-settings-section vo-settings-section-divider">
+          <div class="card-icon-title"><span class="emoji">🔧</span><h3>IndexTTS 配置</h3></div>
+          <div class="ios-group">
+            <div class="group-caption">服务地址</div>
+            <div class="ios-group-body">
+              <div class="field-row field-row-stack">
+                <label class="field-label" for="tts-base-url">Gradio 地址</label>
+                <input id="tts-base-url" class="ios-input" type="url" placeholder="http://10.0.221.33:37191/" value="${escAttr(cfg.base_url || "")}" />
               </div>
-            </div>
-            <div class="ios-group" style="margin-top:12px">
-              <div class="group-caption">生成参数</div>
-              <div class="ios-group-body">
-                <div class="field-row">
-                  <label class="field-label" for="tts-emo-weight">情感权重</label>
-                  <input id="tts-emo-weight" class="ios-input" type="number" step="0.05" min="0" max="1" value="${defaults.emo_weight ?? 0.65}" />
-                </div>
-                <div class="field-divider"></div>
-                <div class="field-row">
-                  <label class="field-label" for="tts-temperature">Temperature</label>
-                  <input id="tts-temperature" class="ios-input" type="number" step="0.05" min="0" max="2" value="${defaults.temperature ?? 0.8}" />
-                </div>
-                <div class="field-divider"></div>
-                <div class="field-row">
-                  <label class="field-label" for="tts-top-p">Top P</label>
-                  <input id="tts-top-p" class="ios-input" type="number" step="0.05" min="0" max="1" value="${defaults.top_p ?? 0.8}" />
-                </div>
-              </div>
-            </div>
-            <div class="toolbar">
-              <button class="btn btn-primary" onclick="saveTtsConfig().catch(e=>toast(e.message))">保存配置</button>
-              <button class="btn btn-secondary" onclick="checkTtsHealth().catch(e=>toast(e.message))">检测连接</button>
             </div>
           </div>
-        </div>
-      </aside>
+          <div class="ios-group" style="margin-top:12px">
+            <div class="group-caption">生成参数</div>
+            <div class="ios-group-body">
+              <div class="field-row">
+                <label class="field-label" for="tts-emo-weight">情感权重</label>
+                <input id="tts-emo-weight" class="ios-input" type="number" step="0.05" min="0" max="1" value="${defaults.emo_weight ?? 0.65}" />
+              </div>
+              <div class="field-divider"></div>
+              <div class="field-row">
+                <label class="field-label" for="tts-temperature">Temperature</label>
+                <input id="tts-temperature" class="ios-input" type="number" step="0.05" min="0" max="2" value="${defaults.temperature ?? 0.8}" />
+              </div>
+              <div class="field-divider"></div>
+              <div class="field-row">
+                <label class="field-label" for="tts-top-p">Top P</label>
+                <input id="tts-top-p" class="ios-input" type="number" step="0.05" min="0" max="1" value="${defaults.top_p ?? 0.8}" />
+              </div>
+            </div>
+          </div>
+          <div class="toolbar">
+            <button class="btn btn-primary" onclick="saveTtsConfig().catch(e=>toast(e.message))">保存配置</button>
+            <button class="btn btn-secondary" onclick="checkTtsHealth().catch(e=>toast(e.message))">检测连接</button>
+          </div>
+        </section>
+      </div>
+    </div>
+    <div class="card card-no-accent vo-main-card">
+      <div class="beats-filter-bar">
+        <label class="beats-filter-label">
+          <input type="checkbox" id="beats-filter-attention" onchange="toggleBeatsFilter()" />
+          仅显示需关注（偏差 &gt;0.3s 或 CPS 异常）
+        </label>
+        <span id="beats-filter-count" class="metric"></span>
+      </div>
+      <div class="beats-table-wrap">
+        ${tableWrap(`<thead><tr>
+          <th class="col-beat-id">Beat</th><th class="col-narration">口播</th><th class="col-metric">计划</th><th class="col-metric">实测</th><th class="col-metric">偏差</th><th class="col-metric">CPS</th><th class="col-status">状态</th><th class="col-status">配音</th><th class="col-audio">音频</th><th class="col-actions">操作</th>
+        </tr></thead><tbody id="beats-table-body">${renderBeatTableRows(beats, prog)}</tbody>`)}
+      </div>
     </div>`
   );
 
   window.__beatsAllRows = beats;
-  initCollapsiblePanel("tts-config-toggle", "tts-config-panel", "rs-tts-config-collapsed", true);
+  initCollapsiblePanel("vo-settings-toggle", "vo-settings-panel", "rs-vo-settings-collapsed", true);
+  bindTtsForceRedubCheckbox();
   bindRefUploadInput();
   updateTtsProgressBar(summary.progress || prog);
   updateBeatsTtsCells(prog);
@@ -984,7 +1051,7 @@ window.openBeatDetail = async (beatId) => {
     <textarea id="drawer-narration" class="beat-text" rows="4">${esc(beat.narration || "")}</textarea>
     <p class="metric">计划 ${beat.planned_sec ?? "-"}s · 实测 ${beat.vo?.duration_sec ?? "-"}s · CPS ${beat.vo?.cps ?? "-"}</p>
     <p class="metric">Claim ${esc(beat.claim_ids || "-")} · 动作 ${esc(beat.semantic_action || "-")}</p>
-    ${beat.vo_wav ? `<audio controls preload="none" src="${mediaUrl(beat.vo_wav)}"></audio>` : ""}
+    ${beat.vo_wav ? `<button type="button" class="btn btn-secondary btn-compact beat-audio-btn" data-beat="${beatId}" onclick="playBeatAudio('${beatId}','${escAttr(beat.vo_wav)}')">▶ 试听</button>` : ""}
     <p style="margin-top:12px"><strong>IndexTTS 配音状态</strong></p>
     <div id="drawer-tts-st-${beatId}" class="beat-drawer-tts">${beatTtsStatusHtml(beatId, lastTtsProgress)}</div>
     <p><strong>微事件 (${(beat.micro_events || []).length})</strong></p>

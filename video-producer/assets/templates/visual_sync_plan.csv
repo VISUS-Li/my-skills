@@ -1,0 +1,4 @@
+beat_id,segment_id,spoken_focus,visual_intent,visual_subject_desc,screen_content_desc,must_show_detail,source_visual,asset_ids,visual_read_time_sec,focal_owner,layout_zone,pre_show_sec,post_hold_sec,mismatch_risk,acceptance_check
+B001,S001,问题本身,hook,问题标题卡和疑问图标,中心标题卡，背景网格轻微移动,标题关键词,none,title_problem_card;icon_question;focus_ring,0.8,title_problem_card,center,0.00,0.16,低：抽象开场不需要证据素材,观众能在一秒内知道这段要解决什么问题。
+B002,S001,限定词,proof,来源截图卡片,文档截图放在 source card 内，限定词被黄色框扫过,限定词和来源标注,ref_source_terms,ref_source_terms;source_card;yellow_highlight_box,1.4,ref_source_terms,center-right,0.15,0.32,中：如果截图太小会读不清限定词,截图先于台词出现，限定词在说出口时被高亮且停留。
+B003,S001,机制转起来,explain,机制流程图,三个模块从左到右连接，箭头显示因果流,模块顺序和箭头方向,gen_mechanism_diagram,gen_mechanism_diagram;icon_pipeline;arrow_connector,1.0,gen_mechanism_diagram,center,0.08,0.18,低：示意图不冒充真实证据,不听声音也能看出输入到处理再到输出。

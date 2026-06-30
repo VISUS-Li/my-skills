@@ -14,6 +14,8 @@ REQUIRED_FILES = [
     "script/creative_brief.md",
     "script/storyboard.json",
     "script/narration_beats.csv",
+    "script/rhythm_map.json",
+    "script/visual_sync_plan.csv",
     "script/beat_timeline.json",
     "script/shotlist.json",
     "design/art_direction.md",
@@ -21,11 +23,13 @@ REQUIRED_FILES = [
     "design/design.md",
     "design/tokens.json",
     "assets/asset_manifest.csv",
+    "assets/asset_selection_report.json",
     "assets/asset_choreography_manifest.csv",
     "audio/audio_style_guide.md",
     "audio/audio_cue_sheet.json",
     "audio/music_brief.md",
     "audio/voice_profile.md",
+    "audio/prosody_plan.csv",
     "audio/tts_plan.json",
     "audio/sfx_search_queries.json",
     "audio/audio_mix_plan.json",
@@ -219,12 +223,84 @@ def validate_narration_beats(root: Path) -> list[str]:
     try:
         with path.open(newline="", encoding="utf-8") as f:
             reader = csv.DictReader(f)
-            expected = {"beat_id", "segment_id", "start_sec", "end_sec", "narration", "semantic_action", "visual_response_required", "sfx_intent"}
+            expected = {"beat_id", "segment_id", "start_sec", "end_sec", "narration", "semantic_action", "visual_response_required", "sfx_intent", "spoken_focus", "beat_type", "information_density"}
             missing = expected - set(reader.fieldnames or [])
             if missing:
                 errors.append(f"script/narration_beats.csv missing columns: {', '.join(sorted(missing))}")
     except Exception as exc:  # noqa: BLE001
         errors.append(f"invalid narration beats: {exc}")
+    return errors
+
+
+def validate_rhythm_map(root: Path) -> list[str]:
+    errors: list[str] = []
+    data, json_errors = load_json(root / "script/rhythm_map.json")
+    errors.extend(json_errors)
+    if errors:
+        return errors
+    beats = data.get("beats")
+    if not isinstance(beats, list) or not beats:
+        errors.append("script/rhythm_map.json must contain a non-empty beats list")
+        return errors
+    required = {"beat_id", "segment_id", "spoken_focus", "beat_type", "min_visual_read_time_sec", "pace", "focal_owner"}
+    for i, beat in enumerate(beats):
+        if not isinstance(beat, dict):
+            errors.append(f"rhythm beat[{i}] must be an object")
+            continue
+        missing = required - set(beat)
+        if missing:
+            errors.append(f"rhythm beat[{i}] missing fields: {', '.join(sorted(missing))}")
+    return errors
+
+
+def validate_visual_sync_plan(root: Path) -> list[str]:
+    path = root / "script/visual_sync_plan.csv"
+    errors: list[str] = []
+    try:
+        with path.open(newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            expected = {"beat_id", "segment_id", "spoken_focus", "visual_intent", "visual_subject_desc", "screen_content_desc", "must_show_detail", "visual_read_time_sec", "focal_owner", "acceptance_check"}
+            missing = expected - set(reader.fieldnames or [])
+            if missing:
+                errors.append(f"script/visual_sync_plan.csv missing columns: {', '.join(sorted(missing))}")
+    except Exception as exc:  # noqa: BLE001
+        errors.append(f"invalid visual sync plan: {exc}")
+    return errors
+
+
+def validate_prosody_plan(root: Path) -> list[str]:
+    path = root / "audio/prosody_plan.csv"
+    errors: list[str] = []
+    try:
+        with path.open(newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            expected = {"beat_id", "segment_id", "tts_text", "pace", "pre_pause_ms", "post_pause_ms", "emphasis_words", "tone"}
+            missing = expected - set(reader.fieldnames or [])
+            if missing:
+                errors.append(f"audio/prosody_plan.csv missing columns: {', '.join(sorted(missing))}")
+    except Exception as exc:  # noqa: BLE001
+        errors.append(f"invalid prosody plan: {exc}")
+    return errors
+
+
+def validate_asset_selection_report(root: Path) -> list[str]:
+    errors: list[str] = []
+    data, json_errors = load_json(root / "assets/asset_selection_report.json")
+    errors.extend(json_errors)
+    if errors:
+        return errors
+    assets = data.get("assets")
+    if not isinstance(assets, list):
+        errors.append("assets/asset_selection_report.json must contain assets list")
+        return errors
+    required = {"asset_id", "beat_ids", "content_description", "relevance_score", "readability_score", "crop_safety_score", "rights_status", "trim_policy", "crop_anchor", "selected"}
+    for i, asset in enumerate(assets):
+        if not isinstance(asset, dict):
+            errors.append(f"asset selection[{i}] must be an object")
+            continue
+        missing = required - set(asset)
+        if missing:
+            errors.append(f"asset selection[{i}] missing fields: {', '.join(sorted(missing))}")
     return errors
 
 
@@ -318,7 +394,11 @@ def main() -> int:
         errors.extend(validate_shotlist(root))
         errors.extend(validate_claim_ledger(root))
         errors.extend(validate_asset_manifest(root))
+        errors.extend(validate_asset_selection_report(root))
         errors.extend(validate_narration_beats(root))
+        errors.extend(validate_rhythm_map(root))
+        errors.extend(validate_visual_sync_plan(root))
+        errors.extend(validate_prosody_plan(root))
         errors.extend(validate_beat_timeline(root))
         errors.extend(validate_director_event_graph(root))
         errors.extend(validate_asset_choreography(root))

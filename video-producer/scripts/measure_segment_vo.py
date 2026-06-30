@@ -33,8 +33,10 @@ def main() -> int:
     vo_path = root / "segments" / seg / "vo_timing.json"
     locked: dict[str, dict] = {}
     cached: dict[str, dict] = {}
+    master_playback_rate = 1.0
     if vo_path.exists():
         existing = json.loads(vo_path.read_text(encoding="utf-8-sig"))
+        master_playback_rate = float(existing.get("master_playback_rate") or 1.0)
         for b in existing.get("beats", []):
             if b.get("locked"):
                 locked[b["beat_id"]] = b
@@ -50,10 +52,14 @@ def main() -> int:
             bid = row["beat_id"]
             chars = narration_char_count(row)
             planned = planned_duration_sec(row)
+            prev = cached.get(bid) or locked.get(bid) or {}
             if bid in locked:
                 lb = locked[bid]
                 dur = float(lb["duration_sec"])
                 source = "manual"
+            elif prev.get("disabled"):
+                dur = 0.0
+                source = str(prev.get("source") or "manual")
             else:
                 wav = beats_dir / f"{bid}.wav"
                 if wav.exists():
@@ -67,7 +73,7 @@ def main() -> int:
                     dur = planned
                     source = "planned"
                     print(f"planned fallback: {bid} {dur}s (missing {wav.name})")
-            rows.append({
+            entry = {
                 "beat_id": bid,
                 "start_sec": round(t, 3),
                 "duration_sec": round(dur, 3),
@@ -77,8 +83,20 @@ def main() -> int:
                 "planned_sec": planned,
                 "locked": bid in locked,
                 "source": source,
-            })
-            t += dur
+            }
+            if prev.get("playback_rate") is not None:
+                entry["playback_rate"] = float(prev["playback_rate"])
+            if prev.get("source_duration_sec") is not None:
+                entry["source_duration_sec"] = float(prev["source_duration_sec"])
+            elif dur and source == "measured":
+                entry["source_duration_sec"] = round(dur, 3)
+            if prev.get("disabled"):
+                entry["disabled"] = True
+            rows.append(entry)
+            t += dur if not entry.get("disabled") else 0
+            if entry.get("disabled"):
+                entry["duration_sec"] = 0.0
+                entry["end_sec"] = entry["start_sec"]
 
     if not rows:
         print(f"no beats for segment {seg}", file=sys.stderr)
@@ -86,7 +104,12 @@ def main() -> int:
 
     out = root / "segments" / seg / "vo_timing.json"
     out.parent.mkdir(parents=True, exist_ok=True)
-    payload = {"segment_id": seg, "total_sec": round(t, 3), "beats": rows}
+    payload = {
+        "segment_id": seg,
+        "total_sec": round(t, 3),
+        "master_playback_rate": master_playback_rate,
+        "beats": rows,
+    }
     out.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     for r in rows:

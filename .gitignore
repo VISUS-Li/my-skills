@@ -45,3 +45,9 @@ p*.err
 .claude/
 .agents/
 .cursor/
+
+# Local skill distribution archives (pack manually; do not commit)
+video-producer.zip
+
+# IndexTTS2 intermediate beat WAV (removed after padding; may linger on Windows)
+*.__raw__.wav

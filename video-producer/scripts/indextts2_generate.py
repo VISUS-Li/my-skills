@@ -102,11 +102,75 @@ def load_beats(root: Path, segment_id: str | None) -> list[dict]:
     return rows
 
 
+def load_prosody(root: Path) -> dict[str, dict[str, str]]:
+    path = root / "audio" / "prosody_plan.csv"
+    if not path.exists():
+        return {}
+    with path.open(encoding="utf-8-sig", newline="") as f:
+        return {row.get("beat_id", ""): row for row in csv.DictReader(f) if row.get("beat_id")}
+
+
+def pause_ms(row: dict[str, str], key: str) -> int:
+    try:
+        return max(0, int(float(row.get(key) or 0)))
+    except ValueError:
+        return 0
+
+
 def concat_wav(files: list[Path], out: Path) -> None:
     out.parent.mkdir(parents=True, exist_ok=True)
     lst = out.with_suffix(".txt")
     lst.write_text("\n".join(f"file '{p.resolve().as_posix()}'" for p in files), encoding="utf-8")
     subprocess.run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(lst), "-c", "copy", str(out)], check=True)
+
+
+def collect_segment_beat_wavs(root: Path, segment_id: str, beats_dir: Path) -> tuple[list[Path], list[str]]:
+    """All beat WAV paths for a segment in narration order (not limited to this run's --beats filter)."""
+    paths: list[Path] = []
+    missing: list[str] = []
+    for row in load_beats(root, segment_id):
+        bid = row["beat_id"]
+        wav = beats_dir / f"{bid}.wav"
+        if wav.exists() and wav.stat().st_size > 1000:
+            paths.append(wav)
+        else:
+            missing.append(bid)
+    return paths, missing
+
+
+def publish_segment_vo_copies(root: Path, segment_id: str, master: Path) -> None:
+    """Mirror master VO to paths used by HyperFrames embed and Review Studio."""
+    seg = segment_id.upper()
+    for rel in (f"audio/voice/{seg}_vo.wav", f"segments/{seg}/{seg.lower()}_vo.wav"):
+        dest = root / rel
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(master, dest)
+        print(f"segment vo: {dest}")
+
+
+def pad_wav_with_silence(src: Path, out: Path, pre_ms: int, post_ms: int) -> None:
+    if pre_ms <= 0 and post_ms <= 0:
+        shutil.copy2(src, out)
+        return
+    out.parent.mkdir(parents=True, exist_ok=True)
+    inputs: list[str] = []
+    labels: list[str] = []
+    input_index = 0
+    if pre_ms > 0:
+        inputs.extend(["-f", "lavfi", "-t", f"{pre_ms / 1000:.3f}", "-i", "anullsrc=r=48000:cl=mono"])
+        labels.append(f"[{input_index}:a]")
+        input_index += 1
+    inputs.extend(["-i", str(src)])
+    labels.append(f"[{input_index}:a]")
+    input_index += 1
+    if post_ms > 0:
+        inputs.extend(["-f", "lavfi", "-t", f"{post_ms / 1000:.3f}", "-i", "anullsrc=r=48000:cl=mono"])
+        labels.append(f"[{input_index}:a]")
+    filt = "".join(labels) + f"concat=n={len(labels)}:v=0:a=1[a]"
+    subprocess.run(
+        ["ffmpeg", "-y", *inputs, "-filter_complex", filt, "-map", "[a]", "-ac", "1", "-ar", "48000", str(out)],
+        check=True,
+    )
 
 
 def progress_payload(
@@ -160,6 +224,7 @@ def main() -> int:
     example_index = int(cfg.get("voice_reference", {}).get("example_index", 3))
 
     beats = load_beats(root, args.segment)
+    prosody = load_prosody(root)
     if args.beats:
         wanted = set(args.beats)
         beats = [b for b in beats if b["beat_id"] in wanted]
@@ -304,15 +369,24 @@ def main() -> int:
                 beat_status[bid] = "done"
                 completed_beats.append(bid)
                 continue
-            text = row["narration"].strip()
+            p = prosody.get(bid, {})
+            text = (p.get("tts_text") or row["narration"]).strip()
             seg = row["segment_id"]
             max_tok = min(600, max(80, narration_char_count(row) * 3))
-            print(f"gen {bid} ({len(text)} chars)")
+            pre = pause_ms(p, "pre_pause_ms")
+            post = pause_ms(p, "post_pause_ms")
+            print(f"gen {bid} ({len(text)} chars, pause {pre}+{post}ms)")
             try:
                 src = synthesize(client, ref, text, seg, cfg, max_tok)
-                shutil.copy2(src, out)
+                raw = out.with_name(f"{out.stem}.__raw__.wav")
+                shutil.copy2(src, raw)
+                pad_wav_with_silence(raw, out, pre, post)
+                try:
+                    raw.unlink()
+                except OSError:
+                    pass
                 generated.append(out)
-                log.write(json.dumps({"beat_id": bid, "status": "ok"}, ensure_ascii=False) + "\n")
+                log.write(json.dumps({"beat_id": bid, "status": "ok", "pre_pause_ms": pre, "post_pause_ms": post}, ensure_ascii=False) + "\n")
                 done += 1
                 beat_status[bid] = "done"
                 completed_beats.append(bid)
@@ -336,22 +410,33 @@ def main() -> int:
                 return 1
             time.sleep(args.sleep)
 
-    if args.concat and generated:
-        write_progress(root, progress_payload(
-            status="running",
-            segment_id=args.segment,
-            phase="concat",
-            message="拼接整段配音…",
-            percent=98,
-            done=done,
-            total=total,
-            beat_ids=beat_ids,
-            beat_status=dict(beat_status),
-            completed_beats=list(completed_beats),
-        ))
-        master = root / "audio/stems/voice/voiceover_full.wav"
-        concat_wav(generated, master)
-        print(f"master: {master}")
+    if args.concat:
+        segment_id = (args.segment or (beats[0]["segment_id"] if beats else "")).upper()
+        concat_files, missing = collect_segment_beat_wavs(root, segment_id, out_dir) if segment_id else ([], [])
+        if missing:
+            preview = ", ".join(missing[:8])
+            suffix = f" (+{len(missing) - 8} more)" if len(missing) > 8 else ""
+            print(f"warn: {len(missing)} beats missing WAV, skipped in concat: {preview}{suffix}", file=sys.stderr)
+        if not concat_files:
+            print("concat skipped: no beat WAV files for segment", file=sys.stderr)
+        else:
+            write_progress(root, progress_payload(
+                status="running",
+                segment_id=args.segment or segment_id,
+                phase="concat",
+                message=f"拼接整段配音 ({len(concat_files)} beats)…",
+                percent=98,
+                done=done,
+                total=total,
+                beat_ids=beat_ids,
+                beat_status=dict(beat_status),
+                completed_beats=list(completed_beats),
+            ))
+            master = root / "audio/stems/voice/voiceover_full.wav"
+            concat_wav(concat_files, master)
+            print(f"master: {master} ({len(concat_files)} beats)")
+            if segment_id:
+                publish_segment_vo_copies(root, segment_id, master)
 
     write_progress(root, progress_payload(
         status="completed",

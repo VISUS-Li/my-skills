@@ -1,0 +1,28 @@
+{
+  "version": "v001",
+  "timebase": "seconds",
+  "policy": {
+    "voice_first": true,
+    "rhythm_is_comprehension_time": true,
+    "one_focal_owner_per_moment": true,
+    "evidence_needs_read_time": true
+  },
+  "beats": [
+    {
+      "beat_id": "B001",
+      "segment_id": "S001",
+      "narration": "示例：先把问题摆出来。",
+      "spoken_focus": "问题本身",
+      "beat_type": "hook",
+      "information_density": "medium",
+      "planned_duration_sec": 2.4,
+      "min_visual_read_time_sec": 0.8,
+      "visual_lead_in_sec": 0.0,
+      "post_hold_sec": 0.16,
+      "pace": "normal",
+      "focal_owner": "title_problem_card",
+      "scene_reset": false,
+      "director_note": "标题卡先抓住注意力，背景只做轻微生命感。"
+    }
+  ]
+}

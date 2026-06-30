@@ -40,10 +40,38 @@ def load_json(path: Path, default: dict[str, Any]) -> dict[str, Any]:
         return default
 
 
+def load_visual_sync(root: Path) -> dict[str, dict[str, str]]:
+    path = root / "script" / "visual_sync_plan.csv"
+    if not path.exists():
+        return {}
+    with path.open(newline="", encoding="utf-8-sig") as f:
+        return {r.get("beat_id", ""): r for r in csv.DictReader(f) if r.get("beat_id")}
+
+
+def load_beat_asset_plans(root: Path) -> dict[str, dict[str, str]]:
+    out: dict[str, dict[str, str]] = {}
+    for path in (root / "segments").glob("*/beat_asset_plan.csv"):
+        with path.open(newline="", encoding="utf-8-sig") as f:
+            for row in csv.DictReader(f):
+                bid = row.get("beat_id", "")
+                if bid:
+                    out[bid] = row
+    return out
+
+
 def split_list(value: Any) -> list[str]:
     if isinstance(value, list):
         return [str(x).strip() for x in value if str(x).strip()]
     return [x.strip() for x in re.split(r"[;,|]", str(value or "")) if x.strip()]
+
+
+def planned_assets(row: dict[str, str], sync_row: dict[str, str], asset_row: dict[str, str]) -> list[str]:
+    assets = split_list(sync_row.get("asset_ids", ""))
+    for key in ["primary_asset", "secondary_asset", "accent_asset", "ambient_asset"]:
+        value = (asset_row.get(key) or "").strip()
+        if value and value.lower() != "none" and value not in assets:
+            assets.append(value)
+    return assets
 
 
 def choose_assets(action: str, role: str) -> list[str]:
@@ -92,6 +120,8 @@ def main() -> int:
 
     root = Path(args.root).resolve()
     narration_rows = read_csv(root / "script" / "narration_beats.csv")
+    visual_sync = load_visual_sync(root)
+    beat_asset_plans = load_beat_asset_plans(root)
     timeline_path = root / "script" / "beat_timeline.json"
     event_graph_path = root / "script" / "director_event_graph.json"
     choreo_path = root / "assets" / "asset_choreography_manifest.csv"
@@ -126,9 +156,16 @@ def main() -> int:
         claim_ids = split_list(row.get("claim_ids", ""))
         text_ids = split_list(row.get("text_ids", ""))
         source_visual = row.get("source_visual", "")
-        assets = choose_assets(action, role)
+        sync_row = visual_sync.get(base_id, {})
+        asset_row = beat_asset_plans.get(base_id, {})
+        assets = planned_assets(row, sync_row, asset_row) or choose_assets(action, role)
         if source_visual and source_visual.lower() not in {"none", "no", ""} and "source_card" not in assets:
             assets.append("source_card")
+        spoken_focus = sync_row.get("spoken_focus") or row.get("spoken_focus") or action or narration[:16]
+        visual_subject = sync_row.get("visual_subject_desc") or asset_row.get("visual_subject_desc") or "planned visual actor"
+        screen_content = sync_row.get("screen_content_desc") or asset_row.get("screen_content_desc") or "frame content follows the spoken phrase"
+        must_show = sync_row.get("must_show_detail") or asset_row.get("must_show_detail") or spoken_focus
+        focal_owner = sync_row.get("focal_owner") or asset_row.get("primary_asset") or (assets[0] if assets else "info_card")
 
         specs = micro_event_specs(duration, action, role)
         step = duration / len(specs)
@@ -136,7 +173,7 @@ def main() -> int:
             s = round(start + step * j - step, 3)
             e = round(start + step * j, 3)
             beat_id = f"{base_id}_E{j:02d}"
-            primary_asset = assets[min(j - 1, len(assets) - 1)] if assets else "info_card"
+            primary_asset = focal_owner if j == 1 else (assets[min(j - 1, len(assets) - 1)] if assets else "info_card")
             cue_id = "deliberate_silence" if "silence" in row.get("sfx_intent", "").lower() else f"SFX_{beat_id}_{cue_kind.upper()}"
             beat = {
                 "beat_id": beat_id,
@@ -145,12 +182,12 @@ def main() -> int:
                 "end_sec": e,
                 "narration": narration,
                 "claim_ids": claim_ids,
-                "intent": role or "explain",
+                "intent": role or sync_row.get("visual_intent") or "explain",
                 "beat_type": event_type,
-                "visual_action": f"{visual}; {primary_asset} performs the visible verb for: {action or 'explain'}",
+                "visual_action": f"{visual}; focal owner {primary_asset} shows '{spoken_focus}'. Screen: {screen_content}. Must remain visible: {must_show}.",
                 "assets": assets,
                 "text_ids": text_ids,
-                "layout_zone": "center" if j == 1 else "attention_path",
+                "layout_zone": sync_row.get("layout_zone") or ("center" if j == 1 else "attention_path"),
                 "camera": "micro_push_in" if j == 1 else "parallax_or_focus_shift",
                 "motion": {
                     "entrance": "0.18-0.35s snap/slide with overshoot" if j == 1 else "inherits previous asset position",
@@ -159,8 +196,8 @@ def main() -> int:
                     "easing": "easeOutCubic for clarity; easeOutBack for tactile hits",
                 },
                 "sfx_cue_ids": [cue_id],
-                "density_note": "foreground cue + midground actor + background grid/depth remain active",
-                "why_not_ppt": "compiled from phrase-level narration into timed asset behavior and audio anchor",
+                "density_note": f"focal={primary_asset}; subject={visual_subject}; supporting layers stay secondary",
+                "why_not_ppt": "visual sync plan defines a focal owner, screen content, readable detail, and timed asset behavior",
             }
             beats.append(beat)
             event_id = f"E{len(nodes)+1:04d}"

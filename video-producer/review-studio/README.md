@@ -52,9 +52,9 @@ Tab：Pipeline · Script · 口播 & 配音 · Assets · Timeline（含预览）
 
 | 区域 | 功能 |
 |------|------|
-| **顶栏** | IndexTTS 状态、参考音、时长汇总、全局配音进度、整段 audio chain |
+| **顶栏** | IndexTTS 状态、参考音、时长汇总、全局配音进度、整段 audio chain、**重新配音**勾选 |
+| **配音设置（可折叠）** | 参考音频库、IndexTTS 配置 |
 | **主表** | 逐 beat 编辑口播、试听、单条配音+对齐；筛选「需关注」偏差/CPS |
-| **侧栏** | 参考音频库、IndexTTS 配置（可折叠） |
 
 ### 新功能（Phase 4–7）
 
@@ -98,11 +98,17 @@ DELETE /api/audio/refs?path=  # 删除参考音频
 # 仅对齐（不 TTS）
 POST /api/jobs/preset/audio_chain?segment=S001
 
-# 完整链：TTS → measure → micro → lint
+# 完整链：TTS → measure → micro → lint（默认跳过已有 WAV，从中断处继续）
 POST /api/jobs/preset/audio_chain_tts?segment=S001
+
+# 完整链 + 强制重新配音（覆盖已有 WAV，如更换参考音色后）
+POST /api/jobs/preset/audio_chain_tts?segment=S001&force_tts=true
 
 # 仅整段 TTS（不对齐）
 POST /api/jobs/preset/indextts_segment?segment=S001
+
+# 仅整段 TTS + 强制重新配音
+POST /api/jobs/preset/indextts_segment?segment=S001&force_tts=true
 
 # 单/多 beat 配音 + 对齐
 POST /api/jobs/preset/indextts_beats_align?segment=S001&beats=B001,B002

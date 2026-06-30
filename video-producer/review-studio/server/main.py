@@ -6,6 +6,7 @@ import argparse
 import asyncio
 import csv
 import json
+import subprocess
 import sys
 import threading
 import uuid
@@ -50,7 +51,15 @@ from artifacts import (  # noqa: E402
     resolve_asset_file,
     write_artifact,
 )
-from timing import audio_summary, patch_beat_timing, patch_micro_event, resolve_timeline_media  # noqa: E402
+from timing import (  # noqa: E402
+    audio_summary,
+    delete_beat_timing,
+    patch_beat_timing,
+    patch_micro_event,
+    patch_timeline_settings,
+    rebuild_timeline_vo,
+    resolve_timeline_media,
+)
 import preview_manager as preview_mgr  # noqa: E402
 import tts as tts_api  # noqa: E402
 
@@ -156,6 +165,12 @@ class ArtifactWriteBody(BaseModel):
 class TimingBeatPatchBody(BaseModel):
     duration_sec: float | None = None
     locked: bool | None = None
+    playback_rate: float | None = Field(default=None, ge=0.25, le=2.0)
+    disabled: bool | None = None
+
+
+class TimelineSettingsPatchBody(BaseModel):
+    master_playback_rate: float | None = Field(default=None, ge=0.25, le=2.0)
 
 
 class MicroEventPatchBody(BaseModel):
@@ -241,6 +256,9 @@ def _read_beats(segment: str) -> list[dict[str, Any]]:
             merged["planned_sec"] = planned
             merged["actual_sec"] = actual if actual else None
             merged["drift_sec"] = round(actual - planned, 3) if actual and planned else None
+            merged["playback_rate"] = float(vo.get("playback_rate") or 1.0)
+            merged["source_duration_sec"] = float(vo.get("source_duration_sec") or actual or 0) or None
+            merged["disabled"] = bool(vo.get("disabled"))
             cps = float(vo.get("cps") or 0)
             if not cps and row.get("char_count") and actual:
                 cps = float(row["char_count"]) / actual
@@ -297,10 +315,17 @@ def _tts_base_url_args() -> list[str]:
     return []
 
 
-def _job_presets(seg: str, beats: list[str] | None = None) -> dict[str, tuple[str, list[str], Path, str]]:
+def _job_presets(
+    seg: str,
+    beats: list[str] | None = None,
+    *,
+    force_tts: bool = False,
+) -> dict[str, tuple[str, list[str], Path, str]]:
     root = _root()
     beat_args = ["--beats", *(beats or [])] if beats else []
     tts_url = _tts_base_url_args()
+    tts_force = ["--force"] if force_tts else []
+    chain_force = ["--force-tts"] if force_tts else []
     presets: dict[str, tuple[str, list[str], Path, str]] = {
         "segment_timing_lint": (
             sys.executable,
@@ -327,7 +352,7 @@ def _job_presets(seg: str, beats: list[str] | None = None) -> dict[str, tuple[st
         ),
         "indextts_segment": (
             sys.executable,
-            [str(SCRIPTS / "indextts2_generate.py"), str(root), "--segment", seg, "--concat", *tts_url],
+            [str(SCRIPTS / "indextts2_generate.py"), str(root), "--segment", seg, "--concat", *tts_force, *tts_url],
             root,
             "IndexTTS2 full segment",
         ),
@@ -351,7 +376,7 @@ def _job_presets(seg: str, beats: list[str] | None = None) -> dict[str, tuple[st
         ),
         "audio_chain_tts": (
             sys.executable,
-            [str(SCRIPTS / "audio_chain.py"), str(root), seg, *tts_url],
+            [str(SCRIPTS / "audio_chain.py"), str(root), seg, *chain_force, *tts_url],
             root,
             "Audio chain (TTS→measure→micro→lint)",
         ),
@@ -833,12 +858,17 @@ def get_publish() -> dict[str, Any]:
 
 
 @app.post("/api/jobs/preset/{preset_name}")
-def post_job_preset(preset_name: str, segment: str | None = None, beats: str | None = None) -> dict[str, Any]:
+def post_job_preset(
+    preset_name: str,
+    segment: str | None = None,
+    beats: str | None = None,
+    force_tts: bool = False,
+) -> dict[str, Any]:
     seg = segment or _default_segment()
     beat_list = [b.strip() for b in beats.split(",") if b.strip()] if beats else None
     if preset_name in {"indextts_beats", "indextts_beats_align"} and not beat_list:
         raise HTTPException(status_code=400, detail="beats query param required for beat-level TTS presets")
-    presets = _job_presets(seg, beat_list)
+    presets = _job_presets(seg, beat_list, force_tts=force_tts)
     if preset_name not in presets:
         raise HTTPException(status_code=404, detail=f"unknown preset: {preset_name}")
     if preset_name in {"render_draft", "render_hq"}:
@@ -878,6 +908,7 @@ def get_timeline(segment: str | None = None) -> dict[str, Any]:
     return {
         "segment_id": seg,
         "total_sec": round(total, 3) if total else None,
+        "master_playback_rate": float(vo.get("master_playback_rate") or 1.0),
         "beats": beats,
         "micro_events": micro_events,
         "media": resolve_timeline_media(root, seg),
@@ -1164,10 +1195,44 @@ def patch_timing_beat(beat_id: str, body: TimingBeatPatchBody, segment: str | No
             _root(), seg, beat_id,
             duration_sec=body.duration_sec,
             locked=body.locked,
+            playback_rate=body.playback_rate,
+            disabled=body.disabled,
         )
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     sync_broadcast({"type": "registry_updated", "beat_id": beat_id})
+    return result
+
+
+@app.delete("/api/timing/beats/{beat_id}")
+def delete_timing_beat(beat_id: str, segment: str | None = None) -> dict[str, Any]:
+    seg = segment or _default_segment()
+    try:
+        result = delete_beat_timing(_root(), seg, beat_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    sync_broadcast({"type": "registry_updated", "beat_id": beat_id, "deleted": True})
+    return result
+
+
+@app.patch("/api/timeline/settings")
+def patch_timeline_settings_api(body: TimelineSettingsPatchBody, segment: str | None = None) -> dict[str, Any]:
+    seg = segment or _default_segment()
+    result = patch_timeline_settings(_root(), seg, master_playback_rate=body.master_playback_rate)
+    sync_broadcast({"type": "timeline_settings", "segment_id": seg})
+    return result
+
+
+@app.post("/api/timeline/rebuild-vo")
+def post_timeline_rebuild_vo(segment: str | None = None) -> dict[str, Any]:
+    seg = segment or _default_segment()
+    try:
+        result = rebuild_timeline_vo(_root(), seg)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except subprocess.CalledProcessError as exc:
+        raise HTTPException(status_code=500, detail=f"ffmpeg failed: {exc.stderr.decode(errors='replace')[:400]}") from exc
+    sync_broadcast({"type": "timeline_vo_rebuilt", "segment_id": seg})
     return result
 
 

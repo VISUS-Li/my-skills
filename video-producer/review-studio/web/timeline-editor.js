@@ -104,16 +104,19 @@
     } = options;
 
     const totalSec = Math.max(0.5, Number(data.total_sec) || 1);
-    const beats = data.beats || [];
+    let beats = (data.beats || []).map(b => ({ ...b, vo: { ...(b.vo || {}) } }));
     const microEvents = (data.micro_events || []).slice(0, 500);
     const media = data.media || {};
     const preview = data.preview || {};
 
     const mp4Src = media.render_mp4 ? mediaUrl(media.render_mp4) : "";
     const voSrc = media.vo_wav ? mediaUrl(media.vo_wav) : "";
+    const useClipEngine = beats.some(b => b.vo_wav);
     const compositionUrl = preview.composition_embed_url || `/api/preview/composition/${segment}/index.html`;
     const studioEmbedUrl = preview.studio_embed_url
       || (preview.studio_url ? `${preview.studio_url}/#project/${segment}` : null);
+
+    const SPEED_PRESETS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
     const state = {
       totalSec,
@@ -124,6 +127,7 @@
       drag: null,
       previewMode: defaultPreviewMode(media, preview),
       studioUrl: studioEmbedUrl,
+      masterPlaybackRate: Number(data.master_playback_rate || 1),
     };
 
     host.innerHTML = `
@@ -159,6 +163,10 @@
             <button type="button" class="btn btn-secondary btn-icon" id="tl-btn-start" title="回到开头">⏮</button>
             <button type="button" class="btn btn-primary btn-icon" id="tl-btn-play" title="播放/暂停">▶</button>
             <span id="tl-time-display" class="tl-time-display">${formatTime(0)} / ${formatTime(totalSec)}</span>
+            <label class="tl-speed-label" title="整体播放速度（OpenCut 式 transport）">整体
+              <input type="range" id="tl-master-speed" min="0.25" max="2" step="0.05" value="${state.masterPlaybackRate}" />
+              <span id="tl-master-speed-val">${state.masterPlaybackRate.toFixed(2)}×</span>
+            </label>
             <label class="tl-zoom-label">缩放
               <input type="range" id="tl-zoom-slider" min="${MIN_PX_PER_SEC}" max="${MAX_PX_PER_SEC}" step="1" value="${state.pxPerSec}" />
             </label>
@@ -167,9 +175,26 @@
             <button type="button" class="btn btn-secondary btn-compact" id="tl-btn-zoom-in">+</button>
           </div>
           <p id="tl-preview-hint" class="metric tl-preview-hint"></p>
+          <div id="tl-clip-inspector" class="tl-clip-inspector hidden" aria-label="片段属性">
+            <div class="tl-inspector-head">
+              <strong id="tl-inspector-beat">—</strong>
+              <span id="tl-inspector-dur" class="metric"></span>
+            </div>
+            <div class="tl-inspector-row">
+              <label class="tl-speed-label">片段速度
+                <input type="range" id="tl-clip-speed" min="0.25" max="2" step="0.05" value="1" />
+                <span id="tl-clip-speed-val">1.00×</span>
+              </label>
+              <div class="tl-speed-presets" id="tl-clip-speed-presets"></div>
+            </div>
+            <div class="tl-inspector-actions">
+              <button type="button" class="btn btn-secondary btn-compact" id="tl-clip-restore">恢复片段</button>
+              <button type="button" class="btn btn-secondary btn-compact" id="tl-clip-delete">删除片段</button>
+            </div>
+          </div>
         </div>
         <div class="card card-no-accent tl-tracks-card">
-          <p class="metric">波形=口播 · 灰=计划 · 蓝=实测 · 橙=微事件 · 播放时仅一路音频（合成页画面静音，口播走波形轨）</p>
+          <p class="metric">波形=口播片段 · 灰=计划 · 蓝=实测 · 橙=微事件 · 右键片段：速度/删除 · Del 删除选中 · 拖拽右缘 trim</p>
           <div class="tl-scroll" id="tl-scroll">
             <div class="tl-scroll-inner" id="tl-scroll-inner">
               <div class="tl-waveform-row" id="tl-waveform-row" style="width:${state.totalSec * state.pxPerSec}px">
@@ -190,7 +215,8 @@
           ${renderBlocked ? `<p class="blocked">${renderBlocked}</p>` : ""}
           <pre id="timeline-log" class="vo-log"></pre>
         </div>
-      </div>`;
+      </div>
+      <div id="tl-context-menu" class="tl-context-menu hidden" role="menu"></div>`;
 
     const scrollEl = host.querySelector("#tl-scroll-tracks");
     const innerEl = host.querySelector("#tl-scroll-tracks-inner");
@@ -208,12 +234,188 @@
     const zoomSlider = host.querySelector("#tl-zoom-slider");
     const logEl = host.querySelector("#timeline-log");
     const hintEl = host.querySelector("#tl-preview-hint");
+    const contextMenu = host.querySelector("#tl-context-menu");
+    const clipInspector = host.querySelector("#tl-clip-inspector");
+    const masterSpeedInput = host.querySelector("#tl-master-speed");
+    const masterSpeedVal = host.querySelector("#tl-master-speed-val");
+    const clipSpeedInput = host.querySelector("#tl-clip-speed");
+    const clipSpeedVal = host.querySelector("#tl-clip-speed-val");
+    const clipSpeedPresets = host.querySelector("#tl-clip-speed-presets");
 
     let wavesurfer = null;
     let syncingWave = false;
     let waveformVoSrc = "";
     let lastCompSeekMs = 0;
     let lastAutoScrollMs = 0;
+    let persistTimer = null;
+    let rebuildVoTimer = null;
+    let masterSettingsTimer = null;
+
+    const clampRate = (r) => (
+      global.TimelineWaveform?.clampRate
+        ? global.TimelineWaveform.clampRate(r)
+        : clamp(Number(r) || 1, 0.25, 2)
+    );
+
+    function beatById(id) {
+      return beats.find(b => b.beat_id === id);
+    }
+
+    function ensureBeatEditFields(b) {
+      const vo = b.vo || {};
+      if (!b.source_duration_sec && !vo.source_duration_sec) {
+        const dur = Number(vo.duration_sec || b.actual_sec || b.duration_sec || 0);
+        const rate = clampRate(b.playback_rate || vo.playback_rate || 1);
+        b.source_duration_sec = dur * rate;
+      }
+      b.playback_rate = clampRate(b.playback_rate ?? vo.playback_rate ?? 1);
+      b.disabled = Boolean(b.disabled ?? vo.disabled);
+      return b;
+    }
+
+    function recomputeLocalTimeline() {
+      let t = 0;
+      for (const raw of beats) {
+        const b = ensureBeatEditFields(raw);
+        const vo = b.vo || {};
+        if (b.disabled) {
+          vo.start_sec = t;
+          vo.duration_sec = 0;
+          vo.end_sec = t;
+          vo.disabled = true;
+          b.vo = vo;
+          b.actual_sec = 0;
+          continue;
+        }
+        const src = Number(b.source_duration_sec || vo.source_duration_sec || b.actual_sec || 1);
+        const rate = clampRate(b.playback_rate);
+        const dur = src / rate;
+        vo.start_sec = round3(t);
+        vo.duration_sec = round3(dur);
+        vo.end_sec = round3(t + dur);
+        vo.playback_rate = rate;
+        vo.source_duration_sec = round3(src);
+        vo.disabled = false;
+        b.vo = vo;
+        b.playback_rate = rate;
+        b.source_duration_sec = src;
+        b.actual_sec = dur;
+        t += dur;
+      }
+      state.totalSec = Math.max(0.5, round3(t));
+      timeDisplay.textContent = `${formatTime(state.currentTime)} / ${formatTime(state.totalSec)}`;
+      if (audioEngine) audioEngine.setTotalSec(state.totalSec);
+    }
+
+    function round3(n) {
+      return Math.round(Number(n) * 1000) / 1000;
+    }
+
+    function getEnabledClips() {
+      return beats
+        .filter(b => !b.disabled && b.vo_wav)
+        .map(b => {
+          ensureBeatEditFields(b);
+          return {
+            beat_id: b.beat_id,
+            start_sec: beatStart(b),
+            duration_sec: beatDur(b),
+            playback_rate: clampRate(b.playback_rate),
+            vo_wav_url: mediaUrl(b.vo_wav),
+          };
+        })
+        .sort((a, b) => a.start_sec - b.start_sec);
+    }
+
+    function applyTimelineLocally({ rerender = true } = {}) {
+      recomputeLocalTimeline();
+      if (rerender) {
+        renderTracks();
+        updateClipInspector();
+      }
+      if (audioEngine) {
+        audioEngine.setTotalSec(state.totalSec);
+        audioEngine.refreshRates();
+        if (!state.playing) audioEngine.seek(state.currentTime);
+      }
+    }
+
+    function schedulePersistBeat(beatId, patch) {
+      clearTimeout(persistTimer);
+      persistTimer = setTimeout(async () => {
+        try {
+          await api(`/timing/beats/${beatId}?segment=${segment}`, {
+            method: "PATCH",
+            body: JSON.stringify(patch),
+          });
+          scheduleRebuildVo();
+        } catch (err) {
+          toast(String(err.message || err));
+        }
+      }, 400);
+    }
+
+    function schedulePersistMasterRate() {
+      clearTimeout(masterSettingsTimer);
+      masterSettingsTimer = setTimeout(async () => {
+        try {
+          await api(`/timeline/settings?segment=${segment}`, {
+            method: "PATCH",
+            body: JSON.stringify({ master_playback_rate: state.masterPlaybackRate }),
+          });
+        } catch (err) {
+          toast(String(err.message || err));
+        }
+      }, 350);
+    }
+
+    function scheduleRebuildVo() {
+      clearTimeout(rebuildVoTimer);
+      rebuildVoTimer = setTimeout(async () => {
+        try {
+          await api(`/timeline/rebuild-vo?segment=${segment}`, { method: "POST" });
+          waveformVoSrc = "";
+          renderWaveformSegments();
+        } catch { /* optional background rebuild */ }
+      }, 1400);
+    }
+
+    function setBeatSpeed(beatId, rate, { persist = true } = {}) {
+      const b = beatById(beatId);
+      if (!b || b.disabled) return;
+      ensureBeatEditFields(b);
+      b.playback_rate = clampRate(rate);
+      applyTimelineLocally();
+      if (persist) schedulePersistBeat(beatId, { playback_rate: b.playback_rate, locked: true });
+    }
+
+    function setBeatDisabled(beatId, disabled) {
+      const b = beatById(beatId);
+      if (!b) return;
+      b.disabled = disabled;
+      applyTimelineLocally();
+      schedulePersistBeat(beatId, { disabled, locked: true });
+      toast(disabled ? `${beatId} 已从时间轴移除` : `${beatId} 已恢复`);
+    }
+
+    let audioEngine = null;
+    if (useClipEngine && global.TimelineAudioEngine) {
+      audioEngine = new global.TimelineAudioEngine({
+        getClips: getEnabledClips,
+        getMasterRate: () => state.masterPlaybackRate,
+        onTimeUpdate: (t) => {
+          if (!state.playing) return;
+          updatePlayheadUI(t);
+          syncCompositionVisual(t);
+          maybeAutoScroll(t);
+        },
+        onEnded: () => {
+          state.playing = false;
+          playBtn.textContent = "▶";
+        },
+      });
+      audioEngine.setTotalSec(state.totalSec);
+    }
 
     function updatePlayheadUI(t) {
       state.currentTime = clamp(t, 0, state.totalSec);
@@ -245,6 +447,7 @@
     function onAudioTimeUpdate() {
       if (!state.playing || active?.drag) return;
       if (state.previewMode === "mp4") return;
+      if (audioEngine) return;
       const t = masterAudio.currentTime;
       if (Math.abs(t - state.currentTime) < 0.015) return;
       updatePlayheadUI(t);
@@ -263,6 +466,7 @@
 
     function masterEl() {
       if (state.previewMode === "mp4") return video;
+      if (audioEngine) return null;
       if (voSrc && masterAudio) return masterAudio;
       return null;
     }
@@ -290,10 +494,10 @@
 
     function updatePreviewHint() {
       const hints = {
-        composition: "合成页画面 + 波形口播（合成内音频已静音）· 拖拽蓝条改时长后请「重建合成」",
-        mp4: "成片 MP4 自带音轨 · 波形仅作参考",
-        audio: "口播 WAV · 播放按钮或波形轨控制",
-        studio: "Studio 热重载 · 画面静音 · 口播与 playhead 走波形轨",
+        composition: "合成页画面 + 分片段口播预览 · 右键片段可调速度/删除 · 整体速度在 transport",
+        mp4: "成片 MP4 · 整体速度影响播放 · 片段编辑请切「口播」或「合成页」",
+        audio: "分片段口播预览 · 拖拽蓝条右缘 trim · Del 删除选中片段",
+        studio: "Studio 画面 + 分片段口播 · 合成内音频静音",
       };
       hintEl.textContent = hints[state.previewMode] || "";
     }
@@ -352,6 +556,7 @@
         if (tl) tl.pause();
       } catch { /* ignore */ }
       if (video && !video.paused) video.pause();
+      if (audioEngine) audioEngine.pause();
       if (masterAudio && !masterAudio.paused) masterAudio.pause();
     }
 
@@ -393,6 +598,10 @@
       if (state.previewMode === "composition") {
         seekComposition(state.currentTime, { pause: true });
       }
+      if (audioEngine) {
+        audioEngine.seek(state.currentTime);
+        return;
+      }
       const m = masterEl();
       if (m && Math.abs(m.currentTime - state.currentTime) > 0.05) {
         m.currentTime = state.currentTime;
@@ -410,11 +619,16 @@
         return `<div class="tl-block planned" style="left:${secToPx(pStart)}px;width:${Math.max(secToPx(pDur), 2)}px" title="planned ${b.beat_id}"></div>`;
       }).join("");
       const actualBlocks = beats.map(b => {
+        if (b.disabled) {
+          return `<div class="tl-block tl-block-disabled" data-beat="${b.beat_id}" title="${b.beat_id} 已删除（可恢复）">${b.beat_id}</div>`;
+        }
         const start = beatStart(b);
         const dur = beatDur(b);
         const sel = state.selectedBeatId === b.beat_id ? " selected" : "";
+        const rate = clampRate(b.playback_rate || 1);
+        const rateBadge = Math.abs(rate - 1) > 0.01 ? `<span class="tl-rate-badge">${rate.toFixed(2)}×</span>` : "";
         return `<div class="tl-block${sel}" data-beat="${b.beat_id}" data-start="${start}" data-dur="${dur}"
-          style="left:${secToPx(start)}px;width:${Math.max(secToPx(dur), 4)}px" title="${b.beat_id} ${dur.toFixed(2)}s">${b.beat_id}</div>`;
+          style="left:${secToPx(start)}px;width:${Math.max(secToPx(dur), 4)}px" title="${b.beat_id} ${dur.toFixed(2)}s @ ${rate.toFixed(2)}×">${b.beat_id}${rateBadge}</div>`;
       }).join("");
       const micro = microEvents.map(ev => {
         const t = Number(ev.t || 0);
@@ -432,7 +646,43 @@
       bindTrackEvents();
       if (state.playing) updatePlayheadUI(state.currentTime);
       else setCurrentTime(state.currentTime);
-      initOrUpdateWaveform();
+      renderWaveformSegments();
+    }
+
+    function renderWaveformSegments() {
+      if (!waveformEl) return;
+      if (useClipEngine && global.TimelineWaveform) {
+        if (wavesurfer) {
+          try { wavesurfer.destroy(); } catch { /* ignore */ }
+          wavesurfer = null;
+        }
+        waveformEl.innerHTML = "";
+        waveformEl.classList.add("tl-waveform-segments");
+        const enabled = beats.filter(b => !b.disabled && b.vo_wav);
+        for (const b of enabled) {
+          ensureBeatEditFields(b);
+          const start = beatStart(b);
+          const dur = beatDur(b);
+          const seg = document.createElement("div");
+          seg.className = "tl-wav-seg";
+          seg.style.left = `${secToPx(start)}px`;
+          seg.style.width = `${Math.max(secToPx(dur), 2)}px`;
+          seg.dataset.beat = b.beat_id;
+          const canvas = document.createElement("canvas");
+          canvas.className = "tl-wav-canvas";
+          canvas.height = 56;
+          canvas.width = Math.max(24, Math.floor(Math.max(secToPx(dur), 2)));
+          seg.appendChild(canvas);
+          waveformEl.appendChild(seg);
+          global.TimelineWaveform.drawClipWaveform(canvas, mediaUrl(b.vo_wav), {
+            color: state.selectedBeatId === b.beat_id
+              ? "rgba(10, 132, 255, 0.85)"
+              : "rgba(10, 132, 255, 0.42)",
+          });
+        }
+        return;
+      }
+      initOrUpdateWaveformFallback();
     }
 
     function bindWaveformEvents() {
@@ -448,7 +698,7 @@
       });
     }
 
-    function initOrUpdateWaveform() {
+    function initOrUpdateWaveformFallback() {
       if (!voSrc || !global.WaveSurfer || !waveformEl || !masterAudio) return;
 
       if (!wavesurfer || waveformVoSrc !== voSrc) {
@@ -502,13 +752,18 @@
     }
 
     function playVo() {
+      if (audioEngine) {
+        if (state.previewMode === "composition") seekComposition(state.currentTime, { pause: true });
+        audioEngine.play(state.currentTime);
+        return Promise.resolve();
+      }
       return masterAudio.play().catch(() => toast("无法播放口播"));
     }
 
     function togglePlay() {
       if (state.previewMode === "composition") {
         muteIframeMedia(compIframe);
-        if (!voSrc) {
+        if (!useClipEngine && !voSrc) {
           toast("口播 WAV 未就绪");
           return;
         }
@@ -525,7 +780,7 @@
 
       if (state.previewMode === "studio") {
         muteIframeMedia(studioIframe);
-        if (!voSrc) {
+        if (!useClipEngine && !voSrc) {
           toast("口播 WAV 未就绪");
           return;
         }
@@ -552,7 +807,7 @@
         return;
       }
 
-      if (voSrc && masterAudio) {
+      if ((useClipEngine || voSrc) && (audioEngine || masterAudio)) {
         if (state.playing) {
           pauseAll();
         } else {
@@ -607,12 +862,15 @@
 
       try {
         if (d.type === "beat-resize" && d.newDur != null) {
-          await api(`/timing/beats/${d.beatId}?segment=${segment}`, {
-            method: "PATCH",
-            body: JSON.stringify({ duration_sec: d.newDur, locked: true }),
-          });
-          toast(`${d.beatId} → ${d.newDur.toFixed(2)}s · 请重建合成以更新画面`);
-          if (onRefresh) await onRefresh();
+          const b = beatById(d.beatId);
+          if (b && !b.disabled) {
+            ensureBeatEditFields(b);
+            const src = Number(b.source_duration_sec || beatDur(b));
+            b.playback_rate = clampRate(src / d.newDur);
+            applyTimelineLocally();
+            schedulePersistBeat(d.beatId, { duration_sec: d.newDur, locked: true });
+            toast(`${d.beatId} → ${d.newDur.toFixed(2)}s（实时预览）· 重建合成以更新画面`);
+          }
         } else if (d.type === "micro-drag" && d.newT != null) {
           await api(`/timing/micro/${d.eventId}?segment=${segment}`, {
             method: "PATCH",
@@ -623,14 +881,84 @@
         }
       } catch (err) {
         toast(String(err.message || err));
-        renderTracks();
+        applyTimelineLocally();
       }
+    }
+
+    function hideContextMenu() {
+      contextMenu?.classList.add("hidden");
+    }
+
+    function showContextMenu(ev, beatId) {
+      if (!contextMenu) return;
+      ev.preventDefault();
+      const b = beatById(beatId);
+      if (!b) return;
+      state.selectedBeatId = beatId;
+      updateClipInspector();
+      innerEl?.querySelectorAll(".tl-block.selected").forEach(el => el.classList.remove("selected"));
+      innerEl?.querySelector(`[data-beat="${beatId}"]`)?.classList.add("selected");
+      if (onBeatSelect) onBeatSelect(beatId);
+
+      const disabled = Boolean(b.disabled);
+      const rate = clampRate(b.playback_rate || 1);
+      const speedItems = SPEED_PRESETS.map(r =>
+        `<button type="button" class="tl-menu-item${Math.abs(r - rate) < 0.01 ? " active" : ""}" data-action="speed" data-rate="${r}">${r}× 速度</button>`
+      ).join("");
+      contextMenu.innerHTML = `
+        <div class="tl-menu-title">${beatId}${disabled ? " · 已删除" : ""}</div>
+        ${disabled ? `<button type="button" class="tl-menu-item" data-action="restore">恢复片段</button>` : `
+          ${speedItems}
+          <button type="button" class="tl-menu-item tl-menu-danger" data-action="delete">删除片段 (Del)</button>
+        `}`;
+      contextMenu.classList.remove("hidden");
+      const pad = 4;
+      contextMenu.style.left = `${ev.clientX + pad}px`;
+      contextMenu.style.top = `${ev.clientY + pad}px`;
+      contextMenu.querySelectorAll("[data-action]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const action = btn.dataset.action;
+          if (action === "delete") setBeatDisabled(beatId, true);
+          if (action === "restore") setBeatDisabled(beatId, false);
+          if (action === "speed") setBeatSpeed(beatId, Number(btn.dataset.rate));
+          hideContextMenu();
+        });
+      });
+    }
+
+    function updateClipInspector() {
+      if (!clipInspector) return;
+      const b = state.selectedBeatId ? beatById(state.selectedBeatId) : null;
+      if (!b) {
+        clipInspector.classList.add("hidden");
+        return;
+      }
+      clipInspector.classList.remove("hidden");
+      host.querySelector("#tl-inspector-beat").textContent = b.beat_id + (b.disabled ? " · 已删除" : "");
+      const dur = b.disabled ? 0 : beatDur(b);
+      host.querySelector("#tl-inspector-dur").textContent = b.disabled
+        ? "不在时间轴上"
+        : `${dur.toFixed(2)}s · 源 ${Number(b.source_duration_sec || dur).toFixed(2)}s`;
+      const rate = clampRate(b.playback_rate || 1);
+      clipSpeedInput.value = String(rate);
+      clipSpeedVal.textContent = `${rate.toFixed(2)}×`;
+      host.querySelector("#tl-clip-delete").classList.toggle("hidden", b.disabled);
+      host.querySelector("#tl-clip-restore").classList.toggle("hidden", !b.disabled);
+      clipSpeedInput.disabled = b.disabled;
     }
 
     function bindTrackEvents() {
       innerEl.querySelectorAll(".tl-block:not(.planned)").forEach(block => {
         block.addEventListener("mousedown", (ev) => {
+          if (ev.button !== 0) return;
           const beatId = block.dataset.beat;
+          const b = beatById(beatId);
+          if (b?.disabled) {
+            state.selectedBeatId = beatId;
+            updateClipInspector();
+            ev.preventDefault();
+            return;
+          }
           const start = parseFloat(block.dataset.start || "0");
           const dur = parseFloat(block.dataset.dur || "0");
           const rect = block.getBoundingClientRect();
@@ -649,9 +977,12 @@
           block.classList.add("selected");
           setCurrentTime(start);
           scrollTimeIntoView(start);
+          updateClipInspector();
+          renderWaveformSegments();
           if (onBeatSelect) onBeatSelect(beatId);
           ev.preventDefault();
         });
+        block.addEventListener("contextmenu", (ev) => showContextMenu(ev, block.dataset.beat));
         block.addEventListener("dblclick", (ev) => {
           if (onBeatOpen) onBeatOpen(block.dataset.beat);
           ev.preventDefault();
@@ -675,6 +1006,7 @@
       scrollEl.addEventListener("mousedown", (ev) => {
         if (ev.target.closest(".tl-block") || ev.target.closest(".tl-micro")) return;
         if (state.playing) pauseAll();
+        hideContextMenu();
         const innerRect = innerEl.getBoundingClientRect();
         const xInInner = ev.clientX - innerRect.left + scrollEl.scrollLeft;
         setCurrentTime(pxToSec(xInInner));
@@ -683,6 +1015,73 @@
         ev.preventDefault();
       });
     }
+
+    if (clipSpeedPresets) {
+      clipSpeedPresets.innerHTML = SPEED_PRESETS.map(r =>
+        `<button type="button" class="btn btn-secondary btn-compact tl-speed-preset" data-rate="${r}">${r}×</button>`
+      ).join("");
+      clipSpeedPresets.querySelectorAll(".tl-speed-preset").forEach(btn => {
+        btn.addEventListener("click", () => {
+          if (!state.selectedBeatId) return;
+          setBeatSpeed(state.selectedBeatId, Number(btn.dataset.rate));
+          updateClipInspector();
+        });
+      });
+    }
+
+    clipSpeedInput?.addEventListener("input", () => {
+      if (!state.selectedBeatId) return;
+      const rate = clampRate(parseFloat(clipSpeedInput.value));
+      clipSpeedVal.textContent = `${rate.toFixed(2)}×`;
+      setBeatSpeed(state.selectedBeatId, rate, { persist: false });
+    });
+    clipSpeedInput?.addEventListener("change", () => {
+      if (!state.selectedBeatId) return;
+      schedulePersistBeat(state.selectedBeatId, {
+        playback_rate: clampRate(parseFloat(clipSpeedInput.value)),
+        locked: true,
+      });
+    });
+
+    masterSpeedInput?.addEventListener("input", () => {
+      state.masterPlaybackRate = clampRate(parseFloat(masterSpeedInput.value));
+      masterSpeedVal.textContent = `${state.masterPlaybackRate.toFixed(2)}×`;
+      if (video) video.playbackRate = state.masterPlaybackRate;
+      audioEngine?.refreshRates();
+      schedulePersistMasterRate();
+    });
+
+    host.querySelector("#tl-clip-delete")?.addEventListener("click", () => {
+      if (state.selectedBeatId) setBeatDisabled(state.selectedBeatId, true);
+    });
+    host.querySelector("#tl-clip-restore")?.addEventListener("click", () => {
+      if (state.selectedBeatId) setBeatDisabled(state.selectedBeatId, false);
+    });
+
+    document.addEventListener("click", (ev) => {
+      if (!contextMenu?.contains(ev.target)) hideContextMenu();
+    });
+    host.addEventListener("keydown", (ev) => {
+      if (ev.key === "Delete" && state.selectedBeatId) {
+        const b = beatById(state.selectedBeatId);
+        if (b && !b.disabled) {
+          setBeatDisabled(state.selectedBeatId, true);
+          ev.preventDefault();
+        }
+      }
+    });
+    host.setAttribute("tabindex", "0");
+
+    waveformScroll?.addEventListener("mousedown", (ev) => {
+      if (!useClipEngine) return;
+      if (state.playing) pauseAll();
+      const rowRect = waveformRow.getBoundingClientRect();
+      const x = ev.clientX - rowRect.left + waveformScroll.scrollLeft;
+      setCurrentTime(pxToSec(x));
+      active.drag = { type: "playhead" };
+      document.body.classList.add("tl-dragging");
+      ev.preventDefault();
+    });
 
     host.querySelectorAll(".tl-mode-btn").forEach(btn => {
       btn.addEventListener("click", () => {
@@ -815,9 +1214,14 @@
     active = {
       drag: null,
       wavesurfer,
+      audioEngine,
       onDocMove,
       onDocUp,
       destroy: () => {
+        clearTimeout(persistTimer);
+        clearTimeout(rebuildVoTimer);
+        clearTimeout(masterSettingsTimer);
+        audioEngine?.destroy();
         if (active?.wavesurfer) {
           try { active.wavesurfer.destroy(); } catch { /* ignore */ }
         }
@@ -829,7 +1233,9 @@
     document.addEventListener("mouseup", onDocUp);
 
     applyPreviewMode();
+    recomputeLocalTimeline();
     fitZoom();
+    updateClipInspector();
 
     return {
       destroy: () => {
