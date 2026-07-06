@@ -69,6 +69,7 @@
       "depends_on": ["director-plan", "voice-and-sound"],
       "required_artifacts": ["segments/{segment}/index.html", "segments/{segment}/beat_asset_coverage_qc.md"],
       "validation_scripts": [
+        "test_composition_preview.py --segment {segment} --no-server",
         "beat_asset_coverage_lint.py {project} {segment} --fail-under 85",
         "segment_timing_lint.py {project} {segment} --full",
         "verify_svg_utf8.py {project}/segments/{segment}/assets"

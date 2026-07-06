@@ -35,6 +35,41 @@ def words(value: Any) -> str:
     return str(value)
 
 
+def event_presets(event: dict[str, Any]) -> list[str]:
+    values: list[str] = []
+    for key in ("motion_preset_id", "text_preset_id"):
+        value = event.get(key)
+        if isinstance(value, str) and value.strip():
+            values.append(value.strip())
+    for key in ("motion_preset_ids", "text_preset_ids"):
+        value = event.get(key)
+        if isinstance(value, list):
+            values.extend(str(v).strip() for v in value if str(v).strip())
+    motion = event.get("motion")
+    if isinstance(motion, dict):
+        value = motion.get("preset_id") or motion.get("motion_preset_id")
+        if isinstance(value, str) and value.strip():
+            values.append(value.strip())
+    return values
+
+
+def load_known_presets(root: Path) -> set[str]:
+    candidates = [
+        root / "assets" / "micro_animation_palette.json",
+        Path(__file__).resolve().parents[1] / "assets" / "templates" / "micro_animation_palette.json",
+    ]
+    known: set[str] = set()
+    for path in candidates:
+        palette, _ = load_json(path)
+        if not isinstance(palette, dict):
+            continue
+        for section in ("motion_presets", "text_presets", "motion_tokens"):
+            values = palette.get(section, {})
+            if isinstance(values, dict):
+                known.update(str(key) for key in values.keys())
+    return known
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Score script/beat_timeline.json and asset choreography density.")
     parser.add_argument("root", nargs="?", default=".", help="Project root")
@@ -48,6 +83,7 @@ def main() -> int:
     asset_rows = read_csv(root / "assets" / "asset_choreography_manifest.csv")
     cue_sheet, cue_errors = load_json(root / "audio" / "audio_cue_sheet.json")
     cues = cue_sheet.get("cues", []) if isinstance(cue_sheet, dict) else []
+    known_presets = load_known_presets(root)
 
     issues: list[tuple[str, int]] = []
     issues.extend((e, 18) for e in errors)
@@ -67,7 +103,13 @@ def main() -> int:
         if not isinstance(beat, dict):
             issues.append((f"beat {i} is not an object", 4))
             continue
-        missing = [k for k in required if k not in beat or beat.get(k) in (None, "", [])]
+        allow_empty_lists = {"text_ids", "sfx_cue_ids"}
+        missing = [
+            k for k in required
+            if k not in beat
+            or beat.get(k) in (None, "")
+            or (beat.get(k) == [] and k not in allow_empty_lists)
+        ]
         if missing:
             issues.append((f"{beat.get('beat_id', i)} missing required fields: {', '.join(missing)}", min(12, 2 * len(missing))))
         try:
@@ -87,6 +129,14 @@ def main() -> int:
             issues.append((f"{beat.get('beat_id', i)} visual_action is too generic or PPT-like", 6))
         if "fade" in visual_action and not any(k in visual_action for k in ["draw", "transform", "slide", "snap", "stamp", "pulse", "zoom", "scan", "morph", "wipe"]):
             issues.append((f"{beat.get('beat_id', i)} uses fade without semantic motion", 4))
+        presets = event_presets(beat)
+        unknown_presets = sorted(p for p in presets if known_presets and p not in known_presets)
+        if unknown_presets:
+            issues.append((f"{beat.get('beat_id', i)} references unknown motion/text preset IDs: {', '.join(unknown_presets[:5])}", 6))
+        if any(p.startswith("reactive.yield") for p in presets):
+            guard_text = words(beat).lower()
+            if not any(k in guard_text for k in ["must_show", "source", "table", "axis", "label", "readable", "detail", "hold"]):
+                issues.append((f"{beat.get('beat_id', i)} uses yield preset without proof/readability guardrail", 6))
 
     # Gaps between beats.
     timed = []

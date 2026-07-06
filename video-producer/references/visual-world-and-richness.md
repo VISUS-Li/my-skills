@@ -6,7 +6,7 @@ Use this when a HyperFrames segment looks empty, text-heavy, visually boring, or
 
 HyperFrames-native does not mean sparse. It means the frame is built from live code layers that can be timed, animated, and restyled precisely.
 
-Every non-deliberately-sparse HyperFrames beat should have:
+For every non-deliberately-sparse HyperFrames beat, explicitly decide which of these roles are cast and which are withheld:
 
 - a designed background bed,
 - one focal owner,
@@ -14,6 +14,8 @@ Every non-deliberately-sparse HyperFrames beat should have:
 - one attention guide,
 - one text hierarchy element,
 - subtle motion during holds.
+
+These are role prompts, not mandatory ingredients. A normal evidence beat may need screenshot + highlight + source label and no flower text. A mechanism beat may need diagram cards + arrows + icons and no real footage. A viewpoint beat may need only a line and silence. The director should avoid both extremes: empty frames caused by no visual decision, and clutter caused by casting every available actor.
 
 ## Light Educational Grid Style
 
@@ -46,14 +48,14 @@ Suggested native components:
 
 ## Layer Budget
 
-Use a practical layer budget, not clutter:
+Use a practical layer budget, not a fixed recipe:
 
 - Sparse viewpoint: background + text + one subtle motion.
 - Medium explanation: background + focal card/diagram + 2 support actors + caption.
 - Evidence/data: background + screenshot/source + annotation + text label + data/icon support.
 - Mechanism: background + modules/cards + arrows + icons + active text/number.
 
-Avoid accidental empty quadrants. Use small chips, ghosted cards, grids, or icon clusters to fill space only when they support the topic.
+Avoid accidental empty quadrants. Use small chips, ghosted cards, grids, actor cutaways, data fragments, or icon clusters to fill space only when they support the topic. If the emptiness is intentional, name its purpose in the director plan: suspense, readability, emotional pause, or transition reset.
 
 ## Motion Rhythm
 
@@ -67,7 +69,7 @@ A rich frame needs small visual life:
 - red/yellow focus marks lock on the spoken keyword.
 - camera pushes/pans enough to create shot changes.
 
-Do not animate everything. One focal actor moves meaningfully; support actors breathe quietly.
+Do not animate everything. One focal actor moves meaningfully; support actors breathe quietly. Across a sequence, vary motion language: proof can hold while annotation moves, data can count/draw, text can hit on a keyword, a human cutaway can slow-push, and a reset can stay almost still.
 
 ## Empty Frame Rejections
 

@@ -25,12 +25,48 @@ Use this when compiling beats into micro-events, animation, and sound.
 - `data_change`: counter, chart, price, or bar changes.
 - `compare_shift`: attention moves between sides.
 - `evidence_lock`: red box, bracket, source label, stamp.
+- `yield`: existing focal object shifts, scales, or dims to make room for an entering keyword/insert without hiding proof.
+- `text_store`: earlier flower text shrinks, moves aside, or becomes a chip so the next phrase can take focus without erasing context.
 - `camera_move`: push, pull, pan, match move, snap zoom.
 - `transition_bridge`: carry anchor into next shot.
 - `hold`: deliberate readable or emotional pause.
 - `reset`: black/quiet scene, silence, or low-density cut.
 
 One micro-event should have one focal owner. Secondary layers can breathe, but should not compete.
+
+## Preset Registry Contract
+
+Use `assets/templates/micro_animation_palette.json` as the default registry for CapCut-like semantic presets. The plan should call preset IDs, not rewrite GSAP for common moves. The implementation still happens in HyperFrames/GSAP unless the user explicitly asks for a draft-editor workflow.
+
+Preset fields may include:
+
+- `motion_preset_id`: e.g. `entrance.soft_fade`, `entrance.short_slide_down`, `combo.blur_scale_in`, `text.keyword_pop`, `reactive.yield_left`.
+- `params`: small overrides such as `distance_px`, `direction`, `duration_sec`, `stagger_sec`, `overshoot`, or `yield_px`.
+- `sync_phrase`: narration phrase that the preset should land on.
+- `focal_owner`: asset/text/component that owns the move.
+- `yield_target`: object that should give way during reactive displacement.
+
+Decision rules:
+
+- Use entrance/exit presets for routine cards, labels, source stacks, and chapter moves.
+- Use text presets only for actual emphasis: keywords, numbers, contrast labels, quotes, and viewpoint lines.
+- Use reactive/yield presets when a new element must enter but the existing focal owner should remain visible.
+- Use text store/yield presets when sequential flower words should accumulate, shrink, or make room instead of disappearing on every new phrase.
+- Do not use a flashy preset to compensate for weak material selection. If the beat needs proof, source the proof first.
+- If a preset would hide `must_show_detail`, change its direction/zone or reject it.
+
+## Optional Node Safety
+
+Micro-events are beat-specific. Do not run the same selector choreography across all beats unless every referenced node exists in every beat. If a beat has no `.hf-scan-line`, `.proof-img`, `.anim-proof`, or `.anim-diagram`, that beat must not schedule tweens against those selectors.
+
+Implementation rule:
+
+- Each micro-event names a focal owner and concrete selectors/components.
+- The builder checks whether optional targets exist before adding a tween.
+- Missing required targets are composition errors; missing optional targets are skipped intentionally.
+- GSAP target warnings in Review Studio are failed QC, not harmless noise.
+
+When the registry is insufficient and the task requires a complex custom motion grammar, load the external `hyperframes-animation` skill references selectively: start with its rules index for `reactive-displacement` or text/beat rules, and only load a blueprint such as `metric-video-text-pivot` when the segment specifically needs that show -> yield -> pivot structure. Do not load the whole external skill for routine fades/slides.
 
 ## Sound Binding
 

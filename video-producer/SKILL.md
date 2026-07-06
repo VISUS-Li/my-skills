@@ -13,6 +13,8 @@ Default execution path:
 
 Do not jump from `script -> broad visual prompt -> render`.
 
+Core principle: every visible thing is cast by the director. Actors, screenshots, B-roll, charts, icons, flower text, captions, layout modes, animations, ambient HyperFrames components, and silence/negative space are all optional tools. None are mandatory by default, and none are banned by default. Use them only when they serve the script beat, storyboard function, evidence need, emotional rhythm, or viewer comprehension.
+
 ## Bootstrap
 
 Resolve `PROJECT_DIR` before writing artifacts.
@@ -33,11 +35,10 @@ python "$SKILL_DIR/scripts/init_video_project.py" \
 # Optional: override default ~/projects/<slug>/
 #   --root "/path/to/custom-project-dir"
 
-python "$SKILL_DIR/scripts/validate_project.py" "$PROJECT_DIR"
-python "$SKILL_DIR/scripts/validate_stage.py" "$PROJECT_DIR" --stage script
+python "$SKILL_DIR/scripts/validate_stage.py" "$PROJECT_DIR" --stage plan
 ```
 
-Tell the user the absolute `PROJECT_DIR`. Do not mark `script` or later stages `review` until `validate_stage.py` exits 0 for that stage.
+Tell the user the absolute `PROJECT_DIR`. Initial templates intentionally contain example narration rows; replace them before running full `validate_project.py` or advancing `script`. Do not mark `script` or later stages `review` until `validate_stage.py` exits 0 for that stage.
 
 ## Core Director Loop
 
@@ -46,11 +47,14 @@ For every segment and beat, make these decisions in order:
 1. **Beat function:** fact, evidence, data, mechanism, scene, person, emotion, contrast, transition, or viewpoint.
 2. **Audience need:** credibility, understanding, proof, scale, emotional entry, contrast, suspense, or closure.
 3. **Visual owner:** the one asset/action that owns attention at this moment.
-4. **Material choice:** real footage/photo, UI/web/document screenshot, external chart/data source, HyperFrames-native diagram/card/text/shape/chart, SVG annotation, ambient texture, or silence/black.
-5. **Phrase binding:** map nouns, verbs, numbers, contrast words, and emotion words to visible events.
-6. **Visual world:** choose the background system, support actors, icons/cards/charts, depth layers, and ambient motion that make the frame feel alive.
-7. **Density and rhythm:** decide whether this beat should be rich, readable-dense, medium, sparse, fast, slow, or silent.
-8. **Transition anchor:** carry color, shape, text, number, position, or motion direction into the next beat when possible.
+4. **Casting decision:** decide which visual actors are needed and which should stay out: person/scene, evidence screenshot, data object, text actor, icon/support actor, annotation, ambient world, SFX, or deliberate blank space.
+5. **Shot and layout mode:** choose establish/insert/comparison/mechanism/reset/payoff and a layout mode (grid, vertical stack, asymmetric, diagonal, full-screen proof, split, or sparse). Do not default to left-right.
+6. **Material choice:** real footage/photo, UI/web/document screenshot, external chart/data source, HyperFrames-native diagram/card/text/shape/chart, SVG annotation, ambient texture, or silence/black.
+7. **Phrase binding:** map nouns, verbs, numbers, contrast words, and emotion words to visible events.
+8. **Text choreography:** decide whether text should be absent, caption-only, keyword-level, number-hero, quote/card, sticker/flower-word, or viewpoint-line. Text is an actor; size, color, position, and timing must follow the narration rather than appearing as one flat sentence.
+9. **Visual world:** choose the background system, support actors, icons/cards/charts, depth layers, and ambient motion that make the frame feel alive, or intentionally remove them for a reset/viewpoint beat.
+10. **Density and rhythm:** decide whether this beat should be rich, readable-dense, medium, sparse, fast, slow, or silent.
+11. **Transition anchor and motion preset:** carry color, shape, text, number, position, or motion direction into the next beat when possible; use a named preset when the action is a common entrance/exit/text/yield move.
 
 Read `references/director-decision-system.md` before script beats, visual sync, asset selection, or revision.
 
@@ -64,9 +68,11 @@ Keep the project reviewable. These files are the main creative contract:
 - `assets/asset_selection_report.json`: external candidate assets scored for relevance, readability, crop safety, rights, and selected role.
 - `assets/asset_manifest.csv`: final external assets and any programmatic components that need cross-segment tracking.
 - `segments/<id>/beat_asset_plan.csv`: beat-level asset binding for **every** narration beat, including density target, focal owner, trim/crop policy, and readable hold time.
-- `script/text_manifest.json`: dynamic text units, not whole sentences as one flat caption.
-- `script/beat_timeline.json`: timestamped micro-events for visual actions, text hits, camera moves, and SFX.
+- `script/text_manifest.json`: dynamic text units, not whole sentences as one flat caption. Use optional `spans` and `motion_preset_id` when a line needs keyword-level timing, oversized words, color/stroke/shadow emphasis, or sticker/flower-word behavior.
+- `script/beat_timeline.json`: timestamped micro-events for visual actions, text hits, camera moves, layout changes, yield/displacement moves, preset IDs, SFX, and optional `visual_cast` notes that name lead/support/withheld actors for complex beats.
 - `audio/prosody_plan.csv` and `audio/audio_cue_sheet.json`: speech rhythm, pauses, emphasis, and event-anchored sound. `prosody_plan.csv` `tts_text` must mirror `narration_beats.csv` `narration`.
+- `scripts/build_<segment>_composition.py`: the standard composition build entry for Review Studio and automation. For `S001`, this is `scripts/build_s001_composition.py`. Segment-local builders may be helper modules only; they must not be the only build entry.
+- `segments/<id>/index.html`: the seekable HyperFrames composition generated by the standard builder. It must register `window.__timelines[segment]` and expose `window.initComposition`.
 
 After `init_video_project.py`, **replace all template example rows** (earthquake/App demo beats). Never leave init-template text in narration, visual sync, or prosody files.
 
@@ -107,7 +113,7 @@ Load only what the task needs:
 - **Shot language, screenshot acting, density, transitions:** `references/editorial-shot-language.md`
 - **Rich HyperFrames visual world:** `references/visual-world-and-richness.md`
 - **Asset sourcing and rights:** `references/evidence-and-asset-sourcing.md`
-- **Motion, micro-events, and sound cues:** `references/motion-and-transition-grammar.md`
+- **Motion, presets, micro-events, and sound cues:** `references/motion-and-transition-grammar.md` and `assets/templates/micro_animation_palette.json`
 - **Factual research and narrative script:** `references/factual-research-and-script.md`
 - **HyperFrames-native generation and implementation:** `references/hyperframes-implementation.md`
 - **Director QC rubric:** `references/director-quality-review.md`
@@ -134,6 +140,10 @@ Load `references/factual-research-and-script.md`.
 - Screenshots must perform: show full context, push into the important area, highlight with a red box/label/magnifier, hold long enough to read, then exit or shrink into an evidence stack.
 - Data must perform: number/price/percent can become the largest element; charts should build or compare, not appear as decoration.
 - Text must perform: split important words, numbers, contrast terms, quotes, and emotion lines into separate text units with size, color, position, and timing.
+- Text is optional but, when used, should be directed like an actor: attach it to a proof/detail when possible, let key words be larger than support words, use stroke/shadow/color only for real emphasis, and reveal by phrase/keyword when narration rhythm benefits from it.
+- Layout follows beat function. Use regular grids for comparison, tables, and systematic mechanisms; use vertical, asymmetric, diagonal, or full-screen proof compositions when they better protect the focal owner or make a social-video frame feel less static.
+- Actors/support material are optional but should create variety across the film. A mature explainer alternates proof, data, mechanism, human texture, text emphasis, and quiet space according to the script instead of repeating one empty or one busy composition.
+- Use yield/reactive displacement only when a new text/annotation/insert must enter without covering `must_show_detail`. Proof screenshots and tables should usually stay stable; if they move, the move must preserve source labels, critical rows, axes, and readable hold.
 - Emotion and viewpoint beats may deliberately remove visual clutter: black screen, white text, a human cutaway, night street, back view, or low-saturation quiet footage can be stronger than another chart.
 
 ## Rhythm Rules
@@ -150,12 +160,36 @@ Before coding a segment:
 
 1. Create or update a static styleframe/layout that already communicates the focal owner, background world, support actors, and hierarchy.
 2. Mark `hf_*`, `text_*`, `chart_*`, `svg_*`, and `ambient_*` items that will be generated directly in HyperFrames code instead of external asset files.
-3. Bind micro-events from `script/beat_timeline.json` to voice timing.
-4. Implement exact Chinese text as HTML/SVG/canvas text layers, not baked into generated images.
-5. Keep captions, source labels, table rows, chart axes, and UI details readable.
-6. Use sound only where it has a visual or semantic anchor: click, tick, stamp, whoosh, chime, silence, or no cue.
+3. Load `assets/templates/micro_animation_palette.json` or the project-local copy and map `motion_preset_id` / `text_preset_id` to GSAP timeline helpers. Preset names are semantic contracts; implementation can vary by layout as long as timing and focal ownership are preserved.
+4. Bind micro-events from `script/beat_timeline.json` to voice timing.
+5. Implement exact Chinese text as HTML/SVG/canvas text layers, not baked into generated images. Support `text_manifest.items[].spans[]` for mixed size/color/stroke/shadow/timing inside one spoken line.
+6. Keep captions, source labels, table rows, chart axes, and UI details readable.
+7. Use sound only where it has a visual or semantic anchor: click, tick, stamp, whoosh, chime, silence, or no cue.
 
 For HyperFrames, load `references/hyperframes-implementation.md`.
+
+### Review Studio Composition Contract
+
+Review Studio's composition preview loads `segments/<id>/index.html` in an iframe and drives the picture by calling `compIframe.contentWindow.__timelines[segment].time(t)` from the audio clock. Do not rely on `tl.play()` or autoplay. The timeline must be paused and seekable.
+
+Hard requirements:
+
+- Build through `scripts/build_<segment>_composition.py`. For `S001`, keep `scripts/build_s001_composition.py` as the primary entry; if a rich segment helper exists under `segments/<id>/scripts/`, call it from the root builder instead of replacing the root builder.
+- Generated HTML must include `data-composition-id`, `data-build-entry`, `window.initComposition`, `window.__timelines`, `window.__timelines[segment]`, and `window.__compositionErrors`.
+- Register `window.__timelines[segment] = tl` inside `initComposition()` before adding risky optional tweens, so runtime errors are visible and the preview contract exists.
+- Create the GSAP timeline with `paused: true`; never call `play()` in composition HTML. Review Studio seeks frames; audio playback belongs to the parent page.
+- Guard optional selectors. Use helper functions such as `safeTargets()`, `addFromIfPresent()`, and `addToIfPresent()` before `tl.from()` / `tl.to()` for beat-specific nodes. A beat that lacks `.hf-scan-line`, `.proof-img`, `.anim-proof`, or `.anim-diagram` must not emit GSAP target warnings.
+- GSAP property callbacks receive `(index, target, targets)`. For dataset-driven values, write `width: (index, target) => target.dataset.pct`, never `width: (el) => el.dataset.pct`.
+- Surface runtime errors in `window.__compositionErrors` and an on-frame error overlay. Silent failures before timeline registration are not acceptable.
+
+Before handing a segment to review, run:
+
+```bash
+python "$SKILL_DIR/scripts/test_composition_preview.py" "$PROJECT_DIR" --segment S001 --no-server
+python "$SKILL_DIR/scripts/test_composition_preview.py" "$PROJECT_DIR" --segment S001
+```
+
+The second command also validates the Review Studio proxy and, when Playwright is installed, checks that the iframe runtime actually registers a paused timeline with nonzero duration.
 
 ## Quality Gates
 
@@ -169,11 +203,12 @@ python "$SKILL_DIR/scripts/visual_sync_lint.py" "$PROJECT_DIR" S001 --fail-under
 python "$SKILL_DIR/scripts/beat_asset_coverage_lint.py" "$PROJECT_DIR" S001 --fail-under 85
 python "$SKILL_DIR/scripts/beat_timeline_lint.py" "$PROJECT_DIR" --fail-under 80
 python "$SKILL_DIR/scripts/director_quality_lint.py" "$PROJECT_DIR" --fail-under 78
+python "$SKILL_DIR/scripts/test_composition_preview.py" "$PROJECT_DIR" --segment S001 --no-server
 python "$SKILL_DIR/scripts/aesthetic_score.py" "$PROJECT_DIR" --fail-under 72
 python "$SKILL_DIR/scripts/audio_score.py" "$PROJECT_DIR" --fail-under 72
 ```
 
-Director QC must catch aesthetic failures, not only missing fields: PPT-like shots, SVG overuse, empty/plain backgrounds, text-only frames, no icons/charts/support actors, no real-world texture, unbound keywords, screenshots that do not guide attention, flat whole-sentence text, constant density, transition hard cuts with no anchor, and emotion beats overloaded with evidence.
+Director QC must catch aesthetic failures, not only missing fields: PPT-like shots, SVG overuse, empty/plain backgrounds, text-only frames, no icons/charts/support actors, no real-world texture, unbound keywords, screenshots that do not guide attention, flat whole-sentence text, flower text that vanishes without a director reason, decorative text that hides proof, constant density, transition hard cuts with no anchor, preset calls with no semantic purpose, Review Studio seek-contract failures, GSAP target warnings, and emotion beats overloaded with evidence.
 
 Load `references/director-quality-review.md` when diagnosing or revising.
 

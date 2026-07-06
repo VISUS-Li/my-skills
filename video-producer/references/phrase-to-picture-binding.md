@@ -53,6 +53,65 @@ Rules:
 - A number can be the frame's hero. Do not hide it in subtitle size.
 - Comments and social reactions can appear like stickers or stacked cards, but keep source and privacy considerations.
 
+## Text Span Contract
+
+Use `text_manifest.json` as the contract for expressive text. A text item may remain a single unit, or it may include `spans` when narration needs keyword-level or word-level emphasis.
+
+Recommended optional fields:
+
+- `sync_phrase`: spoken phrase that triggers the item or span.
+- `attach_to`: asset/component/detail ID such as `ref_app_ad_slot`, `chart_price_line`, or `hf_red_box`.
+- `hierarchy`: `caption`, `support`, `keyword`, `hero`, `sticker`, or `viewpoint`.
+- `motion_preset_id`: named entrance/exit/combo preset from `micro_animation_palette.json`.
+- `text_preset_id`: named text styling preset from `micro_animation_palette.json`.
+- `emphasis_level`: `low`, `medium`, `high`, or `hero`.
+- `avoid_zones`: proof details the text must not cover, such as `source_label`, `table_header`, `chart_axis`, or a concrete `must_show_detail`.
+- `persistence_policy`: `hold`, `yield_to_side`, `store_as_chip`, `shrink_stack`, or `exit_intentional`.
+- `previous_text_behavior`: how the prior expressive text should yield when a new phrase enters.
+
+Example shape:
+
+```json
+{
+  "id": "text_price_reason",
+  "text": "不是涨价，是成本被推上去了",
+  "role": "keyword",
+  "beat_id": "B006",
+  "start_sec": 12.4,
+  "end_sec": 14.2,
+  "attach_to": "chart_cost_line",
+  "motion_preset_id": "text.keyword_pop",
+  "spans": [
+    {"text": "不是涨价", "sync_phrase": "不是涨价", "hierarchy": "support", "style": "small_dark"},
+    {"text": "成本", "sync_phrase": "成本", "hierarchy": "hero", "text_preset_id": "text.stroke_shadow_hot"},
+    {"text": "推上去了", "sync_phrase": "推上去了", "hierarchy": "keyword", "motion_preset_id": "text.short_slide_down"}
+  ]
+}
+```
+
+Do not force spans into every caption. Use spans when mixed hierarchy, timing, or visual attachment makes the beat clearer.
+
+## Flower Text and Persistence
+
+For Chinese social/explainer videos, expressive text should behave more like edited "flower words" than subtitles. The director should prefer:
+
+- keyword-level or word-level hierarchy over a whole sentence in one box;
+- live text stroke, outline, shadow, gradient fill, underline, or per-word color over paragraph-level borders;
+- one or two hero words that become much larger than support words;
+- character or span timing when the spoken rhythm has a clear hit;
+- no backing card when outline/stroke/color is enough;
+- a backing sticker/pill only when it improves readability or intentionally feels like a label.
+
+When the next flower text appears, the default is not to delete the previous one. Choose one of these behaviors:
+
+- `yield_to_side`: previous text shrinks and moves to a side/corner to make room.
+- `store_as_chip`: previous text becomes a small memory chip or evidence tag.
+- `shrink_stack`: previous text joins a vertical stack of earlier claims.
+- `hold`: previous text stays in place because it is still the focal owner.
+- `exit_intentional`: previous text leaves only when the beat function needs a clean reset, proof readability, or emotional silence.
+
+Example: for "被 WPS 背刺了", do not render one same-size bordered sentence. Make "WPS" a hero span, thicken/stroke it, and let "被" / "背刺了" support it with different scale, color, or timing. If the next phrase enters, shrink the whole line into a side chip unless the director explicitly marks `exit_intentional`.
+
 ## Screenshot and Evidence Acting
 
 Evidence is an actor with a performance:

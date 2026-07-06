@@ -1,14 +1,178 @@
 {
-  "version": "v001",
+  "version": "v002",
+  "policy": {
+    "renderer": "hyperframes_gsap",
+    "preset_ids_are_semantic_contracts": true,
+    "preset_usage_is_optional": true,
+    "do_not_cover_must_show_detail": true,
+    "bind_to_vo_timing": true
+  },
   "motion_tokens": {
-    "ui_tap": {"duration_sec": 0.12, "easing": "entrance productive", "sfx": "short click"},
-    "card_snap_in": {"duration_sec": 0.32, "easing": "standard productive", "sfx": "paper/card snap"},
-    "stamp_hit": {"duration_sec": 0.18, "easing": "exit expressive", "sfx": "rubber stamp thud"},
-    "arrow_pulse": {"duration_sec": 0.42, "easing": "standard productive", "sfx": "soft data tick"},
-    "line_draw": {"duration_sec": 0.55, "easing": "entrance productive", "sfx": "fine pen draw"},
-    "gauge_fill": {"duration_sec": 0.9, "easing": "standard productive", "sfx": "rising ticks"},
-    "success_badge": {"duration_sec": 0.28, "easing": "entrance expressive", "sfx": "light chime"},
-    "scene_whip": {"duration_sec": 0.45, "easing": "standard expressive", "sfx": "controlled whoosh"},
-    "camera_push": {"duration_sec": 0.8, "easing": "standard productive", "sfx": "subtle airy move"}
+    "ui_tap": {"duration_sec": 0.12, "easing": "power2.out", "sfx": "short click"},
+    "card_snap_in": {"duration_sec": 0.32, "easing": "back.out(1.2)", "sfx": "paper/card snap"},
+    "stamp_hit": {"duration_sec": 0.18, "easing": "back.out(1.5)", "sfx": "rubber stamp thud"},
+    "arrow_pulse": {"duration_sec": 0.42, "easing": "power2.out", "sfx": "soft data tick"},
+    "line_draw": {"duration_sec": 0.55, "easing": "power2.out", "sfx": "fine pen draw"},
+    "gauge_fill": {"duration_sec": 0.9, "easing": "power2.inOut", "sfx": "rising ticks"},
+    "success_badge": {"duration_sec": 0.28, "easing": "back.out(1.3)", "sfx": "light chime"},
+    "scene_whip": {"duration_sec": 0.45, "easing": "power3.inOut", "sfx": "controlled whoosh"},
+    "camera_push": {"duration_sec": 0.8, "easing": "power2.out", "sfx": "subtle airy move"}
+  },
+  "motion_presets": {
+    "entrance.soft_fade": {
+      "category": "entrance",
+      "duration_sec": 0.28,
+      "gsap_from": {"opacity": 0},
+      "gsap_to": {"opacity": 1},
+      "easing": "power2.out",
+      "best_for": ["source_label", "quiet_viewpoint", "timestamp"],
+      "avoid_for": ["high_impact_keyword", "shock_hook"]
+    },
+    "entrance.short_slide_down": {
+      "category": "entrance",
+      "duration_sec": 0.32,
+      "params": {"distance_px": 28},
+      "gsap_from": {"opacity": 0, "y": -28},
+      "gsap_to": {"opacity": 1, "y": 0},
+      "easing": "power3.out",
+      "best_for": ["keyword", "column_label", "chapter_label"]
+    },
+    "entrance.source_card_settle": {
+      "category": "entrance",
+      "duration_sec": 0.42,
+      "params": {"distance_px": 42, "scale_from": 0.98},
+      "easing": "power3.out",
+      "best_for": ["screenshot", "document_card", "evidence_stack"],
+      "note": "Card enters; inner screenshot should remain readable and stable after settle."
+    },
+    "exit.soft_store": {
+      "category": "exit",
+      "duration_sec": 0.35,
+      "params": {"scale_to": 0.72, "opacity_to": 0.78},
+      "easing": "power2.inOut",
+      "best_for": ["evidence_stack", "source_card", "quote_card"]
+    },
+    "combo.blur_scale_in": {
+      "category": "combo",
+      "duration_sec": 0.36,
+      "params": {"scale_from": 0.92, "blur_px": 8},
+      "gsap_from": {"opacity": 0, "scale": 0.92, "filter": "blur(8px)"},
+      "gsap_to": {"opacity": 1, "scale": 1, "filter": "blur(0px)"},
+      "easing": "power3.out",
+      "best_for": ["quote_card", "contrast_label", "data_chip"],
+      "avoid_for": ["small_table_text", "source_url"]
+    },
+    "combo.focus_lock": {
+      "category": "combo",
+      "duration_sec": 0.24,
+      "params": {"pulse_scale": 1.04},
+      "easing": "back.out(1.4)",
+      "best_for": ["red_box", "focus_ring", "must_show_detail"],
+      "sfx": "tick_or_stamp"
+    },
+    "text.keyword_pop": {
+      "category": "text",
+      "duration_sec": 0.22,
+      "params": {"scale_from": 0.82, "overshoot": 1.08},
+      "easing": "back.out(1.6)",
+      "best_for": ["spoken_keyword", "warning_word", "contrast_word"],
+      "sync": "land_on_sync_phrase"
+    },
+    "text.short_slide_down": {
+      "category": "text",
+      "duration_sec": 0.3,
+      "params": {"distance_px": 24},
+      "easing": "power3.out",
+      "best_for": ["support_span", "column_label", "line_by_line_viewpoint"]
+    },
+    "text.number_slam": {
+      "category": "text",
+      "duration_sec": 0.26,
+      "params": {"scale_from": 1.35, "settle_scale": 1},
+      "easing": "back.out(1.25)",
+      "best_for": ["number_hero", "price", "percentage", "rank"],
+      "sfx": "low_hit_or_tick"
+    },
+    "text.line_by_line_reveal": {
+      "category": "text",
+      "duration_sec": 0.45,
+      "params": {"stagger_sec": 0.18},
+      "easing": "power2.out",
+      "best_for": ["viewpoint_line", "final_judgment", "quiet_reset"]
+    },
+    "reactive.yield_left": {
+      "category": "reactive",
+      "duration_sec": 0.38,
+      "params": {"entrant_from": "right", "yield_x_pct": -6, "max_shift_pct": 8},
+      "easing": "power3.out",
+      "best_for": ["keyword_enters_next_to_proof", "magnifier_enters", "side_insert"],
+      "guardrail": "Only shift proof if source labels and must_show_detail stay readable."
+    },
+    "reactive.yield_down": {
+      "category": "reactive",
+      "duration_sec": 0.38,
+      "params": {"entrant_from": "top", "yield_y_pct": 5, "max_shift_pct": 8},
+      "easing": "power3.out",
+      "best_for": ["top_label_enters", "hero_number_above_chart"],
+      "guardrail": "Do not push table headers or chart axes out of frame."
+    },
+    "text.yield_to_corner": {
+      "category": "text_store",
+      "duration_sec": 0.38,
+      "params": {"scale_to": 0.58, "opacity_to": 0.72, "corner": "top_right"},
+      "easing": "power3.inOut",
+      "best_for": ["previous_flower_text", "context_keyword", "claim_memory"],
+      "guardrail": "Use when the previous keyword should stay as context while the new phrase becomes hero."
+    },
+    "text.store_as_chip": {
+      "category": "text_store",
+      "duration_sec": 0.32,
+      "params": {"scale_to": 0.42, "opacity_to": 0.82},
+      "easing": "power2.inOut",
+      "best_for": ["earlier_claim", "evidence_tag", "side_memory_stack"],
+      "guardrail": "Do not store text so small that Chinese characters become unreadable."
+    },
+    "text.character_color_hit": {
+      "category": "text",
+      "duration_sec": 0.34,
+      "params": {"stagger_sec": 0.035, "scale_from": 0.88},
+      "easing": "back.out(1.4)",
+      "best_for": ["short_flower_word", "wordplay", "anger_or_shock_phrase"],
+      "guardrail": "Use character-level color sparingly; preserve readability."
+    }
+  },
+  "text_presets": {
+    "text.source_label": {
+      "style": {"font_weight": 700, "fill": "#f8fafc", "shadow": "0 1px 8px rgba(0,0,0,.35)"},
+      "best_for": ["timestamp", "source", "small_evidence_label"]
+    },
+    "text.stroke_shadow_hot": {
+      "style": {"font_weight": 900, "fill": "#ff2f2f", "stroke": "#ffffff", "stroke_width_px": 4, "shadow": "0 8px 20px rgba(120,0,0,.22)"},
+      "best_for": ["keyword", "warning", "final_emphasis"],
+      "guardrail": "Use for one or two words, not whole captions."
+    },
+    "text.contrast_pair": {
+      "style": {"font_weight": 850, "fill_left": "#334155", "fill_right": "#e11d48", "backing": "small_pill_or_none"},
+      "best_for": ["before_after", "normal_vs_vip", "official_vs_user"]
+    },
+    "text.viewpoint_quiet": {
+      "style": {"font_weight": 800, "fill": "#ffffff", "tracking": 0, "background": "black_or_quiet_footage"},
+      "best_for": ["viewpoint", "reset", "emotional_landing"]
+    },
+    "text.outline_pop_no_box": {
+      "style": {"font_weight": 950, "fill": "#111827", "stroke": "#ffffff", "stroke_width_px": 5, "shadow": "0 10px 24px rgba(15,23,42,.24)", "backing": "none"},
+      "best_for": ["flower_word", "keyword_without_card", "capcut_style_outline"],
+      "guardrail": "Prefer for one emphasized phrase when a paragraph-level border would feel heavy."
+    },
+    "text.hero_brand_contrast": {
+      "style": {"font_weight": 950, "fill": "#e11d48", "stroke": "#ffffff", "stroke_width_px": 5, "support_fill": "#334155", "backing": "none"},
+      "best_for": ["brand_name_in_phrase", "company_keyword", "product_keyword"],
+      "guardrail": "Make the brand/product span hero-sized while support words stay smaller."
+    },
+    "text.multi_color_chars": {
+      "style": {"font_weight": 900, "fill_sequence": ["#e11d48", "#2563eb", "#f59e0b", "#111827"], "stroke": "#ffffff", "stroke_width_px": 3, "backing": "none"},
+      "best_for": ["short_phrase", "high_energy_hook", "character_level_hit"],
+      "guardrail": "Only for short words or phrases; do not turn long captions into confetti."
+    }
   }
 }

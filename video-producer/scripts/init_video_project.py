@@ -121,6 +121,9 @@ def scaffold_segment(root: Path, segment_id: str = "S001", *, force: bool = Fals
         rebuild_dst.parent.mkdir(parents=True, exist_ok=True)
         rebuild_dst.write_text(rebuild_src.read_text(encoding="utf-8"), encoding="utf-8")
 
+    if seg == "S001":
+        copy_template("build_s001_composition.py", root / "scripts" / "build_s001_composition.py", force=force)
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Initialize a staged video production project with art direction, sound design, and quality gates.")
@@ -159,6 +162,7 @@ def main() -> int:
         "design/references",
         "design/styleframes",
         "segments",
+        "scripts",
         "assets/icons",
         "assets/images",
         "assets/screenshots",

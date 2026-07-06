@@ -29,6 +29,32 @@ Let content need choose the material:
 - Use **ambient texture** to create a visual world: grid, grain, desk, map, UI grid, soft light, shadow. It is not evidence, but it prevents empty frames.
 - Use **silence/pause/SFX** to make actions land: screenshot paste-in, red-box lock, number jump, stamp, or black-screen reset.
 
+## Director Casting Principle
+
+Treat each beat like a small scene with casting and blocking:
+
+- **Lead actor:** the one thing the viewer must follow now: proof screenshot, face, product, number, chart endpoint, keyword, hand action, document line, or empty silence.
+- **Supporting actors:** optional helpers such as icons, chips, source cards, cards, cursors, labels, ambient grids, stickers, or SFX. Cast them only when they clarify, add rhythm, or guide attention.
+- **Background world:** optional but usually helpful for normal explainer beats. It can be a grid, desk, source wall, UI surface, street texture, dark reset, or nothing, depending on the scene.
+- **Negative space:** also a director choice. Use it for suspense, emotional landing, viewpoint, or to protect readable proof. Do not use it because no visual idea was chosen.
+- **Animation:** movement should express action, attention, comparison, transfer, pressure, or transition. Do not animate every layer just to avoid stillness.
+- **Text persistence:** when a new keyword/flower-word enters, decide what happens to the previous one: hold, shrink, move aside, stack, store as chip, or exit. Accidental disappearance is not a director decision.
+
+No actor type is required in every beat. No actor type is forbidden in every beat. The director's job is to decide what earns screen time, what stays off screen, and when a previous actor should yield focus to a new one.
+
+## Director-To-Implementation Handoff
+
+Before any segment code is written, the director plan must name:
+
+- the `visual_cast` for complex beats: lead actor, support actors, withheld actors, and reason;
+- `text_treatment` and `text_manifest` IDs for expressive text, including span-level emphasis when useful;
+- `previous_text_behavior` for sequential flower text;
+- `motion_preset_id` / `text_preset_id` for common moves;
+- `must_show_detail` and `avoid_zones` whenever text or reactive displacement is near proof;
+- the standard builder target: `scripts/build_<segment>_composition.py`.
+
+Do not skip directly from script to `index.html`. If the implementation has no `visual_sync_plan`, `beat_timeline`, `text_manifest`, and `micro_animation_palette` mapping, it is not director-led.
+
 ## Visual World Requirement
 
 Do not let HyperFrames-native scenes collapse into text on an empty background. For most explanation/evidence/data beats, build a designed world:
@@ -75,4 +101,4 @@ Ask this before asset generation:
 
 ## Anti-Template Rule
 
-Do not force every beat to have the same number of layers, the same red box, the same card, or the same transition. A mature edit varies density and material language according to section function, while maintaining a coherent visual world.
+Do not force every beat to have the same number of layers, the same red box, the same card, the same actor type, or the same transition. A mature edit varies density, material language, layout, and motion according to section function, while maintaining a coherent visual world. The failure mode is not "too few elements" or "too many elements" in isolation; the failure is using elements without a director reason, or leaving the frame empty when the script needs visual work.
