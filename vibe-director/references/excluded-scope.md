@@ -17,7 +17,7 @@ Version 1 focuses on pure-code knowledge videos and director orchestration.
 
 Keep these as future integrations, not v1 requirements:
 
-- TTS provider integration.
+- Additional TTS provider integrations beyond the IndexTTS2 workflow.
 - Foley or SFX generation.
 - Raw footage editing.
 - AI video model B-roll.

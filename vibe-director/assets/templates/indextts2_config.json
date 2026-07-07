@@ -1,0 +1,35 @@
+{
+  "version": "v001",
+  "base_url": "http://10.0.221.33:37191/",
+  "webui_url": "http://10.0.221.33:37191/",
+  "api_endpoint": "/gen_single",
+  "emotion_control_method": "Same as the voice reference",
+  "voice_reference": {
+    "path": "audio/refs/narrator_ref.wav",
+    "source": "user recording or IndexTTS2 built-in example",
+    "example_index": 3,
+    "notes": "5-10s clean clip; validate RIFF header before batch"
+  },
+  "defaults": {
+    "emo_weight": 0.65,
+    "emo_random": false,
+    "max_text_tokens_per_segment": 120,
+    "do_sample": true,
+    "top_p": 0.8,
+    "top_k": 30,
+    "temperature": 0.8,
+    "length_penalty": 0.0,
+    "num_beams": 3,
+    "repetition_penalty": 10.0,
+    "max_mel_tokens": 1500
+  },
+  "segment_emotion_vectors": {
+    "S001": {"calm": 0.55, "surprised": 0.15},
+    "default": {"calm": 0.65}
+  },
+  "notes": [
+    "Discover API: curl -s BASE/gradio_api/info",
+    "Batch: python scripts/indextts2_generate.py . --segment S001 --concat",
+    "Then: python scripts/measure_segment_vo.py . S001"
+  ]
+}

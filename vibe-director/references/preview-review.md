@@ -37,6 +37,7 @@ Artifacts:
 - Scene preview.
 - `contact-sheet.jpg`.
 - `scene_spec.json`.
+- If voiced: beat WAVs, `segments/<SEGMENT>/vo_timing.json`, and timing notes.
 - `qa.md`.
 
 Review:
@@ -45,6 +46,7 @@ Review:
 - Captions are readable and do not cover the main object.
 - Visual metaphor is clear.
 - Preview duration is within 10 percent of spec.
+- If voiced, animation timing follows measured voiceover rather than planned text duration.
 
 ## Checkpoint 4: Whole Video
 

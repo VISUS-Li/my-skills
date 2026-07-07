@@ -29,6 +29,7 @@ The full video must pass:
 - No long static slides.
 - Captions are readable on mobile.
 - SFX cues are declared even if not implemented.
+- If voiced, IndexTTS2 progress completed and measured VO timing exists.
 - Renderer choices are justified.
 - All previews have contact sheets or equivalent visual review artifacts.
 - `storyboard.json` and scene specs stay synchronized.

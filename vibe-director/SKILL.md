@@ -1,6 +1,6 @@
 ---
 name: vibe-director
-description: pure-code video director skill for creating storyboard-driven, highly animated explainer videos with codex or claude code. use when the user wants to create, plan, storyboard, review, or render short-form videos using remotion, hyperframes, gsap, svg, canvas, three.js, manim, ffmpeg, or reusable agent skills such as vibe-motion. prioritizes director-level scripting, shot planning, effect selection, preview review, and qa while avoiding black-box text-to-video models unless explicitly requested.
+description: pure-code video director skill for creating storyboard-driven, highly animated explainer videos with codex or claude code. use when the user wants to create, plan, storyboard, voice, review, or render short-form videos using remotion, hyperframes, gsap, svg, canvas, three.js, manim, ffmpeg, IndexTTS2 voiceover, or reusable agent skills such as vibe-motion. prioritizes director-level scripting, shot planning, effect selection, TTS timing alignment, preview review, and qa while avoiding black-box text-to-video models unless explicitly requested.
 ---
 
 # Vibe Director
@@ -14,9 +14,10 @@ Use this skill as a lightweight director layer for pure-code explainer videos. T
 3. Produce `storyboard.json` plus a human-readable `shotlist.md`.
 4. Produce `scene_spec.json` for each scene before writing animation code.
 5. Select renderer and effects from references instead of inventing code first.
-6. Generate one scene preview, contact sheet, and scene QA before scaling to the whole video.
-7. Ask for human review at checkpoints unless the user explicitly asks for a fast automated run.
-8. Render full preview, create contact sheets or montage, run QA, fix, then final render.
+6. When voiceover is needed, prepare IndexTTS2 config, `script/narration_beats.csv`, beat WAVs, and measured voice timing before locking animation duration.
+7. Generate one scene preview, contact sheet, and scene QA before scaling to the whole video.
+8. Ask for human review at checkpoints unless the user explicitly asks for a fast automated run.
+9. Render full preview, create contact sheets or montage, run QA, fix, then final render.
 
 Never start by writing full animation code. First make the narrative structure, visual metaphors, storyboard, renderer choices, and motion beats inspectable.
 
@@ -39,6 +40,7 @@ Prefer existing skills and component banks:
 - Read `references/effect-registry.md` when selecting effect candidates.
 - Read `references/style-presets.md` for Chinese short-video visual presets, especially `zheda-cat-git-motion` and `ai-chapingjun-system-explainer`.
 - Read `references/preview-review.md` before deciding whether to pause for review.
+- Read `references/tts-indextts.md` when generating or aligning IndexTTS2 narration.
 - Read `references/qa-checklist.md` before accepting a scene preview or final preview.
 - Read `references/excluded-scope.md` when the task drifts into black-box video generation, raw footage editing, or social publishing.
 

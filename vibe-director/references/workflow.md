@@ -53,7 +53,32 @@ Use `renderer-selection.md`:
 
 Use `effect-registry.md` before custom code. Put candidates into `effectCandidates`, including a short reason for empty candidates in `notes`.
 
-## 7. Preview Generation
+## 7. Voiceover And Timing
+
+When the video needs narration, use `tts-indextts.md` after scene specs and before locking preview timing.
+
+Create or update:
+
+- `audio/indextts2_config.json`.
+- `audio/refs/narrator_ref.wav`.
+- `script/narration_beats.csv`.
+- Optional `audio/prosody_plan.csv`.
+
+Generate voiceover:
+
+```bash
+python scripts/indextts2_generate.py . --segment S001 --concat
+```
+
+Then measure actual voice duration:
+
+```bash
+python scripts/measure_segment_vo.py . S001
+```
+
+Use `segments/S001/vo_timing.json` to align storyboard scene timing, scene specs, captions, and renderer timelines. Do not rely on equal shot splits after real TTS exists.
+
+## 8. Preview Generation
 
 Preview one representative scene first. Save:
 
@@ -63,19 +88,19 @@ Preview one representative scene first. Save:
 
 Then scale to more scenes.
 
-## 8. Human Review
+## 9. Human Review
 
 Default to review checkpoints unless the user explicitly asks for full automation. Use the pattern: ask, confirm, execute, self-evaluate, persist.
 
-## 9. Full Preview
+## 10. Full Preview
 
 Assemble `preview.mp4` before final. Generate `verify/montage.jpg` or per-scene contact sheets.
 
-## 10. QA
+## 11. QA
 
 Use `qa-checklist.md`. Check for slide-like scenes, stale frames, missing visual metaphors, captions covering main objects, renderer misuse, mismatched durations, abrupt shot boundaries, and storyboard/spec drift.
 
-## 11. Fix And Final Render
+## 12. Fix And Final Render
 
 Fix failed scenes, update `storyboard.json` and scene specs, rerender previews, rerun QA, then render `final.mp4`.
 
@@ -86,6 +111,8 @@ video-project/
 ├── project.md
 ├── brief.md
 ├── script.md
+├── script/
+│   └── narration_beats.csv
 ├── section_plan.md
 ├── storyboard.json
 ├── shotlist.md
@@ -101,6 +128,11 @@ video-project/
 ├── assets/
 ├── captions/
 ├── audio/
+│   ├── indextts2_config.json
+│   ├── refs/
+│   │   └── narrator_ref.wav
+│   └── stems/
+│       └── voice/
 ├── verify/
 │   ├── montage.jpg
 │   ├── scene_contact_sheets/

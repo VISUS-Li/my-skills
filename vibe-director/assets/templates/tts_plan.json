@@ -1,0 +1,29 @@
+{
+  "version": "v002-indextts2",
+  "provider": "indextts2",
+  "base_url": "http://10.0.221.33:37191/",
+  "config_file": "audio/indextts2_config.json",
+  "fallback_provider": null,
+  "language": "zh-CN",
+  "voice": "reference-clone",
+  "voice_reference": "audio/refs/narrator_ref.wav",
+  "model": "IndexTTS 2.0",
+  "format": "wav",
+  "sample_rate_hz": 48000,
+  "ai_voice_disclosure_required": true,
+  "disclosure_text": "本视频口播由 AI 语音合成",
+  "output_dir": "audio/stems/voice/beats",
+  "master_file": "audio/stems/voice/voiceover_full.wav",
+  "generation_script": "scripts/indextts2_generate.py",
+  "chars_per_sec_target": 5,
+  "chars_per_sec_band": [4, 6],
+  "sync_protocol": "measure_segment_vo.py -> build_micro_timing.py -> segment HTML",
+  "segments": [],
+  "source_script": "script/voiceover.md",
+  "beat_timing_source": "script/narration_beats.csv",
+  "notes": [
+    "Generate: python scripts/indextts2_generate.py . --segment S001 --concat",
+    "Measure: python scripts/measure_segment_vo.py . S001",
+    "Never use equal shot splits for clip duration"
+  ]
+}
