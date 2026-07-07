@@ -1,7 +1,7 @@
 {
   "version": "v001",
-  "base_url": "http://127.0.0.1:7860/",
-  "webui_url": "http://127.0.0.1:7860/",
+  "base_url": "http://10.0.221.33:37191/",
+  "webui_url": "http://10.0.221.33:37191/",
   "api_endpoint": "/gen_single",
   "emotion_control_method": "Same as the voice reference",
   "voice_reference": {

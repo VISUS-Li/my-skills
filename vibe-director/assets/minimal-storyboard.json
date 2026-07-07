@@ -1,0 +1,56 @@
+{
+  "video": {
+    "title": "Git is a time machine",
+    "platform": "douyin",
+    "aspectRatio": "9:16",
+    "resolution": "1080x1920",
+    "fps": 30,
+    "targetDurationSec": 6,
+    "stylePreset": "zheda-cat-git-motion",
+    "sourceMode": "topic"
+  },
+  "sections": [
+    {
+      "id": "sec_01",
+      "role": "hook",
+      "narrativeGoal": "Reframe Git as history travel instead of a save button.",
+      "durationSec": 6
+    }
+  ],
+  "scenes": [
+    {
+      "id": "s001",
+      "sectionId": "sec_01",
+      "startSec": 0,
+      "durationSec": 3,
+      "narration": "Git is not a save button.",
+      "onScreenText": "Not a save button",
+      "visualMetaphor": "A save icon cracks while a commit graph starts growing behind it.",
+      "shotType": "diagram",
+      "renderer": "hyperframes",
+      "effectCandidates": ["GSAP DrawSVG / MorphSVG / MotionPath / ScrambleText"],
+      "assetsNeeded": [],
+      "sfxCues": ["soft crack"],
+      "status": "draft",
+      "previewPath": "",
+      "notes": "Use HTML/SVG for quick preview."
+    },
+    {
+      "id": "s002",
+      "sectionId": "sec_01",
+      "startSec": 3,
+      "durationSec": 3,
+      "narration": "It is a time machine for your code.",
+      "onScreenText": "Time machine for code",
+      "visualMetaphor": "A cursor scrubs along a commit graph and the editor rewinds to earlier states.",
+      "shotType": "code-demo",
+      "renderer": "remotion",
+      "effectCandidates": ["vibe-motion/claude-typer", "vibe-motion/ruler-progress-render"],
+      "assetsNeeded": [],
+      "sfxCues": ["timeline tick"],
+      "status": "planned",
+      "previewPath": "",
+      "notes": "Remotion is preferred because editor state and graph timing should stay linked."
+    }
+  ]
+}
