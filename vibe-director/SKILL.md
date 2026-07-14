@@ -9,7 +9,8 @@ Use this skill as a lightweight director layer for pure-code explainer videos. T
 
 ## Default Workflow
 
-1. Identify the input mode: topic, script, article, notes, SRT, or existing storyboard.
+1. Identify the input mode: topic, script, article, notes, SRT, video URL/file, or existing storyboard.
+   - If the user provides a YouTube / Bilibili / Douyin / local video and needs spoken content, run sibling skill `subtitle-extractor` first, then continue in `srt` intake mode with `outputs/subtitles/*.srt`.
 2. Draft or refine `script.md` and `section_plan.md`.
 3. Produce `storyboard.json` plus a human-readable `shotlist.md`.
 4. Produce `scene_spec.json` for each scene before writing animation code.

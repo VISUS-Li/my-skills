@@ -11,7 +11,14 @@ Classify the source:
 - `article`: extract claims, examples, and proof.
 - `notes`: organize raw material into a narrative.
 - `srt`: preserve timing where possible and group subtitles into scenes.
+- `video-url` / `video-file`: run sibling `subtitle-extractor` to produce `outputs/subtitles/*.srt`, then continue as `srt`.
 - `existing-storyboard`: validate, enrich, and route to renderers.
+
+For `video-url` / `video-file`:
+
+```bash
+python ../subtitle-extractor/scripts/extract_subtitles.py "<url-or-file>" -o outputs/subtitles --lang zh
+```
 
 Capture title, platform, aspect ratio, duration target, audience, style preset, must-show concepts, forbidden claims, available assets, and whether the user wants checkpoints or full automation.
 

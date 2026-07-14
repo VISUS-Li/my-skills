@@ -1,6 +1,6 @@
 ---
 name: video-producer
-description: "Chinese AI/developer-tool video director skill for Codex, Claude Code, and Cursor. Use when producing, researching, scripting, revising, reviewing, or rendering short videos that need deep research, factual source locking, narrative depth, narration-beat timing, shot grammar, screenshots/code/terminal/UI proof choreography, motion design, sound cues, subtitles/flower text, Remotion/HyperFrames/vibe-motion/Motion Canvas/GSAP/FFmpeg/TTS routing, first-slice preview, and review-studio QA."
+description: "Chinese AI/developer-tool video director skill for Codex, Claude Code, and Cursor. Use when producing, researching, scripting, revising, reviewing, or rendering short videos that need deep research, factual source locking, narrative depth, narration-beat timing, shot grammar, screenshots/code/terminal/UI proof choreography, motion design, sound cues, subtitles/flower text, Remotion/HyperFrames/vibe-motion/Motion Canvas/GSAP/FFmpeg/TTS routing, first-slice preview, and review-studio QA. Delegates reference YouTube/Bilibili/Douyin/local transcript extraction to subtitle-extractor."
 ---
 
 # Video Producer
@@ -46,6 +46,7 @@ For each shot, decide the best owner:
 - **vibe-motion or specific motion skills**: render a high-quality reusable effect, procedural scene, globe/route/ticker/assembly motion, or other slot when an installed skill already matches the shot.
 - **Motion Canvas / SVG / GSAP**: build precise instructional diagrams, Git graphs, timelines, branches, flow maps, arrows, red boxes, morphs, and metaphor objects.
 - **FFmpeg / audio tools / TTS**: measure voice, build contact sheets, mix/duck SFX, stitch local renders, transcode, and package delivery.
+- **subtitle-extractor**: when the user supplies a reference YouTube / Bilibili / Douyin / local video and you need spoken text or timed cues, delegate extraction first. Do not invent transcripts.
 
 When a shot is delegated, record the slot in `segment_spec.json`:
 
@@ -81,22 +82,36 @@ outputs/
 ## Required Workflow
 
 1. Understand the target video, audience, reference style, format, duration, and available proof assets.
-2. If the topic needs facts, judgment, product analysis, web evidence, or a non-shallow argument, run the deep research/script loop in `references/deep-research-and-script.md` before beat planning.
-3. Choose one style preset from `references/style-dna.md`, then select 3-5 shot recipes from `references/shot-grammar.md`.
-4. Write `outputs/script.md` and `outputs/beat_plan.json` with second-level narration beats.
-5. Write `outputs/segment_spec.json` for the first 20-30 seconds only. Each shot must include renderer/skill ownership, start/end time, camera, visual owner, action list, text strategy, transition reason, and acceptance notes.
-6. Write `outputs/audio_cue_sheet.json` from beat keywords and visual actions. Do not add SFX that lack visible motivation.
-7. Validate the plan:
+2. If the user provides a reference video URL or local media and you need its spoken content, timing, or quoteable lines, run `subtitle-extractor` before beat planning:
+
+```bash
+python ../subtitle-extractor/scripts/extract_subtitles.py "<url-or-file>" -o outputs/subtitles --lang zh
+```
+
+Write a delegation note when used:
+
+```json
+"delegation": {"skill": "subtitle-extractor", "purpose": "timed transcript from reference video", "input_artifacts": ["inputs/reference.url"], "output_artifacts": ["outputs/subtitles/*.srt", "outputs/subtitles/*.json"], "acceptance": "non-empty timed segments"}
+```
+
+Prefer soft/auto captions over ASR. Feed `outputs/subtitles/*.txt` / segments into research and script; treat cue times as hints only and re-measure after TTS.
+
+3. If the topic needs facts, judgment, product analysis, web evidence, or a non-shallow argument, run the deep research/script loop in `references/deep-research-and-script.md` before beat planning.
+4. Choose one style preset from `references/style-dna.md`, then select 3-5 shot recipes from `references/shot-grammar.md`.
+5. Write `outputs/script.md` and `outputs/beat_plan.json` with second-level narration beats.
+6. Write `outputs/segment_spec.json` for the first 20-30 seconds only. Each shot must include renderer/skill ownership, start/end time, camera, visual owner, action list, text strategy, transition reason, and acceptance notes.
+7. Write `outputs/audio_cue_sheet.json` from beat keywords and visual actions. Do not add SFX that lack visible motivation.
+8. Validate the plan:
 
 ```bash
 python scripts/validate_segment_spec.py outputs/segment_spec.json
 python scripts/score_preview_plan.py --outputs outputs
 ```
 
-8. Render only the first slice with the selected renderer(s) or delegated skill slots. Prefer the simplest renderer set that can make the slice rich enough.
-9. Build `outputs/review/contact_sheet.jpg` and `outputs/review/review-studio/`.
-10. Review the first slice. Fix the earliest responsible artifact: research, script, beat plan, segment spec, audio cues, assets, renderer implementation, or edit.
-11. After review passes, extend `segment_spec.json` and implementation to the full video.
+9. Render only the first slice with the selected renderer(s) or delegated skill slots. Prefer the simplest renderer set that can make the slice rich enough.
+10. Build `outputs/review/contact_sheet.jpg` and `outputs/review/review-studio/`.
+11. Review the first slice. Fix the earliest responsible artifact: research, script, beat plan, segment spec, audio cues, assets, renderer implementation, or edit.
+12. After review passes, extend `segment_spec.json` and implementation to the full video.
 
 When a new project is needed, create it on the user's Desktop by default. If Desktop is unavailable, create it under the user's home directory. Do not default to writing projects inside the skill repository.
 
@@ -186,6 +201,7 @@ Read `references/renderer-selection.md` before implementation.
 - Use GSAP/SVG for local expressive motion, keyword actors, arrows, red boxes, graph edges, morphs, and transitions.
 - Use FFmpeg for contact sheets, transcode, audio mix, trim, stitch, and delivery formats.
 - Use TTS/voice tools only after beat timing is inspectable; remeasure voice before locking animation.
+- Use `subtitle-extractor` for reference-video transcripts (YouTube / Bilibili / Douyin / local). It owns extraction only; Video Producer still owns beats, flower text, and burn-in.
 - When using another skill, pass only the slot contract, style preset, required assets, and expected output. Keep Video Producer responsible for the global timeline and final review.
 
 ## Review Studio
