@@ -13,6 +13,7 @@ if str(SCRIPTS) not in sys.path:
 
 from indextts2_connect import load_base_url  # noqa: E402
 from segment_timing_lint import lint_segment  # noqa: E402
+from beat_store import ensure_micro_timing  # noqa: E402
 from sync_segment_duration import sync_segment_duration  # noqa: E402
 from tts_progress import patch_progress, read_progress, write_progress  # noqa: E402
 
@@ -122,9 +123,8 @@ def main() -> int:
         return 1
 
     chain_progress(root, seg, phase="micro", message="对齐微事件…", percent=82)
-    if run_step("Build micro timing", [py, str(SCRIPTS / "build_micro_timing.py"), str(root), seg]).returncode != 0:
-        patch_progress(root, status="failed", phase="micro", message="微事件对齐失败", percent=82)
-        return 1
+    ensure_micro_timing(root, seg)
+    print("micro_timing ready")
 
     if not args.skip_sync:
         sync = sync_segment_duration(root, seg)

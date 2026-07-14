@@ -524,15 +524,23 @@ async function scanWorkspace() {
   toast(`扫描完成：${data.projects?.length || 0} 个项目`);
 }
 
+let switchingProject = false;
+
 async function switchProject(path) {
   if (!path) return toast("请选择或输入项目路径");
-  await api("/project/switch", { method: "POST", body: JSON.stringify({ path }) });
-  toast("项目已切换");
-  await afterProjectChange();
+  switchingProject = true;
+  try {
+    const data = await api("/project/switch", { method: "POST", body: JSON.stringify({ path }) });
+    renderWorkspaceControls(data);
+    toast("项目已切换");
+    await afterProjectChange({ skipWorkspace: true });
+  } finally {
+    switchingProject = false;
+  }
 }
 
-async function afterProjectChange() {
-  await loadWorkspace();
+async function afterProjectChange({ skipWorkspace = false } = {}) {
+  if (!skipWorkspace) await loadWorkspace();
   await refreshSegment();
   await loadProjectMeta();
   await refreshActiveView();
@@ -1751,7 +1759,9 @@ document.getElementById("sheet-backdrop")?.addEventListener("click", closeSheet)
     const ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/api/events`);
     ws.onmessage = (ev) => {
       const data = JSON.parse(ev.data);
-      if (data.type === "project_switched") afterProjectChange();
+      if (data.type === "project_switched" && !switchingProject) {
+        afterProjectChange({ skipWorkspace: true });
+      }
       if (data.type === "registry_updated" || data.type === "state_updated") loadProjectMeta();
       if (data.type === "job_progress") {
         renderJobs();

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Video Producer Audio Cue Sheet",
+  "type": "object",
+  "required": ["version", "cues"],
+  "properties": {
+    "version": { "type": "string" },
+    "cues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["cue_id", "at", "type", "visual_action", "mix_note"],
+        "properties": {
+          "cue_id": { "type": "string" },
+          "at": { "type": "number", "minimum": 0 },
+          "type": { "type": "string" },
+          "visual_action": { "type": "string" },
+          "asset": { "type": "string" },
+          "volume_db": { "type": "number" },
+          "mix_note": { "type": "string" }
+        }
+      }
+    }
+  }
+}

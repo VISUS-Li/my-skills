@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import csv
 import json
 import shutil
 import subprocess
@@ -22,7 +21,7 @@ except ImportError:
     raise
 
 from audio_ref_utils import convert_to_wav, is_riff_file, wav_path_for_ref  # noqa: E402
-from beat_csv_utils import narration_char_count  # noqa: E402
+from beat_store import char_count, default_segment as store_default_segment, duration_from_time, list_beats  # noqa: E402
 from indextts2_connect import check_indextts_url, connect_client, load_base_url, normalize_base_url  # noqa: E402
 from tts_progress import clear_progress, write_progress  # noqa: E402
 
@@ -93,21 +92,12 @@ def synthesize(client, ref, text: str, segment_id: str, cfg: dict, max_tokens: i
 
 
 def load_beats(root: Path, segment_id: str | None) -> list[dict]:
-    rows = []
-    with (root / "script/narration_beats.csv").open(encoding="utf-8-sig", newline="") as f:
-        for row in csv.DictReader(f):
-            if segment_id and row["segment_id"].upper() != segment_id.upper():
-                continue
-            rows.append(row)
-    return rows
+    seg = segment_id.upper() if segment_id else None
+    return list_beats(root, seg)
 
 
 def load_prosody(root: Path) -> dict[str, dict[str, str]]:
-    path = root / "audio" / "prosody_plan.csv"
-    if not path.exists():
-        return {}
-    with path.open(encoding="utf-8-sig", newline="") as f:
-        return {row.get("beat_id", ""): row for row in csv.DictReader(f) if row.get("beat_id")}
+    return {}
 
 
 def load_last_generated_text(root: Path) -> dict[str, str]:
@@ -404,7 +394,7 @@ def main() -> int:
             ))
             out = out_dir / f"{bid}.wav"
             p = prosody.get(bid, {})
-            text = (p.get("tts_text") or row["narration"]).strip()
+            text = (p.get("tts_text") or row.get("voice_text") or row.get("narration") or "").strip()
             if should_skip_existing_wav(
                 force=args.force,
                 wav_path=out,
@@ -421,7 +411,7 @@ def main() -> int:
             if out.exists() and out.stat().st_size > 1000 and not args.force:
                 print(f"regen {bid} (text changed)")
             seg = row["segment_id"]
-            max_tok = min(600, max(80, narration_char_count(row) * 3))
+            max_tok = min(600, max(80, char_count(text) * 3))
             pre = pause_ms(p, "pre_pause_ms")
             post = pause_ms(p, "post_pause_ms")
             print(f"gen {bid} ({len(text)} chars, pause {pre}+{post}ms)")

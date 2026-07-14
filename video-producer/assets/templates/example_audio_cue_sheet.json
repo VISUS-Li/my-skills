@@ -1,0 +1,69 @@
+{
+  "version": "1",
+  "cues": [
+    {
+      "cue_id": "c001",
+      "at": 0.2,
+      "type": "soft_pop",
+      "visual_action": "keyword_pop",
+      "volume_db": -16,
+      "mix_note": "Hit the hook keyword without covering the first syllable."
+    },
+    {
+      "cue_id": "c002",
+      "at": 2.4,
+      "type": "marker",
+      "visual_action": "redbox_focus",
+      "volume_db": -18,
+      "mix_note": "Marker lands exactly as the redbox finishes drawing."
+    },
+    {
+      "cue_id": "c003",
+      "at": 3.2,
+      "type": "keyboard_tick",
+      "visual_action": "terminal_command_typing",
+      "volume_db": -24,
+      "mix_note": "Short tick bed under the command only; keep narration clear."
+    },
+    {
+      "cue_id": "c004",
+      "at": 8.3,
+      "type": "whoosh",
+      "visual_action": "macro_scene_reset",
+      "volume_db": -15,
+      "mix_note": "Short transition cue into the dashboard room."
+    },
+    {
+      "cue_id": "c005",
+      "at": 12.0,
+      "type": "marker",
+      "visual_action": "screenshot_redbox_focus",
+      "volume_db": -18,
+      "mix_note": "Use a dry marker click; the proof is the main event."
+    },
+    {
+      "cue_id": "c006",
+      "at": 14.7,
+      "type": "node_pop",
+      "visual_action": "git_node_pop",
+      "volume_db": -19,
+      "mix_note": "Small pop per graph node, not a bass hit."
+    },
+    {
+      "cue_id": "c007",
+      "at": 18.0,
+      "type": "reverse_whoosh",
+      "visual_action": "timeline_rewind",
+      "volume_db": -17,
+      "mix_note": "Reverse cue motivates the repair loop."
+    },
+    {
+      "cue_id": "c008",
+      "at": 22.4,
+      "type": "stamp",
+      "visual_action": "conclusion_stamp",
+      "volume_db": -14,
+      "mix_note": "Strongest hit in the slice; leave a short tail for review."
+    }
+  ]
+}

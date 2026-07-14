@@ -448,94 +448,64 @@ def build_timeline_model(
             manifest_rows[aid] = item
 
     asset_clips: list[dict[str, Any]] = []
-    for plan in _read_csv(root / "segments" / seg / "beat_asset_plan.csv"):
-        beat_id = plan.get("beat_id", "")
-        vb = vo_beats.get(beat_id)
-        if not vb:
-            continue
-        start = float(vb.get("start_sec", 0))
-        dur = float(vb.get("duration_sec", 0))
-        if dur <= 0:
-            continue
-        end = round(start + dur, 3)
-        for col in ("primary_asset", "secondary_asset", "accent_asset", "ambient_asset"):
-            asset_id = (plan.get(col) or "").strip()
-            if not asset_id or asset_id.lower() == "none":
+    spec_path = root / "outputs" / "segment_spec.json"
+    if spec_path.exists():
+        spec = json.loads(spec_path.read_text(encoding="utf-8-sig"))
+        for shot in spec.get("shots", []) if isinstance(spec, dict) else []:
+            if not isinstance(shot, dict):
                 continue
-            meta = manifest_rows.get(asset_id, {})
-            asset_type = meta.get("type", "")
-            path_or_url = (meta.get("path_or_url") or "").strip()
-            programmatic = (
-                path_or_url in {"", "programmatic"}
-                or asset_type in PROGRAMMATIC_TYPES
-                or asset_id.startswith(("hf_", "text_", "chart_", "svg_", "ambient_"))
-            )
-            asset_clips.append({
-                "id": asset_id,
-                "beat_id": beat_id,
-                "start": round(start, 3),
-                "end": end,
-                "kind": asset_type or "asset",
-                "path": None if programmatic else path_or_url,
-                "programmatic": programmatic,
-                "role": col.replace("_asset", ""),
-            })
+            shot_start = float((shot.get("time") or [0, 0])[0])
+            shot_end = float((shot.get("time") or [0, 0])[1]) if isinstance(shot.get("time"), list) else shot_start
+            for action in shot.get("visual_actions", []):
+                if not isinstance(action, dict):
+                    continue
+                asset_id = (action.get("asset") or "").strip()
+                if not asset_id:
+                    continue
+                at = shot_start + float(action.get("at") or 0)
+                asset_clips.append({
+                    "id": asset_id,
+                    "beat_id": (shot.get("narration_beats") or [""])[0],
+                    "start": round(at, 3),
+                    "end": round(min(shot_end, at + 0.5), 3),
+                    "kind": action.get("type", "asset"),
+                    "path": asset_id,
+                    "programmatic": False,
+                    "role": "shot_action",
+                })
 
     micro_by_id = {
         str(ev.get("id") or ev.get("event_id")): ev
         for ev in micro_events
         if isinstance(ev, dict)
     }
+    plan_dur_by_beat = {
+        str(row.get("beat_id", "")): float(row.get("planned_sec") or row.get("duration_sec") or 1)
+        for row in beats
+    }
     event_clips: list[dict[str, Any]] = []
-    timeline_path = root / "script" / "beat_timeline.json"
-    if timeline_path.exists():
-        timeline = json.loads(timeline_path.read_text(encoding="utf-8-sig"))
-        for ev in timeline.get("beats", []):
-            if str(ev.get("segment_id", "")).upper() != seg:
-                continue
-            event_id = str(ev.get("beat_id", ""))
-            micro = micro_by_id.get(event_id, {})
-            start = float(micro.get("t", ev.get("start_sec", 0)))
-            planned_start = float(ev.get("start_sec", start))
-            planned_end = float(ev.get("end_sec", planned_start + 0.35))
-            planned_dur = max(0.15, planned_end - planned_start)
-            parent = str(micro.get("parent") or event_id.rsplit("_", 1)[0] if "_" in event_id else "")
-            if parent in vo_beats:
-                parent_dur = float(vo_beats[parent].get("duration_sec", 1)) or 1
-                parent_plan = _read_csv(root / "script" / "narration_beats.csv")
-                plan_dur = 1.0
-                for pr in parent_plan:
-                    if pr.get("beat_id") == parent and pr.get("segment_id", "").upper() == seg:
-                        plan_dur = float(pr.get("duration_sec") or 1) or 1
-                        break
-                scale = parent_dur / plan_dur if plan_dur else 1
-                event_dur = round(planned_dur * scale, 3)
-            else:
-                event_dur = round(planned_dur, 3)
-            event_clips.append({
-                "id": event_id,
-                "parent": parent,
-                "start": round(start, 3),
-                "end": round(start + event_dur, 3),
-                "visual_action": ev.get("visual_action", ""),
-                "assets": ev.get("assets", []),
-                "beat_type": ev.get("beat_type", ""),
-            })
-    elif micro_events:
-        for ev in micro_events:
-            if not isinstance(ev, dict):
-                continue
-            event_id = str(ev.get("id") or ev.get("event_id", ""))
-            start = float(ev.get("t", 0))
-            event_clips.append({
-                "id": event_id,
-                "parent": ev.get("parent", ""),
-                "start": round(start, 3),
-                "end": round(start + 0.35, 3),
-                "visual_action": ev.get("visual_action", ""),
-                "assets": [],
-                "beat_type": ev.get("type", ""),
-            })
+    for ev in micro_events:
+        if not isinstance(ev, dict):
+            continue
+        event_id = str(ev.get("id") or ev.get("event_id", ""))
+        start = float(ev.get("t", 0))
+        parent = str(ev.get("parent") or "")
+        plan_dur = plan_dur_by_beat.get(parent, 1.0) or 1.0
+        if parent in vo_beats:
+            parent_dur = float(vo_beats[parent].get("duration_sec", plan_dur)) or plan_dur
+            scale = parent_dur / plan_dur if plan_dur else 1.0
+            event_dur = round(0.35 * scale, 3)
+        else:
+            event_dur = 0.35
+        event_clips.append({
+            "id": event_id,
+            "parent": parent,
+            "start": round(start, 3),
+            "end": round(start + event_dur, 3),
+            "visual_action": ev.get("visual_action") or ev.get("type", ""),
+            "assets": [ev.get("text")] if ev.get("text") else [],
+            "beat_type": ev.get("type", ""),
+        })
 
     return {
         "timebase": "vo_timing",

@@ -52,8 +52,8 @@ video-producer.zip
 # IndexTTS2 intermediate beat WAV (removed after padding; may linger on Windows)
 *.__raw__.wav
 
-# video-producer local dev / phase scratch tests
-# (official quality gates stay tracked: test_composition_preview.py, test_review_studio.py)
-video-producer/scripts/test_timeline_phase*.py
-video-producer/scripts/test_narration_tts_sync.py
-video-producer/scripts/test_stage_validation.py
+# video-producer: Chinese audit mirrors (not part of skill runtime)
+video-producer/audit/
+
+# video-producer: local/scratch test scripts (do not ship)
+video-producer/scripts/test_*.py

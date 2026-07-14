@@ -103,6 +103,9 @@ def write_artifact(root: Path, rel_path: str, content: str, *, note: str = "", s
 
 
 def find_voiceover_path(root: Path) -> Path | None:
+    lite = root / "outputs" / "script.md"
+    if lite.exists():
+        return lite
     script_dir = root / "script"
     if not script_dir.exists():
         return None

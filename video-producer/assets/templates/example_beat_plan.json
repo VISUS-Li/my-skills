@@ -1,0 +1,95 @@
+{
+  "version": "1",
+  "style": "vibemotion-dev-demo",
+  "duration": 24,
+  "beats": [
+    {
+      "beat_id": "b001",
+      "time": [0.0, 3.0],
+      "voice_text": "你有没有发现，很多 AI 视频看起来很炫，但就是不像一个真的工具演示。",
+      "keyword": "不像工具演示",
+      "intent": "hook_contrast",
+      "visual_owner": "KeywordActor",
+      "visual_action": "keyword_pop_then_bad_screenshot_redbox",
+      "audio_cue": "soft_pop.marker",
+      "subtitle_strategy": "bottom_caption_plus_keyword_flower"
+    },
+    {
+      "beat_id": "b002",
+      "time": [3.0, 5.8],
+      "voice_text": "问题不是特效少，而是每句话没有画面动作接住。",
+      "keyword": "画面动作",
+      "intent": "diagnose",
+      "visual_owner": "TerminalProof",
+      "visual_action": "terminal_command_typing_then_warning_highlight",
+      "audio_cue": "keyboard_tick.tick",
+      "subtitle_strategy": "caption_low_weight_code_labels_high_weight"
+    },
+    {
+      "beat_id": "b003",
+      "time": [5.8, 8.5],
+      "voice_text": "所以先别急着做全片，先把前二十四秒变成一个可审的切片。",
+      "keyword": "可审切片",
+      "intent": "workflow_turn",
+      "visual_owner": "SegmentSpecCode",
+      "visual_action": "code_file_reveal_visual_owner_field_then_macro_reset",
+      "audio_cue": "keyboard_tick.whoosh",
+      "subtitle_strategy": "subtitle_supports_code_focus"
+    },
+    {
+      "beat_id": "b004",
+      "time": [8.5, 11.5],
+      "voice_text": "在这个切片里，每零点八到一点五秒，都要有一个能看见的动作。",
+      "keyword": "0.8 到 1.5 秒",
+      "intent": "rhythm_rule",
+      "visual_owner": "ActionDashboard",
+      "visual_action": "dashboard_timeline_markers_pop_in_sequence",
+      "audio_cue": "tick_rise",
+      "subtitle_strategy": "timeline_labels_carry_numbers"
+    },
+    {
+      "beat_id": "b005",
+      "time": [11.5, 14.5],
+      "voice_text": "截图、红框、光标、音效，要跟着同一个关键词落下去。",
+      "keyword": "同一个关键词",
+      "intent": "audio_visual_sync",
+      "visual_owner": "ActionDashboard",
+      "visual_action": "screenshot_redbox_and_waveform_marker_sync",
+      "audio_cue": "marker.tick",
+      "subtitle_strategy": "short_caption_plus_attached_labels"
+    },
+    {
+      "beat_id": "b006",
+      "time": [14.5, 17.2],
+      "voice_text": "抽象概念也一样，要变成能生长的结构，而不是一张解释卡。",
+      "keyword": "能生长的结构",
+      "intent": "metaphor_rule",
+      "visual_owner": "GitGraphGrowth",
+      "visual_action": "git_nodes_and_branches_grow_in_narration_order",
+      "audio_cue": "node_pop.line_whoosh",
+      "subtitle_strategy": "graph_node_labels_plus_small_caption"
+    },
+    {
+      "beat_id": "b007",
+      "time": [17.2, 20.0],
+      "voice_text": "如果某个地方拖了，就回到那个节点，修镜头，不是重生整条视频。",
+      "keyword": "修镜头",
+      "intent": "repair_loop",
+      "visual_owner": "GitGraphGrowth",
+      "visual_action": "timeline_rewind_to_failed_gap_then_redbox",
+      "audio_cue": "reverse_whoosh.marker",
+      "subtitle_strategy": "caption_supports_repair_graph"
+    },
+    {
+      "beat_id": "b008",
+      "time": [20.0, 24.0],
+      "voice_text": "这就是 video-producer 应该做的事：先导演，后扩展，通过 review 再成片。",
+      "keyword": "先导演，后扩展",
+      "intent": "landing",
+      "visual_owner": "ConclusionStamp",
+      "visual_action": "proof_thumbnail_stack_keyword_pop_conclusion_stamp",
+      "audio_cue": "soft_whoosh.soft_pop.stamp",
+      "subtitle_strategy": "short_verdict_plus_visual_memory"
+    }
+  ]
+}

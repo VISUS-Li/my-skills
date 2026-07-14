@@ -3,48 +3,46 @@
 from __future__ import annotations
 
 import json
+import sys
 import threading
 from pathlib import Path
 from typing import Any
+
+SCRIPTS = Path(__file__).resolve().parents[2] / "scripts"
+if str(SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS))
+
+from beat_store import is_video_project, load_beat_plan, load_segment_spec  # noqa: E402
 
 CONFIG_DIR = Path.home() / ".video-producer"
 CONFIG_PATH = CONFIG_DIR / "studio.json"
 MAX_RECENT = 12
 
 
-def is_video_project(path: Path) -> bool:
-    try:
-        return (path.resolve() / ".video" / "state.json").is_file()
-    except OSError:
-        return False
-
-
 def project_summary(path: Path) -> dict[str, Any]:
     path = path.resolve()
     title = path.name
     slug = path.name
-    current_stage = "unknown"
-    video_path = path / ".video" / "video.json"
-    state_path = path / ".video" / "state.json"
-    if video_path.exists():
-        try:
-            video = json.loads(video_path.read_text(encoding="utf-8-sig"))
-            title = video.get("title") or title
-            slug = video.get("slug") or slug
-        except Exception:  # noqa: BLE001
-            pass
-    if state_path.exists():
-        try:
-            state = json.loads(state_path.read_text(encoding="utf-8-sig"))
-            current_stage = state.get("current_stage") or current_stage
-        except Exception:  # noqa: BLE001
-            pass
+    current_stage = "plan-only"
+    beat_plan = load_beat_plan(path)
+    spec = load_segment_spec(path)
+    if beat_plan.get("title"):
+        title = str(beat_plan["title"])
+    elif spec.get("segment_id"):
+        title = f"{spec.get('segment_id')} · {path.name}"
+    if (path / "outputs" / "review" / "review-studio" / "index.html").exists():
+        current_stage = "first-slice-review"
+    elif beat_plan.get("beats") and spec.get("shots"):
+        current_stage = "first-slice-plan"
+    elif (path / "outputs" / "script.md").exists():
+        current_stage = "script-only"
     return {
         "path": str(path),
         "name": path.name,
         "title": title,
         "slug": slug,
         "current_stage": current_stage,
+        "kind": "lite",
     }
 
 
@@ -155,24 +153,46 @@ class WorkspaceManager:
     def switch_project(self, path: Path) -> dict[str, Any]:
         resolved = path.resolve()
         if not is_video_project(resolved):
-            raise ValueError(f"not a video project (missing .video/state.json): {resolved}")
+            raise ValueError(f"not a video project (expected outputs/beat_plan.json or outputs/script.md): {resolved}")
         with self._lock:
+            if self.current_project == resolved:
+                return self.snapshot_light_locked()
             self.current_project = resolved
             self._remember_recent_locked(resolved)
             if self.workspace_root is None:
                 self.workspace_root = resolved.parent
-            elif resolved not in discover_projects(self.workspace_root, max_depth=self.scan_depth):
-                pass
             self.save_config()
-            return {
-                "current_project": project_summary(resolved),
-                "workspace_root": str(self.workspace_root) if self.workspace_root else None,
-            }
+            return self.snapshot_light_locked()
 
     def _remember_recent_locked(self, path: Path) -> None:
         key = str(path.resolve())
         self.recent_projects = [key] + [p for p in self.recent_projects if p != key]
         self.recent_projects = self.recent_projects[:MAX_RECENT]
+
+    def _recent_summaries_locked(self) -> list[dict[str, Any]]:
+        recent: list[dict[str, Any]] = []
+        for path_str in self.recent_projects:
+            path = Path(path_str)
+            if is_video_project(path):
+                recent.append(project_summary(path))
+        return recent
+
+    def snapshot_light_locked(self) -> dict[str, Any]:
+        recent = self._recent_summaries_locked()
+        current = project_summary(self.current_project) if self.current_project else None
+        projects: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        for item in ([current] if current else []) + recent:
+            if item and item["path"] not in seen:
+                seen.add(item["path"])
+                projects.append(item)
+        return {
+            "workspace_root": str(self.workspace_root) if self.workspace_root else None,
+            "scan_depth": self.scan_depth,
+            "current_project": current,
+            "projects": projects,
+            "recent_projects": recent,
+        }
 
     def snapshot_locked(self, projects: list[dict[str, Any]] | None = None) -> dict[str, Any]:
         if projects is None:
@@ -181,11 +201,7 @@ class WorkspaceManager:
                 if self.workspace_root
                 else []
             )
-        recent = []
-        for path_str in self.recent_projects:
-            path = Path(path_str)
-            if is_video_project(path):
-                recent.append(project_summary(path))
+        recent = self._recent_summaries_locked()
         current = project_summary(self.current_project) if self.current_project else None
         return {
             "workspace_root": str(self.workspace_root) if self.workspace_root else None,
@@ -195,9 +211,11 @@ class WorkspaceManager:
             "recent_projects": recent,
         }
 
-    def snapshot(self) -> dict[str, Any]:
+    def snapshot(self, *, scan: bool = False) -> dict[str, Any]:
         with self._lock:
-            return self.snapshot_locked()
+            if scan:
+                return self.snapshot_locked()
+            return self.snapshot_light_locked()
 
     def bootstrap(self, *, workspace: Path | None = None, project: Path | None = None, scan_depth: int = 2) -> None:
         with self._lock:

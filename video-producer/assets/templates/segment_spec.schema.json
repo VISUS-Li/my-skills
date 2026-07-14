@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Video Producer Segment Spec",
+  "type": "object",
+  "required": ["version", "segment_id", "style", "duration", "first_slice", "shots"],
+  "properties": {
+    "version": { "type": "string" },
+    "segment_id": { "type": "string" },
+    "style": { "type": "string" },
+    "duration": { "type": "number", "minimum": 1 },
+    "first_slice": { "type": "boolean" },
+    "shots": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["shot_id", "time", "recipe", "renderer", "component", "visual_owner", "camera", "narration_beats", "visual_actions", "transition_out"],
+        "properties": {
+          "shot_id": { "type": "string" },
+          "time": {
+            "type": "array",
+            "prefixItems": [{ "type": "number" }, { "type": "number" }],
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "recipe": { "type": "string" },
+          "renderer": {
+            "type": "string",
+            "enum": ["remotion", "hyperframes", "vibe-motion", "motion-canvas", "gsap-svg", "ffmpeg", "mixed"]
+          },
+          "component": { "type": "string" },
+          "delegation": {
+            "type": "object",
+            "required": ["skill", "purpose", "input_artifacts", "output_artifacts", "acceptance"],
+            "properties": {
+              "skill": { "type": "string", "minLength": 1 },
+              "purpose": { "type": "string", "minLength": 1 },
+              "input_artifacts": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "output_artifacts": {
+                "type": "array",
+                "items": { "type": "string" },
+                "minItems": 1
+              },
+              "acceptance": { "type": "string", "minLength": 1 }
+            }
+          },
+          "visual_owner": { "type": "string", "minLength": 1 },
+          "camera": { "type": "string", "minLength": 1 },
+          "narration_beats": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string" }
+          },
+          "visual_actions": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["at", "type"],
+              "properties": {
+                "at": { "type": "number", "minimum": 0 },
+                "type": { "type": "string", "minLength": 1 },
+                "text": { "type": "string" },
+                "asset": { "type": "string" },
+                "motion": { "type": "string" },
+                "sfx": { "type": "string" },
+                "annotation": { "type": "string" }
+              }
+            }
+          },
+          "text_strategy": { "type": "string" },
+          "transition_out": { "type": "string" },
+          "qa_notes": { "type": "string" }
+        }
+      }
+    }
+  }
+}

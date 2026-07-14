@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-"""Shared review gate, registry, and stale-propagation utilities."""
+"""Shared review registry, stale propagation, and lite stage helpers."""
 from __future__ import annotations
 
-import csv
 import hashlib
 import json
 from datetime import datetime, timezone
@@ -12,6 +11,61 @@ from typing import Any
 STAGE_APPROVED = {"approved", "locked"}
 ARTIFACT_STATUSES = {"draft", "review", "approved", "rejected", "stale", "locked"}
 REGEN_STATUSES = {"pending", "in_progress", "completed", "failed"}
+
+LITE_STAGE_MANIFEST: dict[str, Any] = {
+    "version": "lite",
+    "stages": {
+        "script": {
+            "label": "Script",
+            "depends_on": [],
+            "required_artifacts": ["outputs/script.md"],
+            "optional_artifacts": ["research/factcheck_report.md", "research/claim_ledger.csv"],
+        },
+        "director-plan": {
+            "label": "Beat Plan",
+            "depends_on": ["script"],
+            "required_artifacts": [
+                "outputs/beat_plan.json",
+                "outputs/segment_spec.json",
+                "outputs/audio_cue_sheet.json",
+            ],
+            "optional_artifacts": [],
+        },
+        "voice": {
+            "label": "Voice",
+            "depends_on": ["director-plan"],
+            "required_artifacts": ["segments/{segment}/vo_timing.json"],
+            "optional_artifacts": [
+                "audio/stems/voice/voiceover_full.wav",
+                "segments/{segment}/micro_timing.json",
+            ],
+        },
+        "review": {
+            "label": "Review",
+            "depends_on": ["director-plan"],
+            "required_artifacts": [
+                "outputs/review/metrics.json",
+                "outputs/review/failed_checks.md",
+            ],
+            "optional_artifacts": [
+                "outputs/review/preview.mp4",
+                "outputs/review/contact_sheet.jpg",
+                "outputs/review/review-studio/index.html",
+            ],
+        },
+    },
+}
+
+IMPACT_MAP: dict[str, list[str]] = {
+    "outputs/script.md": ["script", "director-plan"],
+    "outputs/beat_plan.json": ["director-plan", "voice", "review"],
+    "outputs/segment_spec.json": ["director-plan", "review"],
+    "outputs/audio_cue_sheet.json": ["director-plan", "review"],
+    "outputs/review/preview.mp4": ["review"],
+    "outputs/review/metrics.json": ["review"],
+    "segments/": ["voice", "review"],
+    "audio/stems/voice/": ["voice", "review"],
+}
 
 
 def skill_root() -> Path:
@@ -49,16 +103,43 @@ def load_stage_manifest(root: Path) -> dict[str, Any]:
     manifest_path = project_video_dir(root) / "stage_manifest.json"
     if manifest_path.exists():
         return load_json(manifest_path)
-    template = skill_root() / "assets" / "templates" / "stage_manifest.json"
-    if template.exists():
-        return json.loads(template.read_text(encoding="utf-8"))
-    return {"version": "1", "stages": {}}
+    return LITE_STAGE_MANIFEST
 
 
 def stage_dependencies(manifest: dict[str, Any], stage_id: str) -> list[str]:
     stage = manifest.get("stages", {}).get(stage_id, {})
     deps = stage.get("depends_on", [])
     return deps if isinstance(deps, list) else []
+
+
+def default_segment(root: Path) -> str:
+    from beat_store import default_segment as store_default_segment
+
+    return store_default_segment(root)
+
+
+def advancing_status(status: str) -> bool:
+    return status in {"review", "approved", "locked", "rendered", "needs-revision"}
+
+
+def validate_stage_complete(
+    root: Path,
+    stage_id: str,
+    *,
+    segment: str | None = None,
+    run_scripts: bool = False,
+) -> list[str]:
+    del run_scripts
+    manifest = load_stage_manifest(root)
+    meta = manifest.get("stages", {}).get(stage_id, {})
+    seg = segment or default_segment(root)
+    errors: list[str] = []
+    for pattern in meta.get("required_artifacts", []):
+        rel = pattern.replace("{segment}", seg)
+        path = root / rel.replace("\\", "/")
+        if not path.exists():
+            errors.append(f"missing required artifact: {rel}")
+    return errors
 
 
 def content_hash(path: Path) -> str:
@@ -85,9 +166,8 @@ def read_registry_lines(root: Path) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for line in path.read_text(encoding="utf-8").splitlines():
         line = line.strip()
-        if not line:
-            continue
-        rows.append(json.loads(line))
+        if line:
+            rows.append(json.loads(line))
     return rows
 
 
@@ -113,9 +193,7 @@ def append_registry(root: Path, entry: dict[str, Any]) -> dict[str, Any]:
 
 def load_regen_queue(root: Path) -> dict[str, Any]:
     path = project_video_dir(root) / "regen_queue.json"
-    if path.exists():
-        return load_json(path)
-    return {"version": "1", "items": []}
+    return load_json(path) if path.exists() else {"version": "1", "items": []}
 
 
 def save_regen_queue(root: Path, queue: dict[str, Any]) -> None:
@@ -128,7 +206,6 @@ def validate_stage_dependencies(
     *,
     target_status: str | None = None,
 ) -> list[str]:
-    """Return errors when stage dependencies are not approved/locked."""
     manifest = load_stage_manifest(root)
     state = load_state(root)
     stages = state.get("stages", {})
@@ -145,28 +222,7 @@ def validate_stage_dependencies(
     return errors
 
 
-def validate_gates(root: Path) -> list[str]:
-    """CI gate: progressed stages need approved upstream deps and stage readiness."""
-    from stage_validation import default_segment, validate_stage_complete
-
-    manifest = load_stage_manifest(root)
-    state = load_state(root)
-    stages = state.get("stages", {})
-    errors: list[str] = []
-    progressed = {"review", "approved", "locked", "rendered", "needs-revision"}
-    segment = default_segment(root)
-    for stage_id in manifest.get("stages", {}):
-        meta = stages.get(stage_id, {})
-        status = meta.get("status", "draft")
-        if status not in progressed:
-            continue
-        errors.extend(validate_stage_dependencies(root, stage_id))
-        errors.extend(validate_stage_complete(root, stage_id, segment=segment, run_scripts=False))
-    return errors
-
-
-def check_render_allowed(root: Path, stage_id: str = "segments") -> list[str]:
-    """Hard block before render/downstream scripts."""
+def check_render_allowed(root: Path, stage_id: str = "review") -> list[str]:
     return validate_stage_dependencies(root, stage_id, target_status="review")
 
 
@@ -180,49 +236,48 @@ def resolve_safe_path(root: Path, rel_path: str) -> Path | None:
 
 
 def impacted_stages(changed_path: str) -> list[str]:
-    from dependency_report import impacted
-
-    return impacted(changed_path)
+    rel = changed_path.replace("\\", "/")
+    found: list[str] = []
+    for prefix, stages in IMPACT_MAP.items():
+        if rel == prefix or rel.startswith(prefix):
+            for stage in stages:
+                if stage not in found:
+                    found.append(stage)
+    if not found and rel.startswith("outputs/"):
+        found.append("review")
+    return found or ["review"]
 
 
 def stale_artifacts_for_change(root: Path, changed_path: str, segment_id: str = "S001") -> list[str]:
-    """Return artifact paths that should become stale after a change."""
     rel = changed_path.replace("\\", "/")
     stale: list[str] = []
-    if "narration_beats.csv" in rel:
-        stale.extend([
-            f"audio/stems/voice/beats/{beat}.wav" for beat in _beat_ids_from_csv(root)
-        ])
+    if "beat_plan.json" in rel:
+        from beat_store import load_beat_plan
+
+        for beat in load_beat_plan(root).get("beats", []):
+            if isinstance(beat, dict) and beat.get("beat_id"):
+                stale.append(f"audio/stems/voice/beats/{beat['beat_id']}.wav")
         stale.extend([
             f"segments/{segment_id}/vo_timing.json",
             f"segments/{segment_id}/micro_timing.json",
-            f"segments/{segment_id}/index.html",
-            f"segments/{segment_id}/render.mp4",
+            "outputs/review/preview.mp4",
+            "outputs/review/metrics.json",
         ])
     elif rel.endswith(".svg") or "/assets/" in rel:
         stale.extend([
             f"segments/{segment_id}/index.html",
             f"segments/{segment_id}/render.mp4",
+            "outputs/review/preview.mp4",
         ])
     elif "vo_timing.json" in rel or "micro_timing.json" in rel:
         stale.extend([
             f"segments/{segment_id}/index.html",
             f"segments/{segment_id}/render.mp4",
+            "outputs/review/preview.mp4",
         ])
+    elif rel.startswith("outputs/review/"):
+        stale.append("outputs/review/metrics.json")
     return stale
-
-
-def _beat_ids_from_csv(root: Path) -> list[str]:
-    path = root / "script" / "narration_beats.csv"
-    if not path.exists():
-        return []
-    ids: list[str] = []
-    with path.open(newline="", encoding="utf-8") as handle:
-        for row in csv.DictReader(handle):
-            beat_id = row.get("beat_id")
-            if beat_id:
-                ids.append(beat_id)
-    return ids
 
 
 def propagate_stale(
@@ -231,8 +286,7 @@ def propagate_stale(
     *,
     note: str = "",
     segment_id: str = "S001",
-) -> dict[str, Any]:
-    """Mark downstream artifacts stale and downgrade impacted stages."""
+) -> list[dict[str, Any]]:
     manifest = load_stage_manifest(root)
     state = load_state(root)
     stages = state.get("stages", {})
@@ -259,8 +313,6 @@ def propagate_stale(
             registry_entries.append(append_registry(root, entry))
 
     for stage_id in impacted:
-        if stage_id == "manual-review":
-            continue
         meta = stages.setdefault(stage_id, {"status": "draft", "artifacts": []})
         if meta.get("status") == "locked":
             continue
@@ -277,18 +329,20 @@ def propagate_stale(
             })
 
     save_state(root, state)
-    return {"impacted_stages": impacted, "stale_artifacts": registry_entries}
+    return registry_entries
 
 
 def _stage_for_path(path: str, manifest: dict[str, Any]) -> str:
     normalized = path.replace("\\", "/")
+    if normalized.startswith("outputs/review/"):
+        return "review"
+    if normalized.startswith("outputs/"):
+        return "director-plan"
     if normalized.startswith("segments/"):
-        return "segments"
+        return "voice"
     if normalized.startswith("audio/"):
-        return "audio-assets"
-    if normalized.startswith("edit/"):
-        return "assemble"
-    return "assets"
+        return "voice"
+    return "director-plan"
 
 
 def append_job_log(root: Path, event: dict[str, Any]) -> None:
@@ -303,25 +357,12 @@ def append_job_log(root: Path, event: dict[str, Any]) -> None:
 def init_review_files(root: Path, *, force: bool = False) -> None:
     video_dir = project_video_dir(root)
     video_dir.mkdir(parents=True, exist_ok=True)
-
-    manifest_src = skill_root() / "assets" / "templates" / "stage_manifest.json"
     manifest_dst = video_dir / "stage_manifest.json"
-    if manifest_src.exists() and (force or not manifest_dst.exists()):
-        manifest_dst.write_text(manifest_src.read_text(encoding="utf-8"), encoding="utf-8")
-
-    contract_src = skill_root() / "assets" / "templates" / "agent_contract.md"
-    contract_dst = video_dir / "agent_contract.md"
-    if contract_src.exists() and (force or not contract_dst.exists()):
-        contract_dst.write_text(contract_src.read_text(encoding="utf-8"), encoding="utf-8")
-
+    if force or not manifest_dst.exists():
+        write_json(manifest_dst, LITE_STAGE_MANIFEST)
     queue_dst = video_dir / "regen_queue.json"
     if force or not queue_dst.exists():
-        template = skill_root() / "assets" / "templates" / "regen_queue.json"
-        if template.exists():
-            queue_dst.write_text(template.read_text(encoding="utf-8"), encoding="utf-8")
-        else:
-            write_json(queue_dst, {"version": "1", "items": []})
-
+        write_json(queue_dst, {"version": "1", "items": []})
     for name in ("review_registry.jsonl", "history.jsonl", "job_log.jsonl"):
         path = video_dir / name
         if force or not path.exists():

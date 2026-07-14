@@ -1,40 +1,20 @@
 {
-  "skill_name": "video-producer",
+  "skill": "video-producer",
   "evals": [
     {
-      "id": "idea-richness",
-      "prompt": "用 video-producer 从一个想法开始做 90 秒竖屏视频：AI 视频不是工具而是生产线。先产出 creative brief、art direction、storyboard、shotlist、asset manifest，不要渲染。",
-      "expected_output": "Creates staged artifacts with art direction, rich storyboard shots, camera movement, visual metaphors, asset manifest, and review checkpoint."
+      "id": "lite-first-slice-plan",
+      "prompt": "用 video-producer 从话题「AI 视频为什么不像工具演示」做 24 秒竖屏 first slice：产出 outputs/script.md、beat_plan.json、segment_spec.json、audio_cue_sheet.json，并跑 score_preview_plan，不要渲染全片。",
+      "expected_output": "Creates outputs/ contract files, passes validate_segment_spec, writes metrics.json and failed_checks.md."
     },
     {
-      "id": "anti-ppt-revision",
-      "prompt": "第 2 段太像 PPT，画面太空洞，颜色和图标都很少。请只修改必要的上游文件，不要从头生成。",
-      "expected_output": "Identifies storyboard/shotlist/art direction/assets as earliest affected artifacts, creates versioned revisions, lists downstream impact, and runs aesthetic scoring."
+      "id": "lite-beat-edit",
+      "prompt": "Review Studio 里改了 b002 的 voice_text 后，应写回 outputs/beat_plan.json 并标记 preview/metrics stale。",
+      "expected_output": "beat_plan.json updated; review artifacts marked stale; TTS can regenerate from voice_text."
     },
     {
-      "id": "hyperframes-segment-rich",
-      "prompt": "只制作 storyboard 里的 003_summary HyperFrames 段落。要求画面有层次、运镜、图标和粒子，不要只有文字卡片。",
-      "expected_output": "Reads art direction, tokens, shotlist, asset manifest; creates segment brief/styleframe/expanded prompt; includes depth layers, camera motion, assets, timing, anti-PPT measures, and validation steps."
-    },
-    {
-      "id": "audio-richness",
-      "prompt": "这条视频画面还可以，但声音很空、BGM 不搭、转场没有记忆点。请使用 video-producer 只优化音效/音乐/TTS/混音，不重写 research 和 storyboard。",
-      "expected_output": "Loads sound-design references, revises audio_style_guide/music_brief/voice_profile/audio_cue_sheet/audio_mix_plan, records rights, runs dependency_report and audio_score, and explains where each cue should sync."
-    },
-    {
-      "id": "fact-linked-script",
-      "prompt": "写一个关于某 AI 公司访问限制争议的 2 分钟中文视频脚本。要求每个事实句都有 claim_id，不能把 foreign national 曲解成所有人，给出可核查的 source_cards 和 claim_ledger。",
-      "expected_output": "Creates source cards, claim ledger with interpretation guardrails, colloquial script with [Cxxx] tags, and runs or recommends script_claim_lint before beat design."
-    },
-    {
-      "id": "director-compiler",
-      "prompt": "这段口播太像 PPT，请把每句话拆成逐秒动画事件，并给出资产编舞和音效绑定。",
-      "expected_output": "Creates narration_beats, beat_timeline, director_event_graph, asset_choreography_manifest, and event-anchored audio_cue_sheet with beat_timeline_lint gate."
-    },
-    {
-      "id": "xiaobai-debug-style",
-      "prompt": "参考小白debug风格，把一个 AI 工具教程做成有 UI 证据、扁平 SVG、红箭头、代码框、字幕和音效的 HyperFrames 片段。",
-      "expected_output": "Loads xiaobai-debug style DNA, uses UI proof plus light-grid diagram alternation, programmatic Chinese text, asset actors, timestamped expanded prompt, and anti-copy/rights cautions."
+      "id": "deep-research-script",
+      "prompt": "对需要事实核查的财经题，先 deep research 产出 source_cards、claim_ledger、factcheck_report，再写 outputs/script.md 和 beat_plan。",
+      "expected_output": "Research artifacts plus outputs/script.md; claims have sources or uncertainty labels before beat planning."
     }
   ]
 }
