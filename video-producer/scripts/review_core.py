@@ -19,7 +19,17 @@ LITE_STAGE_MANIFEST: dict[str, Any] = {
             "label": "Script",
             "depends_on": [],
             "required_artifacts": ["outputs/script.md"],
-            "optional_artifacts": ["research/factcheck_report.md", "research/claim_ledger.csv"],
+            # Depth tier: when deep_research is on, prefer always-tier locks.
+            # On-demand files stay optional so short factual folds into script.md stay valid.
+            "optional_artifacts": [
+                "research/source_cards.jsonl",
+                "research/event_genealogy.md",
+                "research/claim_ledger.csv",
+                "research/factcheck_report.md",
+                "research/cast_and_incentives.md",
+                "script/narrative_thread_map.json",
+                "research/thread_ledger.csv",
+            ],
         },
         "director-plan": {
             "label": "Beat Plan",
@@ -139,6 +149,14 @@ def validate_stage_complete(
         path = root / rel.replace("\\", "/")
         if not path.exists():
             errors.append(f"missing required artifact: {rel}")
+    if stage_id == "script" and load_state(root).get("deep_research"):
+        try:
+            from validate_research_lite import validate_project
+
+            for err in validate_project(root):
+                errors.append(f"deep research: {err}")
+        except Exception as exc:  # noqa: BLE001 — keep stage validation resilient
+            errors.append(f"deep research: validate_research_lite failed ({exc})")
     return errors
 
 

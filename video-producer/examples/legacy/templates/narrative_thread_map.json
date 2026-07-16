@@ -1,64 +1,106 @@
 {
-  "version": "v001",
+  "_archive": "DO NOT LOAD — use assets/templates/example_narrative_thread_map.json",
+  "version": "v003",
   "story_scope": "single",
   "user_input_points": [
     "用户给的唯一事件或主题（一件事也要深挖前尘后果）"
   ],
-  "master_thread": "一句话：这件事的弧线/真正讲的是什么（不是标题复读）",
-  "narrative_engine": "origin_to_aftermath|misread_correction|incentive_chase|escalation_ladder|timeline_pivot|hidden_third_party|two_front_squeeze",
+  "master_thread": "一句话：这件事的来龙去脉弧线（不是标题复读，也不是对仗金句）",
+  "narrative_engine": "event_genealogy|timeline_reversals|cast_pressure|rule_jam|neighbor_strand|incentive_chase",
+  "tip": "闯入公共视野的那一下 + 日期",
+  "genealogy": "前尘 → tip → 关键节点 → 卡住点",
+  "still_unknown": "目前仍说不清的部分",
   "insight_layers": {
-    "surface": "观众普遍以为发生了什么",
-    "mechanism": "实际机制/博弈如何运转",
-    "secret": "较少人知道、可证实的细节（必填，附 claim_ids）"
+    "surface": "热新闻听起来像什么",
+    "upstream": "tip 之前的前尘",
+    "mechanism": "规则/交易/产品底盘",
+    "secret": "对照数字/日期扣合/权威分裂（附 claim_ids）",
+    "cast_pressure": "各方权限与压力",
+    "ordinary_impact": "落到普通人/开发者/消费者"
   },
+  "cast": [
+    {"actor": "", "role_on_board": "", "leverage_or_vulnerability": "", "pressure": ""},
+    {"actor": "", "role_on_board": "", "leverage_or_vulnerability": "", "pressure": ""},
+    {"actor": "", "role_on_board": "", "leverage_or_vulnerability": "", "pressure": ""}
+  ],
   "selective_omit": [
     {
       "topic": "可省略的背景或时间点",
-      "reason": "与 master_thread 无关 / 观众已知 / 无可靠来源"
+      "reason": "与 genealogy 无关 / 观众已知 / 无可靠来源"
     }
   ],
   "spine": [
     {
-      "phase": "hook",
-      "time_hint": "0-8s",
+      "phase": "tip_stakes",
+      "time_hint": "0-20s",
       "thread_ids": ["T001"],
-      "viewer_payoff": "钩子：误读或秘辛预告",
+      "viewer_payoff": "热 tip + 硬锚点",
       "claim_ids": [],
       "dwell_layers": {
-        "enter": "如何进入（承接开场）",
-        "evidence": "具体可引用细节",
-        "mechanism": "为什么重要",
-        "landing": "本节拍收束句"
+        "enter": "tip 砸地",
+        "evidence": "日期/数字",
+        "mechanism": "",
+        "landing": "预告要把故事讲开"
       },
-      "landing_line": "写完口播前必填：本拐点意味着什么",
-      "carry_forward": "下一节拍必须接住的线头"
+      "landing_line": "",
+      "carry_forward": "认人或前尘"
     },
     {
-      "phase": "turn",
-      "time_hint": "25-60s",
-      "thread_ids": ["T002"],
-      "viewer_payoff": "博弈/转折/verified 关联",
+      "phase": "cast_or_upstream",
+      "time_hint": "early-mid",
+      "thread_ids": ["T001"],
+      "viewer_payoff": "人的压力 或 tip 之前的前尘",
       "claim_ids": [],
       "dwell_layers": {
-        "enter": "从上一节拍承接",
+        "enter": "展开",
         "evidence": "",
         "mechanism": "",
         "landing": ""
       },
       "landing_line": "",
-      "carry_forward": ""
+      "carry_forward": "主时间线"
     },
     {
-      "phase": "payoff",
-      "time_hint": "final",
-      "thread_ids": ["T001", "T002", "T003"],
-      "viewer_payoff": "master_thread 收束",
+      "phase": "main_timeline",
+      "time_hint": "mid",
+      "thread_ids": ["T002"],
+      "viewer_payoff": "日期链与反转",
       "claim_ids": [],
       "dwell_layers": {
-        "enter": "回调前文关键细节",
+        "enter": "钉一条轴",
         "evidence": "",
         "mechanism": "",
-        "landing": "一句 memorable 总结"
+        "landing": ""
+      },
+      "landing_line": "",
+      "carry_forward": "规则底盘"
+    },
+    {
+      "phase": "rule_substrate",
+      "time_hint": "mid-late",
+      "thread_ids": ["T002"],
+      "viewer_payoff": "卡在哪条规则",
+      "claim_ids": [],
+      "dwell_layers": {
+        "enter": "从时间线进入底盘",
+        "evidence": "",
+        "mechanism": "",
+        "landing": ""
+      },
+      "landing_line": "",
+      "carry_forward": "压缩"
+    },
+    {
+      "phase": "compress",
+      "time_hint": "final",
+      "thread_ids": ["T001", "T002", "T003"],
+      "viewer_payoff": "可复述地图 + 边界；禁止频道 CTA 与不是A而是B收尾",
+      "claim_ids": [],
+      "dwell_layers": {
+        "enter": "回调关键日期/人物/规则",
+        "evidence": "",
+        "mechanism": "",
+        "landing": "平常话总结来龙去脉"
       },
       "landing_line": "",
       "carry_forward": ""

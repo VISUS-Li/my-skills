@@ -1,0 +1,529 @@
+{
+  "source_channel": "@StorytellerFan",
+  "purpose": "Portable craft corpus for research breadth/depth and oral VO style. Study moves; never copy titles, CTAs, catchphrases, or channel branding.",
+  "how_to_use": "Load references/storyteller-fan-craft.md first. Then open CATALOG.md and read 1-2 transcript files matching the topic type. Do not load the whole corpus.",
+  "count": 47,
+  "entries": [
+    {
+      "id": "umFhxczfRr8",
+      "title": "真正拖垮赛力斯的，可能不只是销量和存储涨价，而是华为遥遥领先的商业模式！",
+      "file": "transcripts/umFhxczfRr8.txt",
+      "chars": 7597,
+      "segment_count": 757,
+      "tags": [
+        "business_model",
+        "cost_infra"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "L31KQ21VGQk",
+      "title": "Anthropic和中国政府的双向封禁，Claude Code风波5层拆解：后门、禁用与反限制！",
+      "file": "transcripts/L31KQ21VGQk.txt",
+      "chars": 9104,
+      "segment_count": 842,
+      "tags": [
+        "trust_safety_governance",
+        "layered_dig"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "cjkNt4ddcUc",
+      "title": "苹果起诉OpenAI，唐坦为何成关键？",
+      "file": "transcripts/cjkNt4ddcUc.txt",
+      "chars": 8437,
+      "segment_count": 805,
+      "tags": [
+        "legal_dispute"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "T9zqRW4GOq4",
+      "title": "大疆无人机救援刷屏：吊人照片哪些是真的？",
+      "file": "transcripts/T9zqRW4GOq4.txt",
+      "chars": 7639,
+      "segment_count": 753,
+      "tags": [
+        "general_ai_tech"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "O-UxoRmKzDw",
+      "title": "Meta向AI竞争对手投毒，小扎的行为艺术不断？",
+      "file": "transcripts/O-UxoRmKzDw.txt",
+      "chars": 6044,
+      "segment_count": 558,
+      "tags": [
+        "general_ai_tech"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "LQ1eDafXiYU",
+      "title": "DeepSeek招聘乱象：华为天才少年被羞辱，拿到融资后别这样扩张！",
+      "file": "transcripts/LQ1eDafXiYU.txt",
+      "chars": 8318,
+      "segment_count": 790,
+      "tags": [
+        "funding_power",
+        "org_people"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "S-k6mGuy5U0",
+      "title": "豆包千问下线智能体背后的真相！",
+      "file": "transcripts/S-k6mGuy5U0.txt",
+      "chars": 7551,
+      "segment_count": 752,
+      "tags": [
+        "general_ai_tech"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "PA5tyDcrPeU",
+      "title": "小红书上市前夜：一封举报信卡住IPO？",
+      "file": "transcripts/PA5tyDcrPeU.txt",
+      "chars": 7500,
+      "segment_count": 736,
+      "tags": [
+        "general_ai_tech"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "C_kr0Q81DC0",
+      "title": "Meta卖算力传闻后，AI行情为何三天剧震?",
+      "file": "transcripts/C_kr0Q81DC0.txt",
+      "chars": 10323,
+      "segment_count": 970,
+      "tags": [
+        "cost_infra"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "VwL82lejnrw",
+      "title": "Palantir CEO破防怒骂OpenAI和Anthropic，他真正怕的是什么？",
+      "file": "transcripts/VwL82lejnrw.txt",
+      "chars": 5632,
+      "segment_count": 518,
+      "tags": [
+        "general_ai_tech"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "5HfZoa_9EtA",
+      "title": "苹果塔塔泄密后，iPhone 18发布会还剩什么悬念？",
+      "file": "transcripts/5HfZoa_9EtA.txt",
+      "chars": 6625,
+      "segment_count": 628,
+      "tags": [
+        "general_ai_tech"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "6Nii_IUJwOw",
+      "title": "中国算法养蛊罐，为什么能孵出全球妖怪？",
+      "file": "transcripts/6Nii_IUJwOw.txt",
+      "chars": 5708,
+      "segment_count": 587,
+      "tags": [
+        "general_ai_tech"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "5F--cT8Pn3o",
+      "title": "Claude大封号背后，账号为何突然消失？",
+      "file": "transcripts/5F--cT8Pn3o.txt",
+      "chars": 8897,
+      "segment_count": 812,
+      "tags": [
+        "general_ai_tech"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "IBIaj6uWlSI",
+      "title": "小米特调机评测作弊，极客湾视频被压制4个月之后，遭央视曝光。",
+      "file": "transcripts/IBIaj6uWlSI.txt",
+      "chars": 7376,
+      "segment_count": 738,
+      "tags": [
+        "eval_vs_workbench"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "Pa4lkWQvu_E",
+      "title": "从苹果涨价看懂—— 4 次泡沫后的赢家规律！",
+      "file": "transcripts/Pa4lkWQvu_E.txt",
+      "chars": 7130,
+      "segment_count": 706,
+      "tags": [
+        "cost_infra"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "JsW7VqcvMdA",
+      "title": "美国AI监管盯上GPT-5.6，真正漏洞在哪？",
+      "file": "transcripts/JsW7VqcvMdA.txt",
+      "chars": 10343,
+      "segment_count": 962,
+      "tags": [
+        "deal_terms"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "o7E5XTYpuCs",
+      "title": "中国超算重回全球第一，遥遥领先的华为提供的芯片，我们突破芯片封锁了吗？",
+      "file": "transcripts/o7E5XTYpuCs.txt",
+      "chars": 5679,
+      "segment_count": 542,
+      "tags": [
+        "business_model",
+        "geopolitics_semiconductor"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "GUK-8Wy-sUQ",
+      "title": "SpaceX吞特斯拉前，先看懂5个关键问题！",
+      "file": "transcripts/GUK-8Wy-sUQ.txt",
+      "chars": 7623,
+      "segment_count": 725,
+      "tags": [
+        "general_ai_tech"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "b-6T46BBlcs",
+      "title": "Anthropic举报阿里，真正受伤的不是Claude，而是整个开源AI生态崩了！",
+      "file": "transcripts/b-6T46BBlcs.txt",
+      "chars": 4972,
+      "segment_count": 463,
+      "tags": [
+        "trust_safety_governance"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "3wla63rUgWs",
+      "title": "纸尿裤事件四天五反转：甲酰胺检测为何说不清？",
+      "file": "transcripts/3wla63rUgWs.txt",
+      "chars": 6666,
+      "segment_count": 658,
+      "tags": [
+        "general_ai_tech"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "o_WSSM1sMfs",
+      "title": "Sakana AI跑分登顶，真让日本AI追上了吗？",
+      "file": "transcripts/o_WSSM1sMfs.txt",
+      "chars": 7140,
+      "segment_count": 637,
+      "tags": [
+        "eval_vs_workbench"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "bBMJFZ1JRng",
+      "title": "美国商务部长指责荷兰阿斯麦：中国到底拿到EUV光刻机了吗？",
+      "file": "transcripts/bBMJFZ1JRng.txt",
+      "chars": 6821,
+      "segment_count": 657,
+      "tags": [
+        "geopolitics_semiconductor"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "tug90T9FUrE",
+      "title": "Elon Musk认为国产模型追不上Anthropic Fable 5，差的不只是跑分？",
+      "file": "transcripts/tug90T9FUrE.txt",
+      "chars": 12289,
+      "segment_count": 1107,
+      "tags": [
+        "eval_vs_workbench"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "qOu-TD_Nn8E",
+      "title": "DeepMind两大佬出走，谷歌AI到底怎么了？",
+      "file": "transcripts/qOu-TD_Nn8E.txt",
+      "chars": 7830,
+      "segment_count": 715,
+      "tags": [
+        "general_ai_tech"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "g20t3FKr49k",
+      "title": "DeepSeek510亿融资，国资为什么特别待遇，其他忍气吞声的出资人，也不傻吧？",
+      "file": "transcripts/g20t3FKr49k.txt",
+      "chars": 8628,
+      "segment_count": 825,
+      "tags": [
+        "funding_power"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "gSoxJZwOp68",
+      "title": "同轨不同命：MiniMax和智谱为什么上市后分叉？",
+      "file": "transcripts/gSoxJZwOp68.txt",
+      "chars": 5529,
+      "segment_count": 505,
+      "tags": [
+        "general_ai_tech"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "ZKF8JKNUN9E",
+      "title": "英国禁16岁以下社媒：4个副作用更难管！",
+      "file": "transcripts/ZKF8JKNUN9E.txt",
+      "chars": 7490,
+      "segment_count": 685,
+      "tags": [
+        "general_ai_tech"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "yflPZc-GIVM",
+      "title": "为什么山姆被市监总局约谈，并道歉，全网就都炸了？",
+      "file": "transcripts/yflPZc-GIVM.txt",
+      "chars": 7742,
+      "segment_count": 746,
+      "tags": [
+        "general_ai_tech"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "kFa6zNT64Ko",
+      "title": "AI Agent时代的6个坑，非程序员更要避开！",
+      "file": "transcripts/kFa6zNT64Ko.txt",
+      "chars": 10915,
+      "segment_count": 1023,
+      "tags": [
+        "labor_ai"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "OHsdqiAcVJE",
+      "title": "马斯克敲钟，桑德斯收税：AI 财富到底该归谁？",
+      "file": "transcripts/OHsdqiAcVJE.txt",
+      "chars": 15953,
+      "segment_count": 1521,
+      "tags": [
+        "general_ai_tech"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "qOFvhTllPhI",
+      "title": "鹅腿阿姨翻车：清北学生不傻，缺的是社会认知！",
+      "file": "transcripts/qOFvhTllPhI.txt",
+      "chars": 8639,
+      "segment_count": 823,
+      "tags": [
+        "general_ai_tech"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "Db-4n8vtons",
+      "title": "Mythos 5 和 Fable 5 全网下架：Anthropic最强模型就是最大单点故障？",
+      "file": "transcripts/Db-4n8vtons.txt",
+      "chars": 6461,
+      "segment_count": 607,
+      "tags": [
+        "eval_vs_workbench"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "XBCe0FGyqa4",
+      "title": "Anthropic 卖 Claude，也想参与制定世界规则？",
+      "file": "transcripts/XBCe0FGyqa4.txt",
+      "chars": 9243,
+      "segment_count": 862,
+      "tags": [
+        "general_ai_tech"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "hdDlR3smlYg",
+      "title": "伤敌一千，自损八百：中美清单战已经回不去了!",
+      "file": "transcripts/hdDlR3smlYg.txt",
+      "chars": 8792,
+      "segment_count": 828,
+      "tags": [
+        "general_ai_tech"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "NgLtr8XYXvw",
+      "title": "印度外包被掘墓，赢家可能还是印度？",
+      "file": "transcripts/NgLtr8XYXvw.txt",
+      "chars": 7811,
+      "segment_count": 709,
+      "tags": [
+        "general_ai_tech"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "bpIgZBfrwCQ",
+      "title": "大学毕业找不到工作，高考价值今天还剩多少？",
+      "file": "transcripts/bpIgZBfrwCQ.txt",
+      "chars": 7573,
+      "segment_count": 737,
+      "tags": [
+        "general_ai_tech"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "UqX-LmQz-b0",
+      "title": "Token账单爆炸：大厂到底错在哪里？",
+      "file": "transcripts/UqX-LmQz-b0.txt",
+      "chars": 11817,
+      "segment_count": 1009,
+      "tags": [
+        "cost_infra"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "IoGsT9VJYuY",
+      "title": "钉钉内网7万字长文，到底刺痛了谁?",
+      "file": "transcripts/IoGsT9VJYuY.txt",
+      "chars": 7231,
+      "segment_count": 666,
+      "tags": [
+        "general_ai_tech"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "zQ013DYviu0",
+      "title": "越喊危险越要用？Anthropic安全叙事的反面！",
+      "file": "transcripts/zQ013DYviu0.txt",
+      "chars": 5474,
+      "segment_count": 442,
+      "tags": [
+        "trust_safety_governance"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "IbVORK8NX2M",
+      "title": "谷歌融资847.5亿：4个动作看懂AI过冬！",
+      "file": "transcripts/IbVORK8NX2M.txt",
+      "chars": 6548,
+      "segment_count": 595,
+      "tags": [
+        "funding_power"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "sjDcBw3Jhaw",
+      "title": "OpenAI 的 Codex超级App路线！",
+      "file": "transcripts/sjDcBw3Jhaw.txt",
+      "chars": 8906,
+      "segment_count": 749,
+      "tags": [
+        "general_ai_tech"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "M8-o9pg2eqU",
+      "title": "AI 的切尔诺贝利时刻，真正可怕的不是事故，而是不愿意承认事实？",
+      "file": "transcripts/M8-o9pg2eqU.txt",
+      "chars": 4205,
+      "segment_count": 366,
+      "tags": [
+        "trust_safety_governance"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "uJEUy8YV9mc",
+      "title": "N1X不是PC革命：英伟达最想解决的是库存？",
+      "file": "transcripts/uJEUy8YV9mc.txt",
+      "chars": 6452,
+      "segment_count": 580,
+      "tags": [
+        "general_ai_tech"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "vx-Greno3qU",
+      "title": "中国品牌出海难在哪？张雪机车给了答案！",
+      "file": "transcripts/vx-Greno3qU.txt",
+      "chars": 13831,
+      "segment_count": 1314,
+      "tags": [
+        "general_ai_tech"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "ZcFggj3FpIM",
+      "title": "Ferrari的第一台电动车翻车了，被欧洲嘲笑的中国新能源车企在挖欧洲车企设计师设计，而老牌的Ferrari却找来了iPhone的设计师，倒反天罡了？",
+      "file": "transcripts/ZcFggj3FpIM.txt",
+      "chars": 7956,
+      "segment_count": 745,
+      "tags": [
+        "general_ai_tech"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "00YVzqruxPc",
+      "title": "Anthropic的Pre-IPO融资，AI泡沫破裂之前的大逃杀游戏开始了。",
+      "file": "transcripts/00YVzqruxPc.txt",
+      "chars": 8636,
+      "segment_count": 737,
+      "tags": [
+        "funding_power"
+      ],
+      "method": "soft_sub"
+    },
+    {
+      "id": "5T2zHBa9aj4",
+      "title": "教皇AI通谕背后的硅谷伦理战！",
+      "file": "transcripts/5T2zHBa9aj4.txt",
+      "chars": 7205,
+      "segment_count": 639,
+      "tags": [
+        "general_ai_tech"
+      ],
+      "method": "soft_sub"
+    }
+  ]
+}

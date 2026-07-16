@@ -13,8 +13,8 @@
     },
     {
       "id": "deep-research-script",
-      "prompt": "对需要事实核查的财经题，先 deep research 产出 source_cards、claim_ledger、factcheck_report，再写 outputs/script.md 和 beat_plan。",
-      "expected_output": "Research artifacts plus outputs/script.md; claims have sources or uncertainty labels before beat planning."
+      "prompt": "对需要事实核查的财经题，先 deep research：always-tier 产出 source_cards + event_genealogy（人物履历/融资量级等 identity bits 够写出场），写稿前读 storyteller-fan-craft 五问 + 1–2 篇 corpus（学故事债与专名出场，禁止频道壳与你就记/别听成黑话教辅腔），再按 narrative-depth-copy 写 outputs/script.md。先跑 validate_research_lite 与 validate_vo_craft；用户只要口播则停在 script-only，勿强开 shot-grammar。",
+      "expected_output": "Always-tier research locks plus story-coherent outputs/script.md; no teaching-deconstruction anti-patterns; corpus as craft teacher; picture files only after script gate or when user asks to render."
     }
   ]
 }

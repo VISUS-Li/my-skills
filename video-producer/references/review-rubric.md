@@ -15,6 +15,29 @@ Run review after the first-slice preview. The goal is to decide whether to repai
 9. `review_studio_generated`: review page exists after preview.
 10. `complexity_budget`: first slice stays focused: one style, 3-5 recipes, 1-3 renderers, no more than two delegated slots.
 
+## Script Depth Checks (when deep research path is used)
+
+Run against `outputs/script.md` and research locks before expanding beyond the first slice.  
+**Criteria and examples:** only `references/narrative-depth-copy.md`.  
+**Research skeleton:** `references/deep-research-and-script.md` + `scripts/validate_research_lite.py`.
+
+### Blockers (fail → repair plan before full video)
+
+1. `causal_river_required` — tip → what happened → jam/unknown → takeaway; story continuity, not topic-bucket menus
+2. `instant_comprehension_required` — people/companies/numbers land via background + impact in the same talk turn
+3. `oral_chat_required` — read-aloud like telling a friend a story; no gold-sentence / outline / lesson-talk
+4. `no_teaching_deconstruction` — ban `你就记` / `别听成黑话` / `别听成` / `你可以把它理解成` / `你就当作` style name-explainers (see `validate_vo_craft.py`)
+5. `no_channel_mimicry` — no like/bell/Discord/paid/outro host catchphrases
+
+### Strong guidance (record in failed_checks; usually do not alone block a high visual score)
+
+6. `selective_deep_dig` — at most 1–2 seams get mechanism + scene + return
+7. `cast_when_multi_actor` — role/power/pressure + identity bits when actors matter
+8. `epistemic_split_preferred` — fact / inference / unknown when mixed
+9. `no_clever_framework_spine` — abstract metaphor/tax buckets must not replace the causal river
+
+Items 4–5 are hard content bans when detected; items 6–9 are repair prompts unless they collapse a hard gate above.
+
 ## Style Score
 
 Score 0-100:
@@ -29,6 +52,8 @@ Score 0-100:
 
 Pass target: 78. Below 78, repair the slice. Below 65, repair the plan before touching renderer code.
 
+Script-depth **blockers** above are plan blockers even if the visual score is high.
+
 ## Repair Mapping
 
 - Static: add action events, split long shots, insert camera movement.
@@ -40,3 +65,5 @@ Pass target: 78. Below 78, repair the slice. Below 65, repair the plan before to
 - Slow: reduce shot duration and add macro reset.
 - Too flashy: remove effects that do not serve a keyword, proof point, or transition.
 - Too complex: reduce renderers, merge similar recipes, and keep only delegated slots that are visibly stronger than local implementation.
+- Depth blockers: rewrite VO per narrative-depth-copy Three Hard Gates; fix research lock per deep-research-and-script.
+- Jargon fog / clever framework / stiff lecture / teaching deconstruction: rewrite for story river + résumé-style name entry; sample 1–2 StorytellerFan transcripts; run `validate_vo_craft.py`.

@@ -13,21 +13,23 @@ Do not implement or render the full video before the first-slice preview passes 
 
 When instructions compete, obey this order:
 
-1. **First-slice proof**: make the first 20-30 seconds reviewable before expanding.
-2. **Narration-to-picture binding**: every beat needs a visual owner and visible action.
-3. **Style coherence**: use one style preset and one visual world per first slice.
-4. **Rhythm**: visible micro actions every 0.8-1.5s and one macro reset around 8-12s.
-5. **Renderer delegation**: call other skills only for bounded shot slots.
-6. **Polish**: subtitles, flower text, SFX, transitions, and extra effects support the picture.
+1. **Story / VO coherence (analytical jobs)**: if the user asked for research,口播, or script-only, finish a kill-checklist-passing `outputs/script.md` before optimizing shots, metaphor boards, or first-slice polish. Do not sacrifice story continuity for visual checklists.
+2. **First-slice proof**: once picture work starts, make the first 20-30 seconds reviewable before expanding the full video.
+3. **Narration-to-picture binding**: every beat needs a visual owner and visible action.
+4. **Style coherence**: use one style preset and one visual world per first slice.
+5. **Rhythm**: visible micro actions every 0.8-1.5s and one macro reset around 8-12s.
+6. **Renderer delegation**: call other skills only for bounded shot slots.
+7. **Polish**: subtitles, flower text, SFX, transitions, and extra effects support the picture.
 
-If complexity threatens execution, cut optional effects before cutting proof, timing, or review.
+If complexity threatens execution, cut optional effects before cutting story, proof, timing, or review.
 
 ## Context Budget
 
 Do not load every reference file. Load only what the current step needs:
 
-- Start every project from this `SKILL.md` plus `references/style-dna.md` and `references/shot-grammar.md`.
-- Load `references/deep-research-and-script.md` only for factual, analytical, current, critique, product, or source-dependent topics.
+- Always start from this `SKILL.md`.
+- **Research + VO / script-only**: load `references/deep-research-and-script.md`, then `references/narrative-depth-copy.md` (SSOT) + `references/storyteller-fan-craft.md` + **1–2** transcripts from `references/storyteller-fan-corpus/` (`CATALOG.md`). Do **not** require `style-dna.md` / `shot-grammar.md` until beat planning starts.
+- **Picture / first-slice work**: load `references/style-dna.md` and `references/shot-grammar.md` when writing `beat_plan.json` / `segment_spec.json`.
 - Load `references/renderer-selection.md` only when choosing or delegating implementation.
 - Load `references/audio-sync-grammar.md` only when writing or fixing `audio_cue_sheet.json`.
 - Load `references/review-rubric.md` only before review, scoring, or repair.
@@ -96,9 +98,9 @@ Write a delegation note when used:
 
 Prefer soft/auto captions over ASR. Feed `outputs/subtitles/*.txt` / segments into research and script; treat cue times as hints only and re-measure after TTS.
 
-3. If the topic needs facts, judgment, product analysis, web evidence, or a non-shallow argument, run the deep research/script loop in `references/deep-research-and-script.md` before beat planning.
-4. Choose one style preset from `references/style-dna.md`, then select 3-5 shot recipes from `references/shot-grammar.md`.
-5. Write `outputs/script.md` and `outputs/beat_plan.json` with second-level narration beats.
+3. If the topic needs facts, judgment, product analysis, web evidence, or a non-shallow argument, run the deep research/script loop in `references/deep-research-and-script.md` and produce a kill-checklist-passing `outputs/script.md` **before** beat planning. If the user only asked for口播/script, **stop after script + research validate** (record picture-stage skips in `failed_checks.md`).
+4. Only when moving to picture work: choose one style preset from `references/style-dna.md`, then select 3-5 shot recipes from `references/shot-grammar.md`.
+5. Write `outputs/beat_plan.json` (and refine `outputs/script.md` if beat edits change VO) with second-level narration beats.
 6. Write `outputs/segment_spec.json` for the first 20-30 seconds only. Each shot must include renderer/skill ownership, start/end time, camera, visual owner, action list, text strategy, transition reason, and acceptance notes.
 7. Write `outputs/audio_cue_sheet.json` from beat keywords and visual actions. Do not add SFX that lack visible motivation.
 8. Validate the plan:
@@ -117,46 +119,51 @@ When a new project is needed, create it on the user's Desktop by default. If Des
 
 ## Deep Research And Script
 
-Deep research and deep scripting are first-class abilities, not legacy extras. Use them when the input is an article, product/AI tool review, industry analysis, factual explainer, public event, finance/tech topic, critique, or any script where shallow "three points" narration would fail.
+Use when facts, judgment, product/industry analysis, or non-shallow argument matter. Skip for pure motion tests, logo stings, UI demos with no claims, or user scripts that ask for no research.
 
-Default deep outputs:
+**Load together:** `references/deep-research-and-script.md` (search + lock) and `references/narrative-depth-copy.md` (VO SSOT). For analytical VO, also load `references/storyteller-fan-craft.md` and sample **1–2** corpus transcripts. Do not restate VO gates here.
+
+Default depth artifacts (tiered — do not invent a paperwork pile):
 
 ```text
+# always on depth jobs
 research/source_cards.jsonl
-research/claim_ledger.csv
-research/factcheck_report.md
-script/narrative_thread_map.json
-research/thread_ledger.csv
+research/event_genealogy.md    # tip/upstream/timeline/dig/harvest; cast may live here
 outputs/script.md
+
+# on demand
+research/claim_ledger.csv           # many claims / easy to get wrong
+research/factcheck_report.md        # dispute / skip log
+script/narrative_thread_map.json    # long / multi-strand only
+research/thread_ledger.csv          # multi-strand only
 ```
 
-This is a `script-only draft`, not a review-ready project. After deep research,
-continue into the lightweight review contract unless the user explicitly asks
-for research/script only:
+Small jobs may fold source lock + genealogy into sections inside `outputs/script.md`. Constraints stay the same.
 
-```text
-outputs/beat_plan.json
-outputs/segment_spec.json
-outputs/audio_cue_sheet.json
-outputs/review/metrics.json
-outputs/review/failed_checks.md
-outputs/review/review-studio/index.html
+Scaffold with `--deep` when initializing:
+
+```bash
+python scripts/init_video_project.py --name "..." --deep
+python scripts/validate_research_lite.py --project /path/to/project
 ```
 
-`outputs/review/preview.mp4` and `outputs/review/contact_sheet.jpg` may be
-missing in a plan-only pass, but that absence must be recorded in
-`outputs/review/failed_checks.md`. Do not call a project review-ready when it
-only contains `outputs/script.md`.
+This is a `script-only draft` until the lite review contract exists (`beat_plan` / `segment_spec` / `audio_cue_sheet` / review stubs). Plan-only may omit `preview.mp4`; record that in `failed_checks.md`. Do not call a project review-ready when it only has `outputs/script.md`.
 
-Hard rules:
+**Three VO hard gates** (details only in `narrative-depth-copy.md`):
 
-- Every factual claim needs a source, uncertainty label, or deletion.
-- Do not invent causal links; bridge cause/effect only when sources support it.
-- Replace "first/second/third point" structure with a master thread, tension, mechanism, evidence, turn, and landing.
-- Keep source screenshots, product pages, code, terminal, tables, charts, and public statements available as visual proof candidates.
-- A line is not ready for beat planning until its visual proof or visual metaphor is knowable.
+1. **Causal river** — tip → what happened → jam/unknown → takeaway; story continuity over topic-bucket menus; soft connectors optional, not quota.
+2. **Instant comprehension** — people/companies/numbers land via background + impact in the same talk turn; ban teaching deconstruction (`你就记` / `别听成黑话` / …).
+3. **Oral chat** — read-aloud like telling a friend a story; no gold-sentence / outline / lesson-talk.
 
-Record any skipped depth checks in `research/factcheck_report.md` or `outputs/review/failed_checks.md`; do not silently skip depth for factual or analytical videos.
+Also: every factual claim needs source / uncertainty / deletion; no invented causality; dig at most 1–2 seams. **Visual proof tags belong at beat-planning time** — do not force metaphors or shot recipes while the VO story is still broken. Default voice = 老范讲故事式讲解（学故事债与人物出场，不学频道壳，不学教辅拆词）。
+
+Optional craft lint after drafting VO:
+
+```bash
+python scripts/validate_vo_craft.py --project /path/to/project
+```
+
+Record skipped depth checks in `factcheck_report.md` or `failed_checks.md`; do not silently skip depth for factual/analytical videos.
 
 ## First-Slice Gate
 
@@ -267,7 +274,10 @@ Only these scripts are part of the active workflow:
 
 | Script | Purpose |
 |--------|---------|
-| `init_video_project.py` | Scaffold lite project with `outputs/` contract |
+| `init_video_project.py` | Scaffold lite project; add `--deep` for research stubs |
+| `validate_research_lite.py` | Depth skeleton: sources + genealogy + script |
+| `validate_vo_craft.py` | Soft/hard lint: teaching-deconstruction anti-patterns in VO |
+| `sync_storyteller_fan_corpus.py` | Refresh StorytellerFan txt corpus from `outputs/subtitles/StorytellerFan` |
 | `validate_segment_spec.py` | Validate `segment_spec.json` + `beat_plan.json` |
 | `score_preview_plan.py` | Score first slice → `metrics.json` / `failed_checks.md` |
 | `build_review_bundle.py` | Static Review Studio bundle + runtime sync |
@@ -290,10 +300,12 @@ Do not use scripts under `examples/legacy/` for new projects.
 ## References
 
 - Style presets: `references/style-dna.md`
-- Deep research and deep script: `references/deep-research-and-script.md`
+- Deep research (search + locks): `references/deep-research-and-script.md`
+- Narrative depth copy (VO SSOT, 老范口播默认): `references/narrative-depth-copy.md`
+- StorytellerFan craft + corpus (analytical VO: sample 1–2 transcripts): `references/storyteller-fan-craft.md` + `references/storyteller-fan-corpus/`
 - Reusable shot recipes: `references/shot-grammar.md`
 - Audio/visual cue rules: `references/audio-sync-grammar.md`
 - Renderer routing: `references/renderer-selection.md`
 - Review scoring and checks: `references/review-rubric.md`
 - Schemas and minimal examples: `assets/templates/`
-- Legacy archived material: `examples/legacy/`
+- Legacy archived material (**do not load for new projects**): `examples/legacy/`

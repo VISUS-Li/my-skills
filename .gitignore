@@ -37,6 +37,12 @@ logs/
 tmp/
 temp/
 
+# Playwright MCP browser dumps / snapshots
+.playwright-mcp/
+
+# Repo-root runtime artifacts (subtitle extract, local video runs)
+/outputs/
+
 # Manual CLI stdout/stderr redirects (e.g. indextts2_generate.py > p1.out 2> p1.err)
 p*.out
 p*.err
@@ -57,3 +63,10 @@ video-producer/audit/
 
 # video-producer: local/scratch test scripts (do not ship)
 video-producer/scripts/test_*.py
+video-producer/scripts/*_test.py
+
+# sticker-kit / cozy-sticker-ui: local render dumps (frames, sheets, GIFs)
+sticker-kit-output/
+cozy-sticker-ui-output/
+**/sticker-kit-output/
+**/cozy-sticker-ui-output/

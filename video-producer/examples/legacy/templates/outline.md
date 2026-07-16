@@ -1,5 +1,9 @@
 # Outline
 
+> **DO NOT LOAD for new projects.** Superseded by `research/event_genealogy.md` +
+> optional `assets/templates/example_narrative_thread_map.json` and
+> `references/narrative-depth-copy.md`. Kept for archive only.
+
 ## Master thread (write first)
 
 - `story_scope`: single | multi
@@ -70,5 +74,8 @@ Each spine beat in `narrative_thread_map.json` needs:
 
 ## Oral delivery notes
 - Bridge lines must **cite or point to evidence** (原文/条款/时间线), not speculative chat
-- Allowed rhythm: `[pause]`, ……, repeat key fact words, “不对，更准确地说…”
+- **Term gloss / Meaning / Harvest** gates: see `references/narrative-depth-copy.md`
+- Depth = 来龙去脉 + 意味着什么 + 可带走收获；不是读稿机，也不是对仗金句堆
 - Forbidden: 你想啊 / 其实吧 / 我跟你说 / 无来源的我觉得估计
+- Forbidden: 对仗口号当全文脊柱；导航话术每段起手
+- Forbidden mimicry: 欢迎收听××频道 / 这就是今天的故事 / 点赞小铃铛 Discord 付费频道 再见

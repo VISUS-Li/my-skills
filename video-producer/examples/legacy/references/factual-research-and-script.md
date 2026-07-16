@@ -1,5 +1,8 @@
 # Factual Research And Script
 
+> **DO NOT LOAD for new projects.** Superseded by `references/deep-research-and-script.md`
+> (artifact tiers) and `references/narrative-depth-copy.md` (VO gates). Kept for archive only.
+
 Use this for news, finance, technology, social issues, public incidents, science, policy, and documentary-style narration.
 
 ## Research Lock

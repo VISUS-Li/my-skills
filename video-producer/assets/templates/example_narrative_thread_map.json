@@ -1,0 +1,38 @@
+{
+  "version": "v006",
+  "story_scope": "single",
+  "tip": "闯入公共视野的那一下 + 日期",
+  "genealogy": "前尘 → tip → 关键节点 → 卡住点（一句话可复述）",
+  "viewer_harvest": {
+    "one_liner": "听完带走的那一句（能复述、能再用）"
+  },
+  "dig_worthy": [
+    {
+      "node": "最多 1–2 道缝：反常数字 / 制度缝 / 激励裂缝 / 大众误读",
+      "mechanism_hint": "为什么会这样",
+      "analogy_hint": "外行能抓住的一个比方",
+      "return_line": "挖完怎么收回主线"
+    }
+  ],
+  "still_unknown": "目前仍说不清的部分",
+  "spine": [
+    {
+      "phase": "tip_stakes",
+      "time_hint": "0-20s",
+      "viewer_payoff": "热 tip + 硬锚点（可含工作结论预告）",
+      "landing_line": "这意味着……（口语，不要停在事实本身）"
+    },
+    {
+      "phase": "dig_expand",
+      "time_hint": "mid",
+      "viewer_payoff": "选 1–2 个 dig_worthy：机制 + 类比 + 边界，再收回主线",
+      "landing_line": "所以对……来说，这意味着……"
+    },
+    {
+      "phase": "compress",
+      "time_hint": "final",
+      "viewer_payoff": "可复述地图 + harvest + 不确定边界；禁止频道 CTA",
+      "landing_line": "平常话钉住收获"
+    }
+  ]
+}
