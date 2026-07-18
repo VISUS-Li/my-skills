@@ -1,0 +1,69 @@
+{
+  "project": "sword_fly_long",
+  "style_id": "cozy-scrapbook",
+  "target_unique_frames": 112,
+  "bridge_reserve": 12,
+  "fps": 12,
+  "hold": 1,
+  "layers": ["character"],
+  "global_action_family": "sword_fly",
+  "topology_lock": "exactly ONE rider + ONE flying sword under feet + TWO separate cloud props; sword never fused to boots; clouds never fused to sleeves",
+  "acts": [
+    {
+      "id": "cruise",
+      "title": "平飞加速",
+      "unique_frames": 28,
+      "action_class": "sword_fly_cruise",
+      "free_channels": ["lean", "sleeve_trail", "hair_trail", "sword_tilt", "cloud_a_pos", "cloud_b_pos"],
+      "vfx": {"enabled": false},
+      "beat_summary": "level flight → lean forward → speed surge sleeve trail → settle",
+      "stage_beats": [
+        {"span": [1, 8], "desc": "near-level lean 5→12°"},
+        {"span": [9, 18], "desc": "lean 12→20°, sleeves trail harder"},
+        {"span": [19, 28], "desc": "hold surge then ease to lean 14°"}
+      ]
+    },
+    {
+      "id": "dive_cloud",
+      "title": "俯冲穿云",
+      "unique_frames": 32,
+      "action_class": "sword_fly_dive",
+      "free_channels": ["dive_angle", "sword_tip_down", "cloud_overlap"],
+      "vfx": {"enabled": false},
+      "beat_summary": "tip down → enter cloud (separate silhouettes) → exit recover",
+      "stage_beats": [
+        {"span": [1, 10], "desc": "dive entry tip down 5→15°"},
+        {"span": [11, 20], "desc": "through-cloud, cloud_b overlaps but SEPARATE"},
+        {"span": [21, 32], "desc": "exit cloud, sword levels toward 8°"}
+      ]
+    },
+    {
+      "id": "bank",
+      "title": "侧倾回转",
+      "unique_frames": 28,
+      "action_class": "sword_fly_bank",
+      "free_channels": ["roll", "sword_bank", "hair_curve", "cloud_swap"],
+      "vfx": {"enabled": false},
+      "beat_summary": "bank right → deeper roll → recover toward level",
+      "stage_beats": [
+        {"span": [1, 10], "desc": "roll 0→12° right"},
+        {"span": [11, 18], "desc": "roll 12→18°, clouds swap sides"},
+        {"span": [19, 28], "desc": "recover roll → lean 8°"}
+      ]
+    },
+    {
+      "id": "loop_close",
+      "title": "回平闭环",
+      "unique_frames": 24,
+      "action_class": "sword_fly_cruise",
+      "free_channels": ["lean", "bob", "cloud_a_pos", "cloud_b_pos"],
+      "vfx": {"enabled": false},
+      "beat_summary": "small hop bob on sword → ease to match cruise start for loop",
+      "stage_beats": [
+        {"span": [1, 8], "desc": "hop up on sword"},
+        {"span": [9, 16], "desc": "settle down"},
+        {"span": [17, 24], "desc": "near-level lean ~5° for loop match"}
+      ]
+    }
+  ]
+}

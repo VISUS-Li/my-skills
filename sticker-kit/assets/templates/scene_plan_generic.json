@@ -1,0 +1,56 @@
+{
+  "project": {
+    "name": "layered-wan-scene",
+    "style_id": "cozy-scrapbook",
+    "duration_sec": 4.0,
+    "fps": 16,
+    "canvas": [960, 540],
+    "element_canvas": [640, 640],
+    "visual_lock": "统一的手绘贴纸风，角色比例、轮廓、配色和光向保持一致",
+    "negative_prompt": "写实摄影，复杂背景，镜头晃动，形象漂移，额外肢体，残影",
+    "wan": {
+      "base_url": "http://10.0.221.33:8090",
+      "width": 640,
+      "height": 640,
+      "fps": 16,
+      "steps": 20,
+      "cfg_i2v": 3.5,
+      "cfg_flf2v": 4.0,
+      "seed": -1
+    }
+  },
+  "interaction_contracts": [],
+  "shots": [
+    {
+      "id": "shot_01",
+      "start_sec": 0.0,
+      "end_sec": 4.0,
+      "camera": {"mode": "locked", "description": "固定全景"},
+      "background": {"image": "assets/backgrounds/background.png"},
+      "elements": [
+        {
+          "id": "actor_with_held_prop",
+          "kind": "actor_group",
+          "z": 30,
+          "anchor": "bottom-center",
+          "identity_lock": "同一个角色和其手持道具，造型、颜色、部件数量始终一致，道具不脱手",
+          "matte": {"mode": "chroma", "color": "#00FF00"},
+          "states": [
+            {
+              "id": "action_a_to_b",
+              "start_sec": 0.0,
+              "end_sec": 4.0,
+              "mode": "flf2v",
+              "start_image": "assets/elements/actor/action_a.png",
+              "end_image": "assets/elements/actor/action_b.png",
+              "motion_prompt": "角色从动作 A 平滑完成到动作 B，动作弧线明确，重心连续，没有跳帧",
+              "playback": "stretch",
+              "transform_from": {"x": 0.35, "y": 0.86, "height": 0.5},
+              "transform_to": {"x": 0.55, "y": 0.86, "height": 0.5}
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

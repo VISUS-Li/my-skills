@@ -53,7 +53,7 @@ python scripts/validate_research_lite.py --project /path/to/project
 
 ## Research Intake
 
-Do not start from slogan judgments. Gather enough to expand the tip into a river **and** know what each hard fact means at human scale.
+Do not start from slogan judgments. Gather enough to expand the tip into a **coherent story** **and** know what each hard fact means at human scale.
 
 **Optional breadth coach:** load `references/storyteller-fan-craft.md` and skim the research-width table + **1–2** matching transcripts in `references/storyteller-fan-corpus/CATALOG.md`. Use them to decide *what kinds of material to hunt* (timeline reversals, rule substrate, cast pressure, comparators, mechanism cracks) — not what lines to reuse. Analytical VO later defaults to the same oral craft via `narrative-depth-copy.md`.
 
@@ -76,7 +76,7 @@ Each important source card:
 - risk: current / old / disputed / interpretation / anecdote / marketing / blocked
 - genealogy role: tip / upstream / cast / rule / timeline / neighbor / comparator / impact
 - **optional meaning note:** one line on what this evidence implies if used on VO
-- **optional dig flag:** mark `dig_worthy` when the tip hides a mechanism, incentive crack, calendar lock, or common misread worth a full analogy+expand beat
+- **optional dig flag:** mark `dig_worthy` when the node could earn a **focused expand beat** in VO (mechanism crack, policy shift, cast reversal, common misread, neighbor that reframes the tip)
 
 Rules:
 
@@ -99,11 +99,24 @@ Rules:
 | neighbor_strands | Parallel lines that change reading（或 `none` + 理由） |
 | still_unknown | Unsettled |
 | ordinary_impact | Where it lands on users/builders/consumers |
-| dig_worthy | At most 1–2 nodes (or `none` + 理由 on thin topics) |
+| dig_worthy | **Candidate** expand nodes for VO (see selection rubric below) |
 | viewer_harvest | One-sentence takeaway the VO must land (plain language; no type label required) |
 | cast | Major actors with role / leverage / pressure（fold here unless separate cast file） |
 
 After this file, a stranger can retell 来龙去脉 in under a minute **and** say what the tip means for ordinary stakeholders.
+
+### Dig-worthy selection（研究标记 → 写稿再判）
+
+Research may flag **several** candidates. When drafting `outputs/script.md`, **pick 1–2 for the spoken expand** based on:
+
+- **Tip centrality** — does this node explain why the news matters *now*?
+- **Knowledge yield** — will the listener learn something non-obvious (policy line, neighbor list, cast reversal, mechanism)?
+- **Drama / curiosity** — negotiation,乌龙, misread, industry precedent
+- **Evidence strength** — primary / multi-source vs single 「据悉」
+
+**Not a roster rule:** do not expand every named company because it appeared in research. Example: for「Apple 智能备案」, neighbors (同批七家 + 端侧首次单列) and rule shift may outrank a full Baidu chapter; Baidu/Alibaba enter when they explain **why the tip landed this way**.
+
+Record final picks in script appendix or `event_genealogy.md` dig notes; skipped candidates → one line in `factcheck_report.md` or genealogy.
 
 ### Claim Ledger (when used)
 
@@ -123,7 +136,7 @@ Spine phases are a **menu**, not a mandatory fill. Short pieces often: `tip_stak
 
 Avoid as structure:
 
-- 「首先 / 其次 / 最后」as sole spine with no river
+- 「首先 / 其次 / 最后」as sole spine with no story thread
 - Empty speculation without proof
 - Slogan conclusions not earned by expansion
 - Fact payloads with no meaning/impact path into VO
@@ -143,17 +156,18 @@ Meaning lines often need a visual that shows **scale or contrast**, not only the
 When research lock is enough:
 
 1. Load `references/narrative-depth-copy.md` and `references/storyteller-fan-craft.md`; read **1–2** matching transcripts and mark the five craft questions (opening / debt order / cast entry / meaning / dig-return).
-2. Write `outputs/script.md` against the three hard gates — story continuity first; names enter via résumé/goal/status, not teaching deconstruction.
-3. Run:
+2. **Re-select 1–2 dig nodes** for the spoken script (see rubric above); embed in main thread, not mechanical per-actor chapters.
+3. Write `outputs/script.md` against the three hard gates — story continuity first; names enter via résumé/goal/status, not teaching deconstruction; oral/TTS feel per narrative-depth-copy.
+4. Run:
    - `python scripts/validate_research_lite.py --project ...`
-   - `python scripts/validate_vo_craft.py --project ...` (flags teaching-deconstruction anti-patterns)
-4. Continue to beat planning unless the user asked for research/script only.
+   - `python scripts/validate_vo_craft.py --project ...` (teaching-deconstruction + meta-commentary hints)
+5. Continue to beat planning unless the user asked for research/script only.
 
 Research checklist (skeleton, not style):
 
 - [ ] Source cards exist (or Sources section folded into script)
 - [ ] Genealogy exists (file or folded); stranger can retell tip → upstream → jam → takeaway
-- [ ] dig_worthy marked (at most 1–2 seams) or explicitly skipped with reason
+- [ ] dig_worthy candidates marked; final 1–2 picks for VO noted (or explicitly skipped with reason)
 - [ ] viewer_harvest stated for VO (plain sentence; no type taxonomy required)
 - [ ] Claims either sourced, uncertain, or removed
 - [ ] Lead cast/companies have enough identity bits for story entry (or marked unknown)

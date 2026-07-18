@@ -1,0 +1,1256 @@
+{
+  "schema_version": "4.0",
+  "deliverable_type": "full_production",
+  "language": "zh-CN",
+  "project": {
+    "title": "AI 仓库搬运测试",
+    "one_line_hook": "我让 AI 工人搬箱子，它把整面墙当成了最近的箱子。",
+    "content_form": "sandbox_test",
+    "game_genre": "physics_logistics_prototype",
+    "target_platforms": [
+      "bilibili",
+      "youtube",
+      "douyin"
+    ],
+    "target_duration_sec": 240,
+    "player_fantasy": "指挥低配 AI 工人清理仓库",
+    "comedic_promise": "每次提高搬运效率，仓库本身就少一部分",
+    "prototype_goal": "只完成可录制的跑步失控、穿墙和错误救援判定"
+  },
+  "game": {
+    "engine": "engine_agnostic",
+    "engine_version": null,
+    "dimension": "3d",
+    "prototype_fidelity": "rough_graybox",
+    "camera": "third_person_with_free_camera",
+    "player_verbs": [
+      "move",
+      "turn",
+      "inspect",
+      "enter_goal"
+    ],
+    "core_loop": [
+      "移动到城门",
+      "观察身体与碰撞体错位",
+      "利用可见模型穿墙侦察",
+      "把真实碰撞体移动到救援区域"
+    ],
+    "normal_rules": [
+      "身体、肢体和碰撞体应保持同一位置",
+      "恶龙攻击进入感知范围的勇者",
+      "救援区只绑定公主"
+    ],
+    "win_condition": "公主进入出口触发区",
+    "fail_condition": "玩家碰撞体被恶龙击中三次",
+    "systems": [
+      {
+        "id": "character_visual_root",
+        "name": "角色可见模型",
+        "normal_behavior": "可见模型与碰撞体同步",
+        "ai_task": "添加自然跑步动画",
+        "chaos_vectors": [
+          "四肢延迟",
+          "躯干悬浮",
+          "VisualRoot 与 PlayerRoot 脱钩"
+        ],
+        "player_effect": "模型可穿墙侦察，碰撞体仍在门外",
+        "visual_readability_0_10": 10,
+        "reproducibility_0_10": 9
+      },
+      {
+        "id": "rescue_targeting",
+        "name": "救援目标选择",
+        "normal_behavior": "只识别公主标签",
+        "ai_task": "让救援系统自动选择最近目标",
+        "chaos_vectors": [
+          "恶龙成为最近目标"
+        ],
+        "player_effect": "玩家可错误救出恶龙",
+        "visual_readability_0_10": 8,
+        "reproducibility_0_10": 10
+      }
+    ],
+    "playable_arc": [
+      "看见四肢分离",
+      "发现模型可穿墙",
+      "用模型吸引恶龙",
+      "把碰撞体移到出口并错误救出恶龙"
+    ],
+    "minimum_playable_scope": [
+      "40x40 米灰盒",
+      "一个勇者",
+      "一只恶龙",
+      "一个公主占位体",
+      "一面墙",
+      "一个出口触发区"
+    ],
+    "non_goals": [
+      "不做完整战斗",
+      "不做开放世界",
+      "不做精细动画",
+      "不制作多个关卡"
+    ],
+    "scene_3d": {
+      "size_m": "40x40",
+      "layout": [
+        "出生点到城门 15 米",
+        "城门后 8 米放恶龙",
+        "公主和出口在侧后方"
+      ],
+      "scene_hierarchy": [
+        "PrototypeScene/Environment",
+        "PrototypeScene/PlayerRoot/CollisionBody",
+        "PrototypeScene/PlayerRoot/VisualRoot",
+        "PrototypeScene/DragonNPC",
+        "PrototypeScene/Princess",
+        "PrototypeScene/ExitTrigger",
+        "PrototypeScene/DebugCanvas"
+      ],
+      "visual_readability": [
+        "地面浅色，角色深色",
+        "墙高 3 米，确保穿墙明显",
+        "四肢最大偏移 1.2 米且始终留在镜头内"
+      ],
+      "camera_setup": [
+        "跟随距离 6 米",
+        "高度 2.5 米",
+        "45 度轻俯视",
+        "提供自由摄像机"
+      ],
+      "asset_policy": [
+        "优先现有角色",
+        "没有角色时使用躯干方块和四肢胶囊",
+        "不下载外部资产"
+      ]
+    }
+  },
+  "ai_chaos": {
+    "source_type": "mixed",
+    "original_prompt": "让 AI 工人自动搬走最近的箱子。",
+    "expected_result": "工人把纸箱搬到装卸区。",
+    "failure_logic": "目标选择只比较距离，没有校验箱子标签。",
+    "events": [
+      "工人搬墙",
+      "捷径出现",
+      "建筑稳定度下降",
+      "出口被搬走"
+    ],
+    "player_exploit": "用工人拆墙开捷径并快速搬运远处货物。",
+    "escalation_levels": [
+      {
+        "level": 1,
+        "trigger": "命令搬最近箱子",
+        "player_action": "站在墙边下达命令",
+        "game_state_change": "墙被选为搬运对象",
+        "visual_payoff": "工人拖走整面墙",
+        "benefit": "形成捷径",
+        "cost": "仓库稳定度下降"
+      },
+      {
+        "level": 2,
+        "trigger": "重复命令",
+        "player_action": "把工人引到货架和地板旁",
+        "game_state_change": "多个结构物被搬走",
+        "visual_payoff": "仓库像积木一样缺块",
+        "benefit": "路线更短",
+        "cost": "货物开始掉落"
+      },
+      {
+        "level": 3,
+        "trigger": "最终清空命令",
+        "player_action": "在出口旁下令",
+        "game_state_change": "出口门被搬走",
+        "visual_payoff": "装卸区和出口一起被拖走",
+        "benefit": "系统计数归零",
+        "cost": "玩家无法离开"
+      }
+    ],
+    "final_callback": "UI 宣布：仓库清空完成。"
+  },
+  "comedy": {
+    "tone": "deadpan_visual_contrast",
+    "transferable_influences": [
+      "小人物类型降格",
+      "低成本自觉",
+      "字面误解",
+      "权威合理化",
+      "快速反转"
+    ],
+    "contrast_layers": [
+      "史诗救援与灰盒散装角色",
+      "AI 专业声明与四肢分离画面",
+      "英雄音乐与轻微木块碰撞"
+    ],
+    "authority_rationalization": "AI 和任务 UI 始终把错误当作优化成功。",
+    "reversal_chain": [
+      "搬箱子变搬墙",
+      "拆墙变捷径",
+      "提效变拆仓库",
+      "清空仓库变没有仓库"
+    ],
+    "units": [
+      {
+        "unit_id": "C01",
+        "normal_request": "让 AI 工人自动搬走最近的箱子",
+        "ai_claim": "已启用智能最近目标搬运",
+        "audience_expectation": "工人走向最近纸箱并搬到装卸区",
+        "visual_contrast": "工人绕过纸箱，抓住距离手部更近的整面方块墙，并把墙体横着拖过仓库",
+        "reveal_shot": "wide_static",
+        "hold_sec": 1.0,
+        "deadpan_voiceover": "最近，主要是指离它的手比较近。至于是不是箱子，属于下一阶段需求。",
+        "gameplay_consequence": "玩家利用被搬走的墙开捷径，但仓库稳定度下降",
+        "authority_confirmation": "效率面板显示搬运体积提升 800%",
+        "escalation_link": "工人继续把货架、地板和出口当作可搬运对象",
+        "callback_target": "最终 UI 宣布仓库已清空"
+      }
+    ],
+    "forbidden_shortcuts": [
+      "不说太离谱了",
+      "不在揭示前解释四肢会分离",
+      "不靠密集表情包",
+      "不让角色失去操作"
+    ],
+    "narrator_profile": {
+      "perspective": "first_person_creator",
+      "persona": "认真制作粗糙游戏，却不断被 AI 结果迫使重新解释现实的普通创作者",
+      "delivery": "calm_resigned_precise",
+      "language_rules": [
+        "画面先揭示",
+        "不使用泛化反应词",
+        "每句推进下一步测试"
+      ]
+    },
+    "voiceover_rules": {
+      "min_chars_per_finished_minute": 120,
+      "recommended_chars_per_finished_minute": 150,
+      "min_spoken_shot_ratio": 0.7,
+      "max_silent_gap_sec": 12,
+      "exact_text_required": true,
+      "optional_lines_forbidden": true
+    }
+  },
+  "story": {
+    "enabled": false
+  },
+  "video": {
+    "format": "landscape_main_with_vertical_cutdown",
+    "beats": [
+      "事故冷开场",
+      "回到正常提示",
+      "AI 完成声明",
+      "视觉揭示和留白",
+      "冷句",
+      "玩家利用",
+      "错误救援反转"
+    ],
+    "capture_shots": [
+      "正常跑步对照",
+      "四肢分离全景",
+      "穿墙侧面镜头",
+      "恶龙低头中景",
+      "出口错误判定特写"
+    ],
+    "ui_overlays": [
+      "已添加自然跑步动画",
+      "救援目标：最近对象",
+      "任务完成"
+    ],
+    "dialogue": [
+      "恶龙：冥界的同事终于来了。"
+    ],
+    "audio_plan": [
+      "史诗音乐建立类型",
+      "四肢分离时保留木块碰撞",
+      "恶龙低头时音乐突然停止",
+      "错误任务完成使用庄严胜利音"
+    ],
+    "edit_notes": [
+      "错误画面先保持 0.8 秒再进旁白",
+      "提示词和代码画面总计不超过 20%"
+    ],
+    "cutdowns": [
+      "45 秒版本：请求—声明—分离—冷句—穿墙—救错恶龙"
+    ],
+    "narration_contract": {
+      "required": true,
+      "perspective": "first_person_creator",
+      "target_chars_per_minute_min": 120,
+      "target_chars_per_minute_max": 180,
+      "target_spoken_runtime_ratio_min": 0.5,
+      "target_spoken_runtime_ratio_max": 0.75,
+      "min_spoken_shot_ratio": 0.7,
+      "max_silent_gap_sec": 12,
+      "visual_reveal_hold_sec_min": 0.5,
+      "visual_reveal_hold_sec_max": 1.5,
+      "exact_text_required": true,
+      "placeholder_forbidden": true
+    },
+    "voiceover_script": [
+      {
+        "id": "VO01",
+        "start_sec": 7,
+        "end_sec": 14,
+        "speaker": "creator",
+        "text": "事情原本没有这么复杂。我只让 AI 做一个勇者救公主的游戏。",
+        "function": "setup",
+        "delivery": "平静、克制、略带无奈",
+        "paired_visual": "回到提示词界面"
+      },
+      {
+        "id": "VO02",
+        "start_sec": 14,
+        "end_sec": 23,
+        "speaker": "creator",
+        "text": "我的要求很普通：让勇者能跑、能进城，最后把公主带出来。",
+        "function": "expectation",
+        "delivery": "平静、克制、略带无奈",
+        "paired_visual": "展示原始任务目标"
+      },
+      {
+        "id": "VO03",
+        "start_sec": 23,
+        "end_sec": 32,
+        "speaker": "creator",
+        "text": "AI 很快告诉我，自然跑步动画已经完成。它说得很有把握。 我当时相信了，因为这句话看起来比游戏本身完整得多。",
+        "function": "ai_claim_bridge",
+        "delivery": "平静、克制、略带无奈",
+        "paired_visual": "AI 完成声明"
+      },
+      {
+        "id": "VO04",
+        "start_sec": 34,
+        "end_sec": 42,
+        "speaker": "creator",
+        "text": "自然，主要是指不受人体结构约束。",
+        "function": "redefinition",
+        "delivery": "平静、克制、略带无奈",
+        "paired_visual": "四肢分离并拖行"
+      },
+      {
+        "id": "VO05",
+        "start_sec": 42,
+        "end_sec": 55,
+        "speaker": "creator",
+        "text": "我原本以为这只是动画问题。直到他的身体进了城，碰撞体还在门口接受检查。",
+        "function": "consequence",
+        "delivery": "平静、克制、略带无奈",
+        "paired_visual": "身体穿墙而碰撞体留在外面"
+      },
+      {
+        "id": "VO06",
+        "start_sec": 55,
+        "end_sec": 72,
+        "speaker": "creator",
+        "text": "这个错误很快有了用途。勇者负责侦察，剩下的身体部件负责证明他来过。 这也是这个原型第一次出现明确分工，虽然分工对象主要是同一个人。",
+        "function": "observation",
+        "delivery": "平静、克制、略带无奈",
+        "paired_visual": "玩家利用穿墙观察敌人"
+      },
+      {
+        "id": "VO07",
+        "start_sec": 72,
+        "end_sec": 90,
+        "speaker": "creator",
+        "text": "为了让敌人重新认识他，我让 AI 修复角色碰撞。",
+        "function": "escalation",
+        "delivery": "平静、克制、略带无奈",
+        "paired_visual": "再次输入修复要求"
+      },
+      {
+        "id": "VO08",
+        "start_sec": 90,
+        "end_sec": 108,
+        "speaker": "creator",
+        "text": "修复之后，恶龙终于能检测到勇者。可它检测到的，仍然只是留在门外的碰撞体。 这次修改解决了检测问题，同时保留了检测对象不在现场的问题。",
+        "function": "observation",
+        "delivery": "平静、克制、略带无奈",
+        "paired_visual": "恶龙朝错误位置警戒"
+      },
+      {
+        "id": "VO09",
+        "start_sec": 108,
+        "end_sec": 128,
+        "speaker": "creator",
+        "text": "从恶龙的角度看，城里飘着的只是一具没有物理记录的身体。于是它做出了最合理的判断：这是同事。",
+        "function": "consequence",
+        "delivery": "平静、克制、略带无奈",
+        "paired_visual": "恶龙向漂浮躯干低头"
+      },
+      {
+        "id": "VO10",
+        "start_sec": 128,
+        "end_sec": 148,
+        "speaker": "creator",
+        "text": "我本来想让勇者救公主。现在勇者主要负责取得恶龙的信任。",
+        "function": "redefinition",
+        "delivery": "平静、克制、略带无奈",
+        "paired_visual": "玩家和恶龙同行"
+      },
+      {
+        "id": "VO11",
+        "start_sec": 148,
+        "end_sec": 174,
+        "speaker": "creator",
+        "text": "最后我接入了救援判定。系统会把离出口最近的目标算作获救对象。 我没有再要求它理解剧情，只希望它至少能理解出口附近站着谁。",
+        "function": "escalation",
+        "delivery": "平静、克制、略带无奈",
+        "paired_visual": "展示救援区域和最近目标规则"
+      },
+      {
+        "id": "VO12",
+        "start_sec": 174,
+        "end_sec": 198,
+        "speaker": "creator",
+        "text": "公主跑远了，恶龙站得很近。AI 没有改变规则，它只是非常认真地执行了距离。",
+        "function": "observation",
+        "delivery": "平静、克制、略带无奈",
+        "paired_visual": "恶龙进入救援区"
+      },
+      {
+        "id": "VO13",
+        "start_sec": 198,
+        "end_sec": 220,
+        "speaker": "creator",
+        "text": "任务完成时，系统宣布勇者成功救出了恶龙。公主在后面追了很久，主要负责证明她并不需要救援。 从任务统计看，营救效率是一百 百分之百；从公主的反应看，统计口径可能需要调整。",
+        "function": "callback",
+        "delivery": "平静、克制、略带无奈",
+        "paired_visual": "胜利 UI 与追逐画面"
+      },
+      {
+        "id": "VO14",
+        "start_sec": 220,
+        "end_sec": 238,
+        "speaker": "creator",
+        "text": "从最终结果来看，这是一次成功的营救。唯一需要重新确认的，是我们最开始打算救谁。",
+        "function": "callback",
+        "delivery": "平静、克制、略带无奈",
+        "paired_visual": "结尾回收任务目标"
+      }
+    ],
+    "creative_storyboard": [
+      {
+        "shot_id": "S01",
+        "start_sec": 0,
+        "end_sec": 7,
+        "beat_role": "cold_open",
+        "visual": "漂浮勇者穿过城墙，四肢留在墙外，恶龙向躯干低头",
+        "player_action": "向恶龙靠近",
+        "spoken_content": [
+          {
+            "speaker": "恶龙",
+            "type": "dialogue",
+            "text": "冥界的同事终于来了。",
+            "function": "character_reaction",
+            "start_offset_sec": 3,
+            "end_offset_sec": 6,
+            "delivery": "庄严而真诚"
+          }
+        ],
+        "silence_hold_sec": 0.8,
+        "music": "史诗音乐在恶龙低头时突然停止",
+        "sound_effects": [
+          "木块碰撞"
+        ],
+        "comic_turn": "敌人把错误模型当作同盟",
+        "transition": "硬切回提示词界面"
+      },
+      {
+        "shot_id": "S02",
+        "start_sec": 7,
+        "end_sec": 32,
+        "beat_role": "setup",
+        "visual": "提示词界面、任务说明和短暂正常概念图",
+        "player_action": "输入勇者救公主和自然跑步需求",
+        "spoken_content": [
+          {
+            "speaker": "creator",
+            "type": "voiceover",
+            "text": "事情原本没有这么复杂。我只让 AI 做一个勇者救公主的游戏。",
+            "function": "setup",
+            "start_offset_sec": 0,
+            "end_offset_sec": 7,
+            "delivery": "平静、克制、略带无奈"
+          },
+          {
+            "speaker": "creator",
+            "type": "voiceover",
+            "text": "我的要求很普通：让勇者能跑、能进城，最后把公主带出来。",
+            "function": "expectation",
+            "start_offset_sec": 7,
+            "end_offset_sec": 16,
+            "delivery": "平静、克制、略带无奈"
+          },
+          {
+            "speaker": "creator",
+            "type": "voiceover",
+            "text": "AI 很快告诉我，自然跑步动画已经完成。它说得很有把握。 我当时相信了，因为这句话看起来比游戏本身完整得多。",
+            "function": "ai_claim_bridge",
+            "start_offset_sec": 16,
+            "end_offset_sec": 25,
+            "delivery": "平静、克制、略带无奈"
+          }
+        ],
+        "silence_hold_sec": 0,
+        "music": "平静底噪",
+        "sound_effects": [
+          "键盘声",
+          "AI确认音"
+        ],
+        "comic_turn": "用正常目标建立反差",
+        "transition": "切入实际角色"
+      },
+      {
+        "shot_id": "S03",
+        "start_sec": 32,
+        "end_sec": 55,
+        "beat_role": "visual_reveal",
+        "visual": "勇者躯干离地悬浮前进，四肢分离拖行；躯干穿墙而碰撞体停在门外",
+        "player_action": "持续向城门移动",
+        "spoken_content": [
+          {
+            "speaker": "creator",
+            "type": "voiceover",
+            "text": "自然，主要是指不受人体结构约束。",
+            "function": "redefinition",
+            "start_offset_sec": 2,
+            "end_offset_sec": 10,
+            "delivery": "平静、克制、略带无奈"
+          },
+          {
+            "speaker": "creator",
+            "type": "voiceover",
+            "text": "我原本以为这只是动画问题。直到他的身体进了城，碰撞体还在门口接受检查。",
+            "function": "consequence",
+            "start_offset_sec": 10,
+            "end_offset_sec": 23,
+            "delivery": "平静、克制、略带无奈"
+          }
+        ],
+        "silence_hold_sec": 1.0,
+        "music": "英雄主题撤掉",
+        "sound_effects": [
+          "木块碰撞",
+          "摩擦声"
+        ],
+        "comic_turn": "自然跑步变成散装漂浮",
+        "transition": "进入玩家测试"
+      },
+      {
+        "shot_id": "S04",
+        "start_sec": 55,
+        "end_sec": 90,
+        "beat_role": "gameplay_test",
+        "visual": "玩家利用可见模型穿墙观察敌人，再回到界面要求修复碰撞",
+        "player_action": "穿墙侦察并提交修复提示",
+        "spoken_content": [
+          {
+            "speaker": "creator",
+            "type": "voiceover",
+            "text": "这个错误很快有了用途。勇者负责侦察，剩下的身体部件负责证明他来过。 这也是这个原型第一次出现明确分工，虽然分工对象主要是同一个人。",
+            "function": "observation",
+            "start_offset_sec": 0,
+            "end_offset_sec": 17,
+            "delivery": "平静、克制、略带无奈"
+          },
+          {
+            "speaker": "creator",
+            "type": "voiceover",
+            "text": "为了让敌人重新认识他，我让 AI 修复角色碰撞。",
+            "function": "escalation",
+            "start_offset_sec": 17,
+            "end_offset_sec": 35,
+            "delivery": "平静、克制、略带无奈"
+          }
+        ],
+        "silence_hold_sec": 0,
+        "music": "轻微潜行节奏",
+        "sound_effects": [
+          "脚步",
+          "提示音"
+        ],
+        "comic_turn": "错误变成侦察能力",
+        "transition": "进入修复结果"
+      },
+      {
+        "shot_id": "S05",
+        "start_sec": 90,
+        "end_sec": 128,
+        "beat_role": "escalation",
+        "visual": "恶龙只朝门外碰撞体警戒，对城内漂浮躯干低头",
+        "player_action": "让躯干靠近恶龙",
+        "spoken_content": [
+          {
+            "speaker": "creator",
+            "type": "voiceover",
+            "text": "修复之后，恶龙终于能检测到勇者。可它检测到的，仍然只是留在门外的碰撞体。 这次修改解决了检测问题，同时保留了检测对象不在现场的问题。",
+            "function": "observation",
+            "start_offset_sec": 0,
+            "end_offset_sec": 18,
+            "delivery": "平静、克制、略带无奈"
+          },
+          {
+            "speaker": "creator",
+            "type": "voiceover",
+            "text": "从恶龙的角度看，城里飘着的只是一具没有物理记录的身体。于是它做出了最合理的判断：这是同事。",
+            "function": "consequence",
+            "start_offset_sec": 18,
+            "end_offset_sec": 38,
+            "delivery": "平静、克制、略带无奈"
+          }
+        ],
+        "silence_hold_sec": 0.8,
+        "music": "低沉合唱后停止",
+        "sound_effects": [
+          "锁定提示音"
+        ],
+        "comic_turn": "碰撞修复制造身份误认",
+        "transition": "进入同盟玩法"
+      },
+      {
+        "shot_id": "S06",
+        "start_sec": 128,
+        "end_sec": 174,
+        "beat_role": "fake_fix",
+        "visual": "勇者和恶龙并排行走，随后展示救援区域和最近目标规则",
+        "player_action": "把恶龙带向出口",
+        "spoken_content": [
+          {
+            "speaker": "creator",
+            "type": "voiceover",
+            "text": "我本来想让勇者救公主。现在勇者主要负责取得恶龙的信任。",
+            "function": "redefinition",
+            "start_offset_sec": 0,
+            "end_offset_sec": 20,
+            "delivery": "平静、克制、略带无奈"
+          },
+          {
+            "speaker": "creator",
+            "type": "voiceover",
+            "text": "最后我接入了救援判定。系统会把离出口最近的目标算作获救对象。 我没有再要求它理解剧情，只希望它至少能理解出口附近站着谁。",
+            "function": "escalation",
+            "start_offset_sec": 20,
+            "end_offset_sec": 46,
+            "delivery": "平静、克制、略带无奈"
+          }
+        ],
+        "silence_hold_sec": 0,
+        "music": "英雄主题重新出现但略走调",
+        "sound_effects": [
+          "拖行声"
+        ],
+        "comic_turn": "救公主变成取得恶龙信任",
+        "transition": "触发救援判定"
+      },
+      {
+        "shot_id": "S07",
+        "start_sec": 174,
+        "end_sec": 220,
+        "beat_role": "system_reversal",
+        "visual": "公主跑远，恶龙进入出口；金色任务完成 UI 宣布恶龙获救",
+        "player_action": "站在出口等待判定",
+        "spoken_content": [
+          {
+            "speaker": "creator",
+            "type": "voiceover",
+            "text": "公主跑远了，恶龙站得很近。AI 没有改变规则，它只是非常认真地执行了距离。",
+            "function": "observation",
+            "start_offset_sec": 0,
+            "end_offset_sec": 24,
+            "delivery": "平静、克制、略带无奈"
+          },
+          {
+            "speaker": "creator",
+            "type": "voiceover",
+            "text": "任务完成时，系统宣布勇者成功救出了恶龙。公主在后面追了很久，主要负责证明她并不需要救援。 从任务统计看，营救效率是一百 百分之百；从公主的反应看，统计口径可能需要调整。",
+            "function": "callback",
+            "start_offset_sec": 24,
+            "end_offset_sec": 46,
+            "delivery": "平静、克制、略带无奈"
+          }
+        ],
+        "silence_hold_sec": 0.8,
+        "music": "庄严胜利铜管",
+        "sound_effects": [
+          "任务完成音"
+        ],
+        "comic_turn": "最近目标规则反转营救对象",
+        "transition": "切到结尾追逐"
+      },
+      {
+        "shot_id": "S08",
+        "start_sec": 220,
+        "end_sec": 240,
+        "beat_role": "callback",
+        "visual": "勇者拖着恶龙离开，公主在后面追赶；最初任务文字重新出现",
+        "player_action": "离开城堡",
+        "spoken_content": [
+          {
+            "speaker": "creator",
+            "type": "voiceover",
+            "text": "从最终结果来看，这是一次成功的营救。唯一需要重新确认的，是我们最开始打算救谁。",
+            "function": "callback",
+            "start_offset_sec": 0,
+            "end_offset_sec": 18,
+            "delivery": "平静、克制、略带无奈"
+          }
+        ],
+        "silence_hold_sec": 0,
+        "music": "英雄主题反向收尾",
+        "sound_effects": [
+          "远处喊声"
+        ],
+        "comic_turn": "回收最初救援目标",
+        "transition": "黑场结束"
+      }
+    ],
+    "technical_capture_plan": [
+      {
+        "shot_id": "S01",
+        "game_state": "normal_or_chaos_by_shot",
+        "camera_rig": "third_person_or_fixed",
+        "camera_position": "按观众分镜保证主体和错误同框",
+        "trigger": "按该镜头玩家动作触发",
+        "required_parameters": [
+          "fixed_seed=true",
+          "chaos_enabled=true"
+        ],
+        "debug_overlay": "正式录制时关闭",
+        "reset_method": "按 R 重置当前镜头",
+        "capture_notes": "先录正常对照，再录失控版本"
+      },
+      {
+        "shot_id": "S02",
+        "game_state": "normal_or_chaos_by_shot",
+        "camera_rig": "third_person_or_fixed",
+        "camera_position": "按观众分镜保证主体和错误同框",
+        "trigger": "按该镜头玩家动作触发",
+        "required_parameters": [
+          "fixed_seed=true",
+          "chaos_enabled=true"
+        ],
+        "debug_overlay": "正式录制时关闭",
+        "reset_method": "按 R 重置当前镜头",
+        "capture_notes": "先录正常对照，再录失控版本"
+      },
+      {
+        "shot_id": "S03",
+        "game_state": "normal_or_chaos_by_shot",
+        "camera_rig": "third_person_or_fixed",
+        "camera_position": "按观众分镜保证主体和错误同框",
+        "trigger": "按该镜头玩家动作触发",
+        "required_parameters": [
+          "fixed_seed=true",
+          "chaos_enabled=true"
+        ],
+        "debug_overlay": "正式录制时关闭",
+        "reset_method": "按 R 重置当前镜头",
+        "capture_notes": "先录正常对照，再录失控版本"
+      },
+      {
+        "shot_id": "S04",
+        "game_state": "normal_or_chaos_by_shot",
+        "camera_rig": "third_person_or_fixed",
+        "camera_position": "按观众分镜保证主体和错误同框",
+        "trigger": "按该镜头玩家动作触发",
+        "required_parameters": [
+          "fixed_seed=true",
+          "chaos_enabled=true"
+        ],
+        "debug_overlay": "正式录制时关闭",
+        "reset_method": "按 R 重置当前镜头",
+        "capture_notes": "先录正常对照，再录失控版本"
+      },
+      {
+        "shot_id": "S05",
+        "game_state": "normal_or_chaos_by_shot",
+        "camera_rig": "third_person_or_fixed",
+        "camera_position": "按观众分镜保证主体和错误同框",
+        "trigger": "按该镜头玩家动作触发",
+        "required_parameters": [
+          "fixed_seed=true",
+          "chaos_enabled=true"
+        ],
+        "debug_overlay": "正式录制时关闭",
+        "reset_method": "按 R 重置当前镜头",
+        "capture_notes": "先录正常对照，再录失控版本"
+      },
+      {
+        "shot_id": "S06",
+        "game_state": "normal_or_chaos_by_shot",
+        "camera_rig": "third_person_or_fixed",
+        "camera_position": "按观众分镜保证主体和错误同框",
+        "trigger": "按该镜头玩家动作触发",
+        "required_parameters": [
+          "fixed_seed=true",
+          "chaos_enabled=true"
+        ],
+        "debug_overlay": "正式录制时关闭",
+        "reset_method": "按 R 重置当前镜头",
+        "capture_notes": "先录正常对照，再录失控版本"
+      },
+      {
+        "shot_id": "S07",
+        "game_state": "normal_or_chaos_by_shot",
+        "camera_rig": "third_person_or_fixed",
+        "camera_position": "按观众分镜保证主体和错误同框",
+        "trigger": "按该镜头玩家动作触发",
+        "required_parameters": [
+          "fixed_seed=true",
+          "chaos_enabled=true"
+        ],
+        "debug_overlay": "正式录制时关闭",
+        "reset_method": "按 R 重置当前镜头",
+        "capture_notes": "先录正常对照，再录失控版本"
+      },
+      {
+        "shot_id": "S08",
+        "game_state": "normal_or_chaos_by_shot",
+        "camera_rig": "third_person_or_fixed",
+        "camera_position": "按观众分镜保证主体和错误同框",
+        "trigger": "按该镜头玩家动作触发",
+        "required_parameters": [
+          "fixed_seed=true",
+          "chaos_enabled=true"
+        ],
+        "debug_overlay": "正式录制时关闭",
+        "reset_method": "按 R 重置当前镜头",
+        "capture_notes": "先录正常对照，再录失控版本"
+      }
+    ]
+  },
+  "agent_execution": {
+    "agent_profile": "weak_coding_agent",
+    "prompt_strategy": [
+      "一次一个可见功能",
+      "先正常对照再失控",
+      "所有参数可调",
+      "每轮必须手动验收"
+    ],
+    "global_constraints": [
+      "不安装第三方包",
+      "不下载外部资产",
+      "不重构现有玩家输入和摄像机",
+      "只做可录制灰盒",
+      "故意失控属于需求不能自动修复"
+    ],
+    "task_packets": [
+      {
+        "task_id": "A01",
+        "title": "建立正常移动对照和可分离 VisualRoot",
+        "objective": "在不改变现有输入的情况下，把可见模型放到独立 VisualRoot，并提供正常模式与复位。",
+        "current_project_facts": [
+          "粗糙 3D 第三人称原型",
+          "已有可移动 PlayerRoot",
+          "使用占位模型或基础几何体"
+        ],
+        "assumptions": [
+          "未知引擎细节时先复用现有控制器",
+          "不需要外部资产"
+        ],
+        "prerequisites": [
+          "项目可运行",
+          "场景有地面和测试墙"
+        ],
+        "target_files": [
+          "现有玩家视觉控制脚本或新增单一 ChaosVisualController",
+          "当前原型场景"
+        ],
+        "scene_hierarchy": [
+          "PlayerRoot/CollisionBody",
+          "PlayerRoot/VisualRoot/Torso",
+          "PlayerRoot/VisualRoot/Arms",
+          "PlayerRoot/VisualRoot/Legs"
+        ],
+        "required_components": [
+          "玩家根节点",
+          "碰撞体",
+          "独立 VisualRoot",
+          "第三人称摄像机"
+        ],
+        "exact_behavior": [
+          "PlayerRoot 继续控制真实位置和碰撞",
+          "VisualRoot 正常模式下局部位置和旋转归零",
+          "R 键复位玩家和摄像机"
+        ],
+        "visual_reference": {
+          "normal": "角色身体和肢体保持连接，整体随 PlayerRoot 前进",
+          "target_failure": "正常模式仍保持完整角色，为下一任务提供明确对照。",
+          "must_be_visible_in_one_shot": true
+        },
+        "parameter_table": [
+          {
+            "name": "normal_mode",
+            "default": true,
+            "purpose": "切换正常对照"
+          }
+        ],
+        "implementation_steps": [
+          "先保存当前正常版本",
+          "只在 VisualRoot 层实现本任务",
+          "暴露参数并加入模式切换",
+          "运行验收测试并记录结果"
+        ],
+        "pseudocode": [
+          "if chaos_enabled: update_visual_failure()",
+          "else: restore_local_pose()"
+        ],
+        "allowed_changes": [
+          "新增一个局部控制脚本",
+          "调整当前场景内的 VisualRoot 子对象"
+        ],
+        "forbidden_changes": [
+          "不替换玩家输入",
+          "不下载动画或模型",
+          "不重构摄像机",
+          "不把故意失控行为自动修复"
+        ],
+        "non_goals": [
+          "不制作完整战斗系统",
+          "不制作精细角色动画",
+          "不制作完整城堡"
+        ],
+        "debug_controls": [
+          "chaos_enabled",
+          "normal_mode",
+          "reset_scene",
+          "show_debug"
+        ],
+        "acceptance_tests": [
+          "正常模式移动 10 米时身体与碰撞体同步",
+          "按 R 后恢复出生点",
+          "项目连续运行三次无错误"
+        ],
+        "failure_examples": [
+          "错误幅度太小，远景看不见",
+          "角色失去控制或直接倒地",
+          "肢体无限飞出镜头",
+          "Agent 修改了无关系统"
+        ],
+        "agent_response_format": [
+          "列出修改和新增文件",
+          "说明场景挂载位置",
+          "列出参数默认值",
+          "给出逐步测试方法",
+          "列出已知限制和未完成事项"
+        ]
+      },
+      {
+        "task_id": "A02",
+        "title": "实现四肢分离的自然跑步失败",
+        "objective": "按移动输入让躯干平滑悬浮前进，同时让四肢延迟拖行，效果稳定且可切换。",
+        "current_project_facts": [
+          "粗糙 3D 第三人称原型",
+          "已有可移动 PlayerRoot",
+          "使用占位模型或基础几何体"
+        ],
+        "assumptions": [
+          "未知引擎细节时先复用现有控制器",
+          "不需要外部资产"
+        ],
+        "prerequisites": [
+          "项目可运行",
+          "场景有地面和测试墙"
+        ],
+        "target_files": [
+          "现有玩家视觉控制脚本或新增单一 ChaosVisualController",
+          "当前原型场景"
+        ],
+        "scene_hierarchy": [
+          "PlayerRoot/CollisionBody",
+          "PlayerRoot/VisualRoot/Torso",
+          "PlayerRoot/VisualRoot/Arms",
+          "PlayerRoot/VisualRoot/Legs"
+        ],
+        "required_components": [
+          "玩家根节点",
+          "碰撞体",
+          "独立 VisualRoot",
+          "第三人称摄像机"
+        ],
+        "exact_behavior": [
+          "根节点移动速度保持 3.5 m/s",
+          "躯干相对地面悬浮 0.4 m",
+          "四肢延迟 0.25 秒且最大偏移 1.0 m",
+          "chaos_enabled=false 时恢复正常姿势"
+        ],
+        "visual_reference": {
+          "normal": "角色身体和肢体保持连接，整体随 PlayerRoot 前进",
+          "target_failure": "躯干离地 0.4 米前进，四肢落后 0.6 至 1.2 米并轻微碰撞，但角色仍可控制。",
+          "must_be_visible_in_one_shot": true
+        },
+        "parameter_table": [
+          {
+            "name": "limb_lag_seconds",
+            "default": 0.25,
+            "purpose": "控制四肢延迟"
+          },
+          {
+            "name": "max_limb_distance",
+            "default": 1.0,
+            "purpose": "限制四肢不飞出镜头"
+          },
+          {
+            "name": "torso_hover_height",
+            "default": 0.4,
+            "purpose": "控制幽灵悬浮高度"
+          }
+        ],
+        "implementation_steps": [
+          "先保存当前正常版本",
+          "只在 VisualRoot 层实现本任务",
+          "暴露参数并加入模式切换",
+          "运行验收测试并记录结果"
+        ],
+        "pseudocode": [
+          "if chaos_enabled: update_visual_failure()",
+          "else: restore_local_pose()"
+        ],
+        "allowed_changes": [
+          "新增一个局部控制脚本",
+          "调整当前场景内的 VisualRoot 子对象"
+        ],
+        "forbidden_changes": [
+          "不替换玩家输入",
+          "不下载动画或模型",
+          "不重构摄像机",
+          "不把故意失控行为自动修复"
+        ],
+        "non_goals": [
+          "不制作完整战斗系统",
+          "不制作精细角色动画",
+          "不制作完整城堡"
+        ],
+        "debug_controls": [
+          "chaos_enabled",
+          "normal_mode",
+          "reset_scene",
+          "show_debug"
+        ],
+        "acceptance_tests": [
+          "移动 3 秒后至少三只肢体与躯干分离 0.6 米",
+          "最大距离不超过 1.2 米",
+          "玩家仍可转向和停止",
+          "切回正常模式后肢体恢复"
+        ],
+        "failure_examples": [
+          "错误幅度太小，远景看不见",
+          "角色失去控制或直接倒地",
+          "肢体无限飞出镜头",
+          "Agent 修改了无关系统"
+        ],
+        "agent_response_format": [
+          "列出修改和新增文件",
+          "说明场景挂载位置",
+          "列出参数默认值",
+          "给出逐步测试方法",
+          "列出已知限制和未完成事项"
+        ]
+      },
+      {
+        "task_id": "A03",
+        "title": "实现可见模型穿墙但碰撞体留在门外",
+        "objective": "让 VisualRoot 在失控模式下可越过测试墙，而 PlayerRoot 和碰撞体仍遵守碰撞，形成可利用的侦察效果。",
+        "current_project_facts": [
+          "粗糙 3D 第三人称原型",
+          "已有可移动 PlayerRoot",
+          "使用占位模型或基础几何体"
+        ],
+        "assumptions": [
+          "未知引擎细节时先复用现有控制器",
+          "不需要外部资产"
+        ],
+        "prerequisites": [
+          "项目可运行",
+          "场景有地面和测试墙"
+        ],
+        "target_files": [
+          "现有玩家视觉控制脚本或新增单一 ChaosVisualController",
+          "当前原型场景"
+        ],
+        "scene_hierarchy": [
+          "PlayerRoot/CollisionBody",
+          "PlayerRoot/VisualRoot/Torso",
+          "PlayerRoot/VisualRoot/Arms",
+          "PlayerRoot/VisualRoot/Legs"
+        ],
+        "required_components": [
+          "玩家根节点",
+          "碰撞体",
+          "独立 VisualRoot",
+          "第三人称摄像机"
+        ],
+        "exact_behavior": [
+          "PlayerRoot 碰撞保持启用",
+          "VisualRoot 沿输入方向额外偏移并可穿过墙",
+          "最大视觉偏移 3 米",
+          "Debug 模式显示 PlayerRoot 位置"
+        ],
+        "visual_reference": {
+          "normal": "角色身体和肢体保持连接，整体随 PlayerRoot 前进",
+          "target_failure": "摄像机能同时看到墙内的躯干和墙外的碰撞体/四肢，错误空间关系清楚。",
+          "must_be_visible_in_one_shot": true
+        },
+        "parameter_table": [
+          {
+            "name": "max_visual_offset",
+            "default": 3.0,
+            "purpose": "控制可见模型穿墙深度"
+          }
+        ],
+        "implementation_steps": [
+          "先保存当前正常版本",
+          "只在 VisualRoot 层实现本任务",
+          "暴露参数并加入模式切换",
+          "运行验收测试并记录结果"
+        ],
+        "pseudocode": [
+          "if chaos_enabled: update_visual_failure()",
+          "else: restore_local_pose()"
+        ],
+        "allowed_changes": [
+          "新增一个局部控制脚本",
+          "调整当前场景内的 VisualRoot 子对象"
+        ],
+        "forbidden_changes": [
+          "不替换玩家输入",
+          "不下载动画或模型",
+          "不重构摄像机",
+          "不把故意失控行为自动修复"
+        ],
+        "non_goals": [
+          "不制作完整战斗系统",
+          "不制作精细角色动画",
+          "不制作完整城堡"
+        ],
+        "debug_controls": [
+          "chaos_enabled",
+          "normal_mode",
+          "reset_scene",
+          "show_debug"
+        ],
+        "acceptance_tests": [
+          "面对墙持续移动时碰撞体停止在墙外",
+          "VisualRoot 至少进入墙后 1.5 米",
+          "关闭失控后 VisualRoot 平滑回到 PlayerRoot",
+          "连续五次结果一致"
+        ],
+        "failure_examples": [
+          "错误幅度太小，远景看不见",
+          "角色失去控制或直接倒地",
+          "肢体无限飞出镜头",
+          "Agent 修改了无关系统"
+        ],
+        "agent_response_format": [
+          "列出修改和新增文件",
+          "说明场景挂载位置",
+          "列出参数默认值",
+          "给出逐步测试方法",
+          "列出已知限制和未完成事项"
+        ]
+      }
+    ],
+    "final_agent_response_contract": [
+      "修改文件列表",
+      "场景挂载说明",
+      "参数表",
+      "手动测试步骤",
+      "已知限制",
+      "未完成事项"
+    ]
+  },
+  "implementation": {
+    "ai_tools": [
+      "cursor_or_equivalent"
+    ],
+    "engine_assumptions": [
+      "复用用户现有 3D 引擎和控制器",
+      "未知 API 时使用引擎无关逻辑说明"
+    ],
+    "build_steps": [
+      "建立正常对照",
+      "拆分 VisualRoot",
+      "加入肢体延迟",
+      "加入视觉穿墙偏移",
+      "加入错误救援触发",
+      "加入拍摄和复位"
+    ],
+    "test_matrix": [
+      {
+        "test_id": "T01",
+        "variable": "limb_lag_seconds",
+        "values": [
+          0.15,
+          0.25,
+          0.4
+        ],
+        "expected_normal": "四肢保持连接",
+        "interesting_failure": "四肢落后 0.6 至 1.2 米且仍在镜头内",
+        "record": true
+      },
+      {
+        "test_id": "T02",
+        "variable": "max_visual_offset",
+        "values": [
+          1.0,
+          2.0,
+          3.0
+        ],
+        "expected_normal": "模型不穿墙",
+        "interesting_failure": "模型进入墙后但真实碰撞体留在门外",
+        "record": true
+      }
+    ],
+    "debug_switches": [
+      "chaos_enabled",
+      "chaos_level",
+      "normal_mode",
+      "reset_scene",
+      "show_debug",
+      "free_camera"
+    ],
+    "save_versions": [
+      "00_baseline_normal",
+      "01_first_agent_result",
+      "02_controlled_chaos",
+      "03_shooting"
+    ],
+    "capture_setup": [
+      "第三人称距离 6 米、高 2.5 米",
+      "固定侧面机位",
+      "关闭调试 UI 的 shooting_mode"
+    ],
+    "fallback_plan": [
+      "无骨骼角色时用方块躯干和胶囊四肢",
+      "肢体物理不稳定时改用插值延迟",
+      "NavMesh 不稳定时用固定路径"
+    ],
+    "acceptance_criteria": [
+      "主事故一镜可懂",
+      "连续五次可复现",
+      "玩家不失去控制",
+      "可切回正常对照",
+      "Agent 不修改无关系统"
+    ]
+  },
+  "quality_check": {
+    "game_first": true,
+    "three_dimensional_readability": true,
+    "rough_prototype_feasible": true,
+    "player_agency": true,
+    "visual_contrast": true,
+    "deadpan_voiceover": true,
+    "promise_reveal_structure": true,
+    "systemic_escalation": true,
+    "agent_specificity": true,
+    "reproducible": true,
+    "reversal": true,
+    "callback": true,
+    "story_optional": true,
+    "scope_feasible": true,
+    "issues": [],
+    "voiceover_density": true,
+    "exact_voiceover_text": true,
+    "narrator_continuity": true,
+    "creative_technical_separation": true
+  }
+}

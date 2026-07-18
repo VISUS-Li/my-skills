@@ -70,3 +70,9 @@ sticker-kit-output/
 cozy-sticker-ui-output/
 **/sticker-kit-output/
 **/cozy-sticker-ui-output/
+
+# sticker-kit: local smoke / compile / init scratch dirs
+.tmp-sticker-kit-*/
+
+# Skill-local runtime outputs (examples live under references/, not here)
+ai-glitch-comedy-filmmaker/outputs/

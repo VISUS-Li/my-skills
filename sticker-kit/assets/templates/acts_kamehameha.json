@@ -1,0 +1,87 @@
+{
+  "project": "kamehameha",
+  "style_id": "cozy-scrapbook",
+  "target_unique_frames": 112,
+  "bridge_reserve": 12,
+  "fps": 12,
+  "hold": 1,
+  "layers": ["character", "vfx"],
+  "global_action_family": "kamehameha",
+  "topology_lock": "exactly ONE character with TWO arms TWO legs; energy VFX is a SEPARATE layer never fused into sleeves",
+  "acts": [
+    {
+      "id": "charge",
+      "title": "蓄力合掌",
+      "unique_frames": 24,
+      "action_class": "kamehameha_charge",
+      "free_channels": ["arm_angle", "knee_bend", "torso_lean", "hand_distance"],
+      "vfx": {
+        "enabled": true,
+        "free_channels": ["seed_scale"],
+        "must_never": ["full beam", "orb larger than head"]
+      },
+      "beat_summary": "idle stance → arms rise → palms face each other → pea seed appears → seed grows to grape size",
+      "stage_beats": [
+        {"span": [1, 6], "desc": "stance settle, arms start rising"},
+        {"span": [7, 14], "desc": "palms approach, facing inward"},
+        {"span": [15, 20], "desc": "pea-sized seed appears between palms"},
+        {"span": [21, 24], "desc": "seed grows to grape; knees bend slightly"}
+      ]
+    },
+    {
+      "id": "form",
+      "title": "能量球成形",
+      "unique_frames": 28,
+      "action_class": "kamehameha_form",
+      "free_channels": ["arm_brace", "torso_coil", "knee_depth"],
+      "vfx": {
+        "enabled": true,
+        "free_channels": ["orb_scale", "orb_intensity"],
+        "must_never": ["horizontal beam", "second orb"]
+      },
+      "beat_summary": "orb grows from grape → fist size → head size; character braces",
+      "stage_beats": [
+        {"span": [1, 8], "desc": "orb grape→walnut, arms brace"},
+        {"span": [9, 18], "desc": "orb walnut→fist, hair/sleeves react slightly"},
+        {"span": [19, 28], "desc": "orb fist→near head size, deepest coil before push"}
+      ]
+    },
+    {
+      "id": "fire",
+      "title": "发射光束",
+      "unique_frames": 36,
+      "action_class": "kamehameha_fire",
+      "free_channels": ["arm_extend", "recoil", "weight_shift"],
+      "vfx": {
+        "enabled": true,
+        "free_channels": ["beam_length", "beam_width", "muzzle_flare"],
+        "must_never": ["second character", "scene background"]
+      },
+      "beat_summary": "push forward → beam elongates → peak length → slight recoil",
+      "stage_beats": [
+        {"span": [1, 8], "desc": "arms begin thrust, orb elongates into short jet"},
+        {"span": [9, 20], "desc": "beam lengthens steadily, body leans into push"},
+        {"span": [21, 28], "desc": "beam at peak length/width"},
+        {"span": [29, 36], "desc": "mild recoil, beam still present but stabilizing"}
+      ]
+    },
+    {
+      "id": "recover",
+      "title": "余波收势",
+      "unique_frames": 24,
+      "action_class": "kamehameha_recover",
+      "free_channels": ["arm_lower", "posture_recover"],
+      "vfx": {
+        "enabled": true,
+        "free_channels": ["beam_fade", "spark_scatter"],
+        "must_never": ["new full-power beam"]
+      },
+      "beat_summary": "beam fades → sparks → arms lower → neutral ready stance",
+      "stage_beats": [
+        {"span": [1, 8], "desc": "beam shortens and dims"},
+        {"span": [9, 16], "desc": "sparks only, arms begin lowering"},
+        {"span": [17, 24], "desc": "vfx gone, return toward neutral stance"}
+      ]
+    }
+  ]
+}

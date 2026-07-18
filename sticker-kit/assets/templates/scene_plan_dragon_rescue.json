@@ -1,0 +1,261 @@
+{
+  "project": {
+    "name": "pixel-dragon-rescue",
+    "style_id": "pixel-8bit",
+    "duration_sec": 12.0,
+    "fps": 16,
+    "canvas": [960, 540],
+    "element_canvas": [640, 640],
+    "visual_lock": "统一的 8-bit 像素游戏过场风格，固定 16 色调色板，硬像素边缘，无抗锯齿，同一侧视角和光向",
+    "negative_prompt": "抗锯齿，平滑矢量，高分辨率笔触，写实摄影，3D 渲染，运动模糊，残影，镜头运动",
+    "wan": {
+      "base_url": "http://10.0.221.33:8090",
+      "width": 640,
+      "height": 640,
+      "fps": 16,
+      "steps": 20,
+      "cfg_i2v": 3.5,
+      "cfg_flf2v": 4.0,
+      "seed": -1
+    }
+  },
+  "interaction_contracts": [
+    {
+      "id": "fire_01",
+      "shot_id": "castle_battle",
+      "participants": ["dragon", "dragon_fire"],
+      "event_sec": 1.5,
+      "contact": "transient",
+      "rule": "火焰起点始终对齐龙嘴，勇士在火焰到达前完成格挡"
+    },
+    {
+      "id": "hit_01",
+      "shot_id": "castle_battle",
+      "participants": ["warrior_sword", "dragon", "impact_vfx"],
+      "event_sec": 5.2,
+      "contact": "transient",
+      "rule": "剑尖、命中特效和巨龙受击反应在同一时刻对齐"
+    },
+    {
+      "id": "rescue_hug",
+      "shot_id": "castle_battle",
+      "participants": ["warrior_princess_pair"],
+      "event_sec": 9.0,
+      "contact": "sustained",
+      "contact_group": "warrior_princess_pair",
+      "rule": "拥抱阶段改用勇士与公主的组合层，禁止两个独立视频互相穿透"
+    }
+  ],
+  "shots": [
+    {
+      "id": "castle_battle",
+      "start_sec": 0.0,
+      "end_sec": 12.0,
+      "camera": {"mode": "locked", "description": "固定侧视全景，像素游戏 Boss 战构图"},
+      "background": {"image": "assets/backgrounds/castle_hills.png"},
+      "elements": [
+        {
+          "id": "trees_foreground",
+          "kind": "environment",
+          "z": 10,
+          "anchor": "bottom-center",
+          "identity_lock": "同一组像素树木，树干和树冠形状不变化",
+          "matte": {"mode": "chroma", "color": "#0000FF"},
+          "states": [
+            {
+              "id": "wind_loop",
+              "start_sec": 0.0,
+              "end_sec": 12.0,
+              "mode": "i2v",
+              "start_image": "assets/elements/environment/trees_blue_screen.png",
+              "motion_prompt": "树梢被风轻微吹动，幅度小，形成无缝循环，树根和整体位置不动",
+              "length": 81,
+              "playback": "loop",
+              "transform": {"x": 0.5, "y": 1.0, "height": 0.36}
+            }
+          ]
+        },
+        {
+          "id": "princess",
+          "kind": "actor",
+          "z": 24,
+          "anchor": "bottom-center",
+          "identity_lock": "同一位像素公主，金色头发、粉色礼服、王冠和两条手臂始终一致",
+          "matte": {"mode": "chroma", "color": "#00FF00"},
+          "states": [
+            {
+              "id": "tied_idle",
+              "start_sec": 0.0,
+              "end_sec": 6.0,
+              "mode": "i2v",
+              "start_image": "assets/elements/princess/tied.png",
+              "motion_prompt": "公主被绳子捆住，紧张地轻微挣扎和眨眼，绳结不松开，脚底不移动",
+              "length": 81,
+              "playback": "loop",
+              "transform": {"x": 0.82, "y": 0.83, "height": 0.36}
+            },
+            {
+              "id": "freed_reaction",
+              "start_sec": 6.0,
+              "end_sec": 8.0,
+              "mode": "flf2v",
+              "start_image": "assets/elements/princess/tied.png",
+              "end_image": "assets/elements/princess/free_reaching.png",
+              "motion_prompt": "绳子松开消失，公主站稳并向勇士伸手，动作克制且连续",
+              "transform": {"x": 0.82, "y": 0.83, "height": 0.36}
+            }
+          ]
+        },
+        {
+          "id": "warrior_sword",
+          "kind": "actor_group",
+          "z": 30,
+          "anchor": "bottom-center",
+          "identity_lock": "同一个像素勇士与同一把剑作为绑定元素，银色剑刃、棕色剑柄、蓝色盔甲和红色披风不变化",
+          "matte": {"mode": "chroma", "color": "#00FF00"},
+          "states": [
+            {
+              "id": "guard_attack",
+              "start_sec": 0.0,
+              "end_sec": 3.0,
+              "mode": "i2v",
+              "start_image": "assets/elements/warrior/guard.png",
+              "motion_prompt": "勇士举剑格挡并试探性前进，披风轻摆，剑始终握在右手，脚步有重量",
+              "interaction": {"id": "fire_01"},
+              "transform_from": {"x": 0.22, "y": 0.84, "height": 0.42},
+              "transform_to": {"x": 0.29, "y": 0.84, "height": 0.42}
+            },
+            {
+              "id": "decisive_slash",
+              "start_sec": 3.0,
+              "end_sec": 6.0,
+              "mode": "flf2v",
+              "start_image": "assets/elements/warrior/slash_start.png",
+              "end_image": "assets/elements/warrior/slash_end.png",
+              "motion_prompt": "勇士蓄力后完成一次清晰的横向斩击，剑弧从后上方到前下方，命中点发生在片段 73% 处，随后收剑",
+              "interaction": {"id": "hit_01"},
+              "transform_from": {"x": 0.29, "y": 0.84, "height": 0.42},
+              "transform_to": {"x": 0.44, "y": 0.84, "height": 0.42}
+            },
+            {
+              "id": "approach_princess",
+              "start_sec": 6.0,
+              "end_sec": 8.0,
+              "mode": "flf2v",
+              "start_image": "assets/elements/warrior/recover.png",
+              "end_image": "assets/elements/warrior/reach_princess.png",
+              "motion_prompt": "勇士确认巨龙倒地，放低剑并向公主伸出空闲的手，情绪由警觉转为安心",
+              "transform_from": {"x": 0.48, "y": 0.84, "height": 0.42},
+              "transform_to": {"x": 0.69, "y": 0.84, "height": 0.42}
+            }
+          ]
+        },
+        {
+          "id": "dragon",
+          "kind": "actor",
+          "z": 32,
+          "anchor": "bottom-center",
+          "identity_lock": "同一条红色像素巨龙，两只翅膀、四条腿、两只角和一条尾巴始终存在，火焰不与身体融合",
+          "matte": {"mode": "chroma", "color": "#00FF00"},
+          "states": [
+            {
+              "id": "fire_recoil",
+              "start_sec": 0.0,
+              "end_sec": 3.0,
+              "mode": "i2v",
+              "start_image": "assets/elements/dragon/fire_pose.png",
+              "motion_prompt": "巨龙张嘴喷火时身体后坐，胸腔起伏、翅膀张开、头部轻微追踪勇士；不要生成火焰，火焰是独立层",
+              "interaction": {"id": "fire_01"},
+              "transform": {"x": 0.64, "y": 0.84, "height": 0.58}
+            },
+            {
+              "id": "hit_to_defeated",
+              "start_sec": 3.0,
+              "end_sec": 6.0,
+              "mode": "flf2v",
+              "start_image": "assets/elements/dragon/hit_ready.png",
+              "end_image": "assets/elements/dragon/defeated.png",
+              "motion_prompt": "巨龙在片段 73% 处受到斩击，先明显吃痛，再失去平衡向地面倒下，最终趴地眩晕；没有断肢，没有消失",
+              "interaction": {"id": "hit_01"},
+              "transform": {"x": 0.64, "y": 0.84, "height": 0.58}
+            },
+            {
+              "id": "defeated_idle",
+              "start_sec": 6.0,
+              "end_sec": 12.0,
+              "mode": "i2v",
+              "start_image": "assets/elements/dragon/defeated.png",
+              "motion_prompt": "巨龙趴在地上被打晕，只剩非常轻微的呼吸和头顶星星旋转，不重新站起",
+              "length": 81,
+              "playback": "loop",
+              "transform": {"x": 0.58, "y": 0.87, "height": 0.42}
+            }
+          ]
+        },
+        {
+          "id": "dragon_fire",
+          "kind": "vfx",
+          "z": 35,
+          "anchor": "center",
+          "identity_lock": "单独的像素火焰喷流，只有火焰，没有龙头和场景",
+          "matte": {"mode": "luma", "color": "#000000"},
+          "states": [
+            {
+              "id": "fire_burst",
+              "start_sec": 0.5,
+              "end_sec": 2.7,
+              "mode": "flf2v",
+              "start_image": "assets/elements/vfx/fire_small_black.png",
+              "end_image": "assets/elements/vfx/fire_long_black.png",
+              "motion_prompt": "纯黑背景上，像素火焰从短促火苗迅速延伸为横向喷流，火焰根部固定在左侧，末端翻卷后衰减",
+              "interaction": {"id": "fire_01"},
+              "transform": {"x": 0.48, "y": 0.43, "height": 0.26}
+            }
+          ]
+        },
+        {
+          "id": "impact_vfx",
+          "kind": "vfx",
+          "z": 50,
+          "anchor": "center",
+          "identity_lock": "单独的十字形像素命中闪光和少量火花，没有角色",
+          "matte": {"mode": "luma", "color": "#000000"},
+          "states": [
+            {
+              "id": "sword_hit",
+              "start_sec": 4.8,
+              "end_sec": 5.6,
+              "mode": "i2v",
+              "start_image": "assets/elements/vfx/impact_black.png",
+              "motion_prompt": "纯黑背景上，命中闪光瞬间扩张并快速消散，中心固定，没有人物或武器",
+              "interaction": {"id": "hit_01"},
+              "transform": {"x": 0.53, "y": 0.48, "height": 0.18}
+            }
+          ]
+        },
+        {
+          "id": "warrior_princess_pair",
+          "kind": "contact_group",
+          "z": 40,
+          "anchor": "bottom-center",
+          "identity_lock": "勇士与公主作为一个双人组合层，人物身份、服装和相对接触位置保持一致；勇士双臂环抱公主，手臂不穿透身体",
+          "matte": {"mode": "chroma", "color": "#00FF00"},
+          "states": [
+            {
+              "id": "rescue_hug",
+              "start_sec": 8.0,
+              "end_sec": 12.0,
+              "mode": "i2v",
+              "start_image": "assets/elements/pairs/warrior_princess_hug.png",
+              "motion_prompt": "勇士救下公主后拥抱她，两人轻微呼吸和安心地眨眼，接触位置稳定，不能分离或互相穿透",
+              "interaction": {"id": "rescue_hug"},
+              "length": 65,
+              "playback": "loop",
+              "transform": {"x": 0.73, "y": 0.84, "height": 0.48}
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -23,18 +23,20 @@ Run against `outputs/script.md` and research locks before expanding beyond the f
 
 ### Blockers (fail → repair plan before full video)
 
-1. `causal_river_required` — tip → what happened → jam/unknown → takeaway; story continuity, not topic-bucket menus
-2. `instant_comprehension_required` — people/companies/numbers land via background + impact in the same talk turn
-3. `oral_chat_required` — read-aloud like telling a friend a story; no gold-sentence / outline / lesson-talk
+1. `story_thread_required` — tip → what happened → jam/unknown → takeaway; story continuity, not topic-bucket menus
+2. `instant_comprehension_required` — people/companies/numbers land via background + impact in the same talk turn; metaphors explained in the same breath
+3. `oral_human_feel_required` — read-aloud like telling a friend; natural reactions; TTS-friendly punctuation; not outline/lesson-talk
 4. `no_teaching_deconstruction` — ban `你就记` / `别听成黑话` / `别听成` / `你可以把它理解成` / `你就当作` style name-explainers (see `validate_vo_craft.py`)
-5. `no_channel_mimicry` — no like/bell/Discord/paid/outro host catchphrases
+5. `no_meta_vo_commentary` — spoken body avoids `大白话` / `活人味` / skill jargon (`因果河` / `换轨`) and unexplained slogan metaphors (see `validate_vo_craft.py`)
+6. `no_channel_mimicry` — no like/bell/Discord/paid/outro host catchphrases
 
 ### Strong guidance (record in failed_checks; usually do not alone block a high visual score)
 
-6. `selective_deep_dig` — at most 1–2 seams get mechanism + scene + return
-7. `cast_when_multi_actor` — role/power/pressure + identity bits when actors matter
-8. `epistemic_split_preferred` — fact / inference / unknown when mixed
-9. `no_clever_framework_spine` — abstract metaphor/tax buckets must not replace the causal river
+7. `selective_deep_dig` — 1–2 expand beats chosen by tip impact / knowledge / drama; embedded in main thread, not per-actor chapters
+8. `neighbor_and_rule_when_reframe_tip` — same-batch peers, policy shifts, comparators when they change the reading
+9. `cast_when_multi_actor` — role/power/pressure + identity bits when actors matter
+10. `epistemic_split_preferred` — fact / inference / unknown when mixed
+11. `no_clever_framework_spine` — abstract metaphor/tax buckets must not replace the story thread
 
 Items 4–5 are hard content bans when detected; items 6–9 are repair prompts unless they collapse a hard gate above.
 

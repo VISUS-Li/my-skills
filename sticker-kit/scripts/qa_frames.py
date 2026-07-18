@@ -66,6 +66,18 @@ def main() -> None:
         help="Max soft-alpha ratio (e.g. 0.35); flags blend/afterimage frames",
     )
     ap.add_argument("--write-report", type=Path, default=None)
+    ap.add_argument(
+        "--write-bridges",
+        type=Path,
+        default=None,
+        help="Write bridge job JSON for pose_jump pairs (GenerateImage in-betweens)",
+    )
+    ap.add_argument(
+        "--bridges-per-gap",
+        type=int,
+        default=2,
+        help="Suggested bridge frames per failing pair (default 2)",
+    )
     args = ap.parse_args()
 
     files = sorted(args.folder.glob("frame_*.png"))
@@ -125,12 +137,67 @@ def main() -> None:
                     }
                 )
 
+    if args.write_bridges is not None:
+        jobs = []
+        for fail in report["failures"]:
+            if fail.get("reason") != "pose_jump":
+                continue
+            # file field like "frame_03.png->frame_04.png"
+            pair = str(fail.get("file", ""))
+            if "->" not in pair:
+                continue
+            a_name, b_name = [x.strip() for x in pair.split("->", 1)]
+            a_path = args.folder / a_name
+            b_path = args.folder / b_name
+            n_bridges = max(1, int(args.bridges_per_gap))
+            for k in range(1, n_bridges + 1):
+                t = k / (n_bridges + 1)
+                jobs.append(
+                    {
+                        "after": a_name,
+                        "before": b_name,
+                        "insert_tag": f"bridge_{a_path.stem}_to_{b_path.stem}_{k:02d}",
+                        "refs": [str(a_path.resolve()), str(b_path.resolve())],
+                        "progress": round(t, 4),
+                        "diff": fail.get("diff"),
+                        "prompt_stub": (
+                            f"Single sticker BRIDGE frame between {a_name} and {b_name}, "
+                            f"interpolation progress {int(t*100)}% from A toward B. "
+                            f"Identity lock to references. FREE channels ONLY small pose delta. "
+                            f"SINGLE CRISP POSE; NO motion blur, NO afterimages, NO ghost trail, "
+                            f"NO multi-exposure. PURE #00FF00 background. "
+                            f"Do NOT blend/onion-skin both poses — one intermediate pose only."
+                        ),
+                    }
+                )
+        bridge_doc = {
+            "folder": str(args.folder.resolve()),
+            "bridges_per_gap": args.bridges_per_gap,
+            "jobs": jobs,
+            "instruction": (
+                "For each job: GenerateImage with dual refs [anchor, after_frame] "
+                "(optionally also before as style cue). Insert between after and before, "
+                "renumber sequence, re-run qa_frames. Never pack interpolate_sequence output."
+            ),
+        }
+        args.write_bridges.parent.mkdir(parents=True, exist_ok=True)
+        args.write_bridges.write_text(
+            json.dumps(bridge_doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
+        report["bridge_jobs_written"] = len(jobs)
+        report["bridge_jobs_path"] = str(args.write_bridges)
+
     text = json.dumps(report, ensure_ascii=False, indent=2)
     if args.write_report:
         args.write_report.write_text(text, encoding="utf-8")
     print(text)
     if report["failures"]:
         print(f"QA FAIL: {len(report['failures'])} issues", file=sys.stderr)
+        if args.write_bridges is not None:
+            print(
+                f"bridge jobs → {args.write_bridges} ({report.get('bridge_jobs_written', 0)})",
+                file=sys.stderr,
+            )
         sys.exit(1)
     print(f"QA OK: {len(files)} frames, median_h={med:.1f}")
 

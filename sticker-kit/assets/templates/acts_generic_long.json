@@ -1,0 +1,65 @@
+{
+  "project": "long_action",
+  "style_id": "cozy-scrapbook",
+  "target_unique_frames": 112,
+  "bridge_reserve": 12,
+  "fps": 12,
+  "hold": 1,
+  "layers": ["character"],
+  "global_action_family": "custom",
+  "topology_lock": "EDIT ME: exact part counts and SEPARATE tools",
+  "acts": [
+    {
+      "id": "windup",
+      "title": "起势",
+      "unique_frames": 28,
+      "action_class": "custom_windup",
+      "free_channels": ["pose"],
+      "vfx": {"enabled": false},
+      "beat_summary": "EDIT: start → prepare",
+      "stage_beats": [
+        {"span": [1, 14], "desc": "first half of windup"},
+        {"span": [15, 28], "desc": "second half of windup"}
+      ]
+    },
+    {
+      "id": "peak",
+      "title": "高潮",
+      "unique_frames": 36,
+      "action_class": "custom_peak",
+      "free_channels": ["pose"],
+      "vfx": {"enabled": false},
+      "beat_summary": "EDIT: peak action",
+      "stage_beats": [
+        {"span": [1, 18], "desc": "build to peak"},
+        {"span": [19, 36], "desc": "hold / complete peak"}
+      ]
+    },
+    {
+      "id": "follow",
+      "title": "跟随",
+      "unique_frames": 24,
+      "action_class": "custom_follow",
+      "free_channels": ["pose"],
+      "vfx": {"enabled": false},
+      "beat_summary": "EDIT: follow-through",
+      "stage_beats": [
+        {"span": [1, 12], "desc": "follow-through A"},
+        {"span": [13, 24], "desc": "follow-through B"}
+      ]
+    },
+    {
+      "id": "recover",
+      "title": "收势",
+      "unique_frames": 24,
+      "action_class": "custom_recover",
+      "free_channels": ["pose"],
+      "vfx": {"enabled": false},
+      "beat_summary": "EDIT: recover to neutral / loop",
+      "stage_beats": [
+        {"span": [1, 12], "desc": "recover A"},
+        {"span": [13, 24], "desc": "recover B / loop match"}
+      ]
+    }
+  ]
+}

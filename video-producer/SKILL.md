@@ -151,11 +151,11 @@ This is a `script-only draft` until the lite review contract exists (`beat_plan`
 
 **Three VO hard gates** (details only in `narrative-depth-copy.md`):
 
-1. **Causal river** — tip → what happened → jam/unknown → takeaway; story continuity over topic-bucket menus; soft connectors optional, not quota.
-2. **Instant comprehension** — people/companies/numbers land via background + impact in the same talk turn; ban teaching deconstruction (`你就记` / `别听成黑话` / …).
-3. **Oral chat** — read-aloud like telling a friend a story; no gold-sentence / outline / lesson-talk.
+1. **Story thread** — tip → what happened → jam/unknown → takeaway; one coherent line, not topic-bucket menus.
+2. **Instant comprehension** — people/companies/numbers land via background + impact in the same talk turn; story entry, not teaching deconstruction (`你就记` / `别听成黑话` / …).
+3. **Oral human feel** — read-aloud like 老范跟朋友讲热新闻; natural reactions + TTS-friendly punctuation; no outline/lesson-talk; **no skill/meta phrasing in spoken body** (`大白话` / `活人味` / `因果河` / unexplained short metaphors).
 
-Also: every factual claim needs source / uncertainty / deletion; no invented causality; dig at most 1–2 seams. **Visual proof tags belong at beat-planning time** — do not force metaphors or shot recipes while the VO story is still broken. Default voice = 老范讲故事式讲解（学故事债与人物出场，不学频道壳，不学教辅拆词）。
+Also: every factual claim needs source / uncertainty / deletion; no invented causality. **Selective dig:** pick **1–2 expand beats per short script** by tip impact, knowledge yield, and evidence — not by expanding every named actor (see `deep-research-and-script.md` dig rubric). **Visual proof tags belong at beat-planning time** — do not force metaphors or shot recipes while the VO story is still broken. Default voice = 老范讲故事式讲解（广度/深度/聊天节奏；学故事债与人物出场；不学频道壳；不学教辅拆词）。
 
 Optional craft lint after drafting VO:
 

@@ -57,19 +57,26 @@ Also invent a one-line **Topology Sentence** reused verbatim in every frame prom
 
 ## Frame count & timing (avoid fast/jumpy loops)
 
-**Default delivery target: ~48–52 frames**, each a **separately generated single pose**.  
-Do **not** reach ~50 by blending / morphing two poses into one image.
+**Default delivery target: ~48–52 frames** (Medium), each a **separately generated single pose**.
+
+**Long multi-phase moves (image-only):** ~**100–120** uniques via [long-action.md](long-action.md) — do **not** fake duration with large `--hold`.
+
+Do **not** reach target length by blending / morphing two poses into one image.
+
+Do **not** generate a monolithic full sprite sheet as the motion source (export-only).
 
 | Difficulty | Generated frames (each = one clean pose) | Preview FPS | Goal duration |
 |---|---|---|---|
 | Light | 24–32 | 10–12 | ≥2.5s |
-| Medium (default) | **48–52** | 12 | ≥4s |
-| Hard (I2V extract) | extract 48–64 clean frames | 12–15 | ≥4s |
+| Medium (default short) | **48–52** | 12 | ≥4s |
+| **Long (image-only, no video)** | **100–120** via acts + bridges | 12 | **≥8–10s** |
+| Hard (I2V extract, if available) | extract 48–120 clean frames | 12–15 | ≥4–10s |
 
 - Prefer **more GenerateImage micro-poses** over raising FPS on sparse keys.
 - List **every micro-stage** before generating; each stage = **tiny delta** from previous (≈5–15% limb travel).
-- **Pose-class lock**: pick one action class for the whole clip (`run_cycle` | `slash` | `idle_bob`). A frame that switches class (run → crouch/lunge/hand-on-ground) is a **hard fail**.
+- **Pose-class lock**: pick one action class per act (`run_cycle` | `slash` | `kamehameha_charge` | …). A frame that switches class mid-act is a **hard fail**.
 - Example bad jump (do not pack): run stride → mid-air leap → three-point crouch → run again.
+- Beam/orb/aura: use **VFX layer split** ([long-action.md](long-action.md)) so energy does not fuse into body parts.
 
 ## One pose per frame (no ghosts) — HARD RULE
 
@@ -151,10 +158,11 @@ If any check fails: **discard**, regenerate with stronger Topology + Color lock 
 Automated jump gate (silhouette diff; still requires visual QA):
 
 ```bash
-python scripts/qa_frames.py OUT/ordered --max-scale-jitter 0.25 --max-pair-diff 0.22
+python scripts/qa_frames.py OUT/ordered --max-scale-jitter 0.25 --max-pair-diff 0.22 --max-ghost 0.35 \
+  --write-bridges OUT/bridge_jobs.json
 ```
 
-If `--max-pair-diff` fails between `frame_N` and `frame_N+1`: generate **1–3 bridge frames** with dual ref `[anchor, frame_N]` before continuing.
+If `--max-pair-diff` fails between `frame_N` and `frame_N+1`: generate **1–3 bridge frames** with dual ref `[anchor, frame_N]` (see `bridge_jobs.json` prompt stubs) before continuing. **Never** fill gaps with `interpolate_sequence.py` for packed sheets.
 
 Optional automated size-jitter gate:
 

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Sticker Kit + Wan Motion"
+  short_description: "Plan and compose layered Wan sticker animations"
+  default_prompt: "Use $sticker-kit to plan a layered animated scene, generate isolated Wan element clips, key them to transparency, and composite the final video."

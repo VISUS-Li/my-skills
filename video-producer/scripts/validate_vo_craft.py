@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Lint analytical VO for teaching-deconstruction anti-patterns.
+"""Lint analytical VO for teaching-deconstruction and meta-commentary anti-patterns.
 
-Flags phrases that push agents into stiff "名词课" voice instead of story entry.
+Flags phrases that push agents into stiff "名词课" voice or skill-jargon in spoken body.
 Exit 0 when clean or only soft warnings; exit 1 when hard blockers found.
 """
 from __future__ import annotations
@@ -23,13 +23,19 @@ HARD_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("channel_shell:点赞.*小铃铛|小铃铛", re.compile(r"小铃铛|点个赞|一键三连")),
 ]
 
-# Soft warnings — overused connectors or lecture smells; do not alone fail
+# Soft warnings — overused connectors, lecture smells, meta-commentary in spoken body
 SOFT_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("soft:所以呢_quota", re.compile(r"所以呢")),
     ("soft:但是呢_quota", re.compile(r"但是呢")),
     ("soft:那问题来了_quota", re.compile(r"那问题来了")),
     ("soft:大家注意_quota", re.compile(r"大家注意")),
     ("soft:你看_lecture", re.compile(r"你看[，,]")),
+    ("meta:大白话", re.compile(r"大白话")),
+    ("meta:活人味", re.compile(r"活人味")),
+    ("meta:还有一层", re.compile(r"还有一层")),
+    ("meta:用人话说", re.compile(r"用人话说")),
+    ("meta_skill:因果河", re.compile(r"因果河")),
+    ("meta_skill:换轨", re.compile(r"换轨")),
 ]
 
 SOFT_QUOTA = {
@@ -38,11 +44,17 @@ SOFT_QUOTA = {
     "soft:那问题来了_quota": 3,
     "soft:大家注意_quota": 3,
     "soft:你看_lecture": 4,
+    "meta:大白话": 0,
+    "meta:活人味": 0,
+    "meta:还有一层": 0,
+    "meta:用人话说": 0,
+    "meta_skill:因果河": 0,
+    "meta_skill:换轨": 0,
 }
 
 
 def _extract_vo(script: str) -> str:
-    """Prefer VO section; else whole script body."""
+    """Prefer explicit VO section; else body before appendices/metadata."""
     m = re.search(
         r"##\s*VO[^\n]*\n(.*?)(?=\n##\s|\Z)",
         script,
@@ -50,7 +62,26 @@ def _extract_vo(script: str) -> str:
     )
     if m:
         return m.group(1)
-    return script
+
+    # Drop YAML-ish front matter block after title
+    body = script
+    if body.startswith("#"):
+        parts = body.split("\n---\n", 1)
+        if len(parts) == 2 and parts[0].count("\n") < 12:
+            body = parts[1]
+
+    # Drop appendices / director notes (not spoken)
+    for marker in (
+        r"\n##\s*附录",
+        r"\n##\s*Appendix",
+        r"\n>\s*项目：",
+        r"\n>\s*形态：",
+        r"\n>\s*深挖",
+        r"\n>\s*TTS",
+    ):
+        body = re.split(marker, body, maxsplit=1, flags=re.I)[0]
+
+    return body
 
 
 def lint_text(text: str) -> tuple[list[str], list[str]]:
@@ -64,7 +95,7 @@ def lint_text(text: str) -> tuple[list[str], list[str]]:
         hits = pat.findall(text)
         limit = SOFT_QUOTA.get(label, 3)
         if len(hits) > limit:
-            soft.append(f"{label} x{len(hits)} (>{limit}; connectors are optional, not a quota)")
+            soft.append(f"{label} x{len(hits)} (>{limit})")
     return hard, soft
 
 
@@ -100,7 +131,7 @@ def main() -> int:
     for item in soft:
         print(f"  - WARN {item}")
     if not soft:
-        print("  - no teaching-deconstruction anti-patterns detected in VO section")
+        print("  - no teaching-deconstruction or meta-commentary patterns in spoken body")
     return 0
 
 

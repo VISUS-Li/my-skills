@@ -1,0 +1,1365 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/ai-glitch-comedy-filmmaker-v3.schema.json",
+  "title": "AI Glitch Comedy Filmmaker Output v3",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "deliverable_type",
+    "language",
+    "project",
+    "game",
+    "ai_chaos",
+    "comedy",
+    "story",
+    "video",
+    "agent_execution",
+    "implementation",
+    "quality_check"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "4.0"
+    },
+    "deliverable_type": {
+      "enum": [
+        "concept_pack",
+        "game_chaos_design",
+        "agent_prompt_pack",
+        "prototype_plan",
+        "video_blueprint",
+        "full_production",
+        "bug_audit",
+        "research_report"
+      ]
+    },
+    "language": {
+      "type": "string",
+      "minLength": 2
+    },
+    "project": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "title",
+        "one_line_hook",
+        "content_form",
+        "game_genre",
+        "target_platforms",
+        "target_duration_sec",
+        "player_fantasy",
+        "comedic_promise",
+        "prototype_goal"
+      ],
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "one_line_hook": {
+          "type": "string"
+        },
+        "content_form": {
+          "enum": [
+            "playable_experiment",
+            "dev_challenge",
+            "sandbox_test",
+            "competition",
+            "mockumentary",
+            "narrative_short",
+            "hybrid"
+          ]
+        },
+        "game_genre": {
+          "type": "string"
+        },
+        "target_platforms": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "target_duration_sec": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "player_fantasy": {
+          "type": "string"
+        },
+        "comedic_promise": {
+          "type": "string"
+        },
+        "prototype_goal": {
+          "type": "string"
+        }
+      }
+    },
+    "game": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "engine",
+        "engine_version",
+        "dimension",
+        "prototype_fidelity",
+        "camera",
+        "player_verbs",
+        "core_loop",
+        "normal_rules",
+        "win_condition",
+        "fail_condition",
+        "systems",
+        "playable_arc",
+        "minimum_playable_scope",
+        "non_goals",
+        "scene_3d"
+      ],
+      "properties": {
+        "engine": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "engine_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "dimension": {
+          "const": "3d"
+        },
+        "prototype_fidelity": {
+          "enum": [
+            "rough_graybox",
+            "placeholder_lowpoly",
+            "existing_assets_only",
+            "polished_slice"
+          ]
+        },
+        "camera": {
+          "type": "string"
+        },
+        "player_verbs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "core_loop": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "normal_rules": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "win_condition": {
+          "type": "string"
+        },
+        "fail_condition": {
+          "type": "string"
+        },
+        "systems": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": [
+              "id",
+              "name",
+              "normal_behavior",
+              "ai_task",
+              "chaos_vectors",
+              "player_effect",
+              "visual_readability_0_10",
+              "reproducibility_0_10"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "normal_behavior": {
+                "type": "string"
+              },
+              "ai_task": {
+                "type": "string"
+              },
+              "chaos_vectors": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "player_effect": {
+                "type": "string"
+              },
+              "visual_readability_0_10": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 10
+              },
+              "reproducibility_0_10": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 10
+              }
+            }
+          }
+        },
+        "playable_arc": {
+          "type": "array",
+          "items": {
+            "type": [
+              "string",
+              "object"
+            ]
+          }
+        },
+        "minimum_playable_scope": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "non_goals": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "scene_3d": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "size_m",
+            "layout",
+            "scene_hierarchy",
+            "visual_readability",
+            "camera_setup",
+            "asset_policy"
+          ],
+          "properties": {
+            "size_m": {
+              "type": "string"
+            },
+            "layout": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "scene_hierarchy": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "visual_readability": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "camera_setup": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "asset_policy": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "ai_chaos": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "source_type",
+        "original_prompt",
+        "expected_result",
+        "failure_logic",
+        "events",
+        "player_exploit",
+        "escalation_levels",
+        "final_callback"
+      ],
+      "properties": {
+        "source_type": {
+          "enum": [
+            "prompt_misread",
+            "implementation_bug",
+            "reward_hacking",
+            "system_coupling",
+            "generation_error",
+            "npc_emergence",
+            "mixed"
+          ]
+        },
+        "original_prompt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "expected_result": {
+          "type": "string"
+        },
+        "failure_logic": {
+          "type": "string"
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "type": [
+              "string",
+              "object"
+            ]
+          }
+        },
+        "player_exploit": {
+          "type": "string"
+        },
+        "escalation_levels": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "level",
+              "trigger",
+              "player_action",
+              "game_state_change",
+              "visual_payoff",
+              "benefit",
+              "cost"
+            ],
+            "properties": {
+              "level": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "trigger": {
+                "type": "string"
+              },
+              "player_action": {
+                "type": "string"
+              },
+              "game_state_change": {
+                "type": "string"
+              },
+              "visual_payoff": {
+                "type": "string"
+              },
+              "benefit": {
+                "type": "string"
+              },
+              "cost": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "final_callback": {
+          "type": "string"
+        }
+      }
+    },
+    "comedy": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "tone",
+        "voiceover_rules",
+        "narrator_profile",
+        "transferable_influences",
+        "contrast_layers",
+        "authority_rationalization",
+        "reversal_chain",
+        "units",
+        "forbidden_shortcuts"
+      ],
+      "properties": {
+        "tone": {
+          "const": "deadpan_visual_contrast"
+        },
+        "transferable_influences": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "contrast_layers": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "string"
+          }
+        },
+        "authority_rationalization": {
+          "type": "string"
+        },
+        "reversal_chain": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "units": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "unit_id",
+              "normal_request",
+              "ai_claim",
+              "audience_expectation",
+              "visual_contrast",
+              "reveal_shot",
+              "hold_sec",
+              "deadpan_voiceover",
+              "gameplay_consequence",
+              "authority_confirmation",
+              "escalation_link",
+              "callback_target"
+            ],
+            "properties": {
+              "unit_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "normal_request": {
+                "type": "string",
+                "minLength": 1
+              },
+              "ai_claim": {
+                "type": "string",
+                "minLength": 1
+              },
+              "audience_expectation": {
+                "type": "string",
+                "minLength": 1
+              },
+              "visual_contrast": {
+                "type": "string",
+                "minLength": 12
+              },
+              "reveal_shot": {
+                "type": "string",
+                "minLength": 1
+              },
+              "hold_sec": {
+                "type": "number",
+                "minimum": 0.3,
+                "maximum": 3
+              },
+              "deadpan_voiceover": {
+                "type": "string",
+                "minLength": 1
+              },
+              "gameplay_consequence": {
+                "type": "string",
+                "minLength": 1
+              },
+              "authority_confirmation": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "escalation_link": {
+                "type": "string",
+                "minLength": 1
+              },
+              "callback_target": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        },
+        "forbidden_shortcuts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "narrator_profile": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "perspective",
+            "persona",
+            "delivery",
+            "language_rules"
+          ],
+          "properties": {
+            "perspective": {
+              "enum": [
+                "first_person_creator",
+                "first_person_player",
+                "creator_player_hybrid"
+              ]
+            },
+            "persona": {
+              "type": "string",
+              "minLength": 12
+            },
+            "delivery": {
+              "type": "string",
+              "minLength": 3
+            },
+            "language_rules": {
+              "type": "array",
+              "minItems": 3,
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "voiceover_rules": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "min_chars_per_finished_minute",
+            "recommended_chars_per_finished_minute",
+            "min_spoken_shot_ratio",
+            "max_silent_gap_sec",
+            "exact_text_required",
+            "optional_lines_forbidden"
+          ],
+          "properties": {
+            "min_chars_per_finished_minute": {
+              "type": "integer",
+              "minimum": 120
+            },
+            "recommended_chars_per_finished_minute": {
+              "type": "integer",
+              "minimum": 120
+            },
+            "min_spoken_shot_ratio": {
+              "type": "number",
+              "minimum": 0.7,
+              "maximum": 1
+            },
+            "max_silent_gap_sec": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 12
+            },
+            "exact_text_required": {
+              "const": true
+            },
+            "optional_lines_forbidden": {
+              "const": true
+            }
+          }
+        }
+      }
+    },
+    "story": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "enabled"
+          ],
+          "properties": {
+            "enabled": {
+              "const": false
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "enabled",
+            "premise",
+            "characters",
+            "scenes"
+          ],
+          "properties": {
+            "enabled": {
+              "const": true
+            },
+            "premise": {
+              "type": "string"
+            },
+            "characters": {
+              "type": "array"
+            },
+            "scenes": {
+              "type": "array"
+            }
+          }
+        }
+      ]
+    },
+    "video": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "format",
+        "beats",
+        "capture_shots",
+        "ui_overlays",
+        "narration_contract",
+        "voiceover_script",
+        "dialogue",
+        "audio_plan",
+        "edit_notes",
+        "creative_storyboard",
+        "technical_capture_plan",
+        "cutdowns"
+      ],
+      "properties": {
+        "format": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "beats": {
+          "type": "array"
+        },
+        "capture_shots": {
+          "type": "array"
+        },
+        "ui_overlays": {
+          "type": "array"
+        },
+        "dialogue": {
+          "type": "array"
+        },
+        "audio_plan": {
+          "type": "array"
+        },
+        "edit_notes": {
+          "type": "array"
+        },
+        "cutdowns": {
+          "type": "array"
+        },
+        "narration_contract": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "required",
+            "perspective",
+            "target_chars_per_minute_min",
+            "target_chars_per_minute_max",
+            "target_spoken_runtime_ratio_min",
+            "target_spoken_runtime_ratio_max",
+            "min_spoken_shot_ratio",
+            "max_silent_gap_sec",
+            "visual_reveal_hold_sec_min",
+            "visual_reveal_hold_sec_max",
+            "exact_text_required",
+            "placeholder_forbidden"
+          ],
+          "properties": {
+            "required": {
+              "const": true
+            },
+            "perspective": {
+              "enum": [
+                "first_person_creator",
+                "first_person_player",
+                "creator_player_hybrid"
+              ]
+            },
+            "target_chars_per_minute_min": {
+              "type": "integer",
+              "minimum": 120
+            },
+            "target_chars_per_minute_max": {
+              "type": "integer",
+              "minimum": 140
+            },
+            "target_spoken_runtime_ratio_min": {
+              "type": "number",
+              "minimum": 0.45,
+              "maximum": 0.8
+            },
+            "target_spoken_runtime_ratio_max": {
+              "type": "number",
+              "minimum": 0.5,
+              "maximum": 0.9
+            },
+            "min_spoken_shot_ratio": {
+              "type": "number",
+              "minimum": 0.7,
+              "maximum": 1
+            },
+            "max_silent_gap_sec": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 12
+            },
+            "visual_reveal_hold_sec_min": {
+              "type": "number",
+              "minimum": 0.3,
+              "maximum": 1.5
+            },
+            "visual_reveal_hold_sec_max": {
+              "type": "number",
+              "minimum": 0.5,
+              "maximum": 2
+            },
+            "exact_text_required": {
+              "const": true
+            },
+            "placeholder_forbidden": {
+              "const": true
+            }
+          }
+        },
+        "voiceover_script": {
+          "type": "array",
+          "minItems": 4,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "start_sec",
+              "end_sec",
+              "speaker",
+              "text",
+              "function",
+              "delivery",
+              "paired_visual"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 3
+              },
+              "start_sec": {
+                "type": "number",
+                "minimum": 0
+              },
+              "end_sec": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "speaker": {
+                "type": "string",
+                "minLength": 1
+              },
+              "text": {
+                "type": "string",
+                "minLength": 8
+              },
+              "function": {
+                "enum": [
+                  "setup",
+                  "expectation",
+                  "ai_claim_bridge",
+                  "redefinition",
+                  "observation",
+                  "escalation",
+                  "consequence",
+                  "callback"
+                ]
+              },
+              "delivery": {
+                "type": "string",
+                "minLength": 2
+              },
+              "paired_visual": {
+                "type": "string",
+                "minLength": 4
+              }
+            }
+          }
+        },
+        "creative_storyboard": {
+          "type": "array",
+          "minItems": 4,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "shot_id",
+              "start_sec",
+              "end_sec",
+              "beat_role",
+              "visual",
+              "player_action",
+              "spoken_content",
+              "silence_hold_sec",
+              "music",
+              "sound_effects",
+              "comic_turn",
+              "transition"
+            ],
+            "properties": {
+              "shot_id": {
+                "type": "string",
+                "minLength": 2
+              },
+              "start_sec": {
+                "type": "number",
+                "minimum": 0
+              },
+              "end_sec": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "beat_role": {
+                "enum": [
+                  "cold_open",
+                  "setup",
+                  "normal_reference",
+                  "visual_reveal",
+                  "redefinition",
+                  "gameplay_test",
+                  "escalation",
+                  "fake_fix",
+                  "system_reversal",
+                  "callback",
+                  "reaction_hold",
+                  "final_button"
+                ]
+              },
+              "visual": {
+                "type": "string",
+                "minLength": 8
+              },
+              "player_action": {
+                "type": "string"
+              },
+              "spoken_content": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "speaker",
+                    "type",
+                    "text",
+                    "function",
+                    "start_offset_sec",
+                    "end_offset_sec",
+                    "delivery"
+                  ],
+                  "properties": {
+                    "speaker": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "type": {
+                      "enum": [
+                        "voiceover",
+                        "dialogue",
+                        "system"
+                      ]
+                    },
+                    "text": {
+                      "type": "string",
+                      "minLength": 2
+                    },
+                    "function": {
+                      "enum": [
+                        "setup",
+                        "expectation",
+                        "ai_claim_bridge",
+                        "redefinition",
+                        "observation",
+                        "escalation",
+                        "consequence",
+                        "callback",
+                        "character_reaction",
+                        "system_confirmation"
+                      ]
+                    },
+                    "start_offset_sec": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "end_offset_sec": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "delivery": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                }
+              },
+              "silence_hold_sec": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 3
+              },
+              "music": {
+                "type": "string"
+              },
+              "sound_effects": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "comic_turn": {
+                "type": "string",
+                "minLength": 4
+              },
+              "transition": {
+                "type": "string",
+                "minLength": 2
+              }
+            }
+          }
+        },
+        "technical_capture_plan": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "shot_id",
+              "game_state",
+              "camera_rig",
+              "camera_position",
+              "trigger",
+              "required_parameters",
+              "debug_overlay",
+              "reset_method",
+              "capture_notes"
+            ],
+            "properties": {
+              "shot_id": {
+                "type": "string",
+                "minLength": 2
+              },
+              "game_state": {
+                "type": "string"
+              },
+              "camera_rig": {
+                "type": "string"
+              },
+              "camera_position": {
+                "type": "string"
+              },
+              "trigger": {
+                "type": "string"
+              },
+              "required_parameters": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "debug_overlay": {
+                "type": "string"
+              },
+              "reset_method": {
+                "type": "string"
+              },
+              "capture_notes": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "agent_execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "agent_profile",
+        "prompt_strategy",
+        "global_constraints",
+        "task_packets",
+        "final_agent_response_contract"
+      ],
+      "properties": {
+        "agent_profile": {
+          "enum": [
+            "weak_coding_agent",
+            "general_coding_agent",
+            "strong_coding_agent"
+          ]
+        },
+        "prompt_strategy": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "global_constraints": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "type": "string"
+          }
+        },
+        "task_packets": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "task_id",
+              "title",
+              "objective",
+              "current_project_facts",
+              "assumptions",
+              "prerequisites",
+              "target_files",
+              "scene_hierarchy",
+              "required_components",
+              "exact_behavior",
+              "visual_reference",
+              "parameter_table",
+              "implementation_steps",
+              "pseudocode",
+              "allowed_changes",
+              "forbidden_changes",
+              "non_goals",
+              "debug_controls",
+              "acceptance_tests",
+              "failure_examples",
+              "agent_response_format"
+            ],
+            "properties": {
+              "task_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "title": {
+                "type": "string",
+                "minLength": 1
+              },
+              "objective": {
+                "type": "string",
+                "minLength": 10
+              },
+              "current_project_facts": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "assumptions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "prerequisites": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "target_files": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "scene_hierarchy": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "required_components": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "exact_behavior": {
+                "type": "array",
+                "minItems": 2,
+                "items": {
+                  "type": "string"
+                }
+              },
+              "visual_reference": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "normal",
+                  "target_failure",
+                  "must_be_visible_in_one_shot"
+                ],
+                "properties": {
+                  "normal": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "target_failure": {
+                    "type": "string",
+                    "minLength": 10
+                  },
+                  "must_be_visible_in_one_shot": {
+                    "const": true
+                  }
+                }
+              },
+              "parameter_table": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "required": [
+                    "name",
+                    "default",
+                    "purpose"
+                  ],
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "default": {},
+                    "purpose": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "implementation_steps": {
+                "type": "array",
+                "minItems": 2,
+                "items": {
+                  "type": "string"
+                }
+              },
+              "pseudocode": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "allowed_changes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "forbidden_changes": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string"
+                }
+              },
+              "non_goals": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string"
+                }
+              },
+              "debug_controls": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "acceptance_tests": {
+                "type": "array",
+                "minItems": 2,
+                "items": {
+                  "type": "string"
+                }
+              },
+              "failure_examples": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string"
+                }
+              },
+              "agent_response_format": {
+                "type": "array",
+                "minItems": 3,
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "final_agent_response_contract": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "implementation": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "ai_tools",
+        "engine_assumptions",
+        "build_steps",
+        "test_matrix",
+        "debug_switches",
+        "save_versions",
+        "capture_setup",
+        "fallback_plan",
+        "acceptance_criteria"
+      ],
+      "properties": {
+        "ai_tools": {
+          "type": "array"
+        },
+        "engine_assumptions": {
+          "type": "array"
+        },
+        "build_steps": {
+          "type": "array"
+        },
+        "test_matrix": {
+          "type": "array"
+        },
+        "debug_switches": {
+          "type": "array"
+        },
+        "save_versions": {
+          "type": "array"
+        },
+        "capture_setup": {
+          "type": "array"
+        },
+        "fallback_plan": {
+          "type": "array"
+        },
+        "acceptance_criteria": {
+          "type": "array"
+        }
+      }
+    },
+    "quality_check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "game_first",
+        "three_dimensional_readability",
+        "rough_prototype_feasible",
+        "player_agency",
+        "visual_contrast",
+        "deadpan_voiceover",
+        "promise_reveal_structure",
+        "systemic_escalation",
+        "agent_specificity",
+        "reproducible",
+        "reversal",
+        "callback",
+        "story_optional",
+        "scope_feasible",
+        "issues",
+        "voiceover_density",
+        "exact_voiceover_text",
+        "narrator_continuity",
+        "creative_technical_separation"
+      ],
+      "properties": {
+        "game_first": {
+          "type": "boolean"
+        },
+        "three_dimensional_readability": {
+          "type": "boolean"
+        },
+        "rough_prototype_feasible": {
+          "type": "boolean"
+        },
+        "player_agency": {
+          "type": "boolean"
+        },
+        "visual_contrast": {
+          "type": "boolean"
+        },
+        "deadpan_voiceover": {
+          "type": "boolean"
+        },
+        "promise_reveal_structure": {
+          "type": "boolean"
+        },
+        "systemic_escalation": {
+          "type": "boolean"
+        },
+        "agent_specificity": {
+          "type": "boolean"
+        },
+        "reproducible": {
+          "type": "boolean"
+        },
+        "reversal": {
+          "type": "boolean"
+        },
+        "callback": {
+          "type": [
+            "boolean",
+            "string"
+          ]
+        },
+        "story_optional": {
+          "type": "boolean"
+        },
+        "scope_feasible": {
+          "type": "boolean"
+        },
+        "issues": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "voiceover_density": {
+          "type": "boolean"
+        },
+        "exact_voiceover_text": {
+          "type": "boolean"
+        },
+        "narrator_continuity": {
+          "type": "boolean"
+        },
+        "creative_technical_separation": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
