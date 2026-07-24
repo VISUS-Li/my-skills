@@ -11,12 +11,27 @@
   },
   "style": {
     "theme": "editorial-dark",
-    "fontFamily": "Microsoft YaHei, Noto Sans SC, sans-serif",
+    "fontFamily": "Noto Sans SC",
     "accent": "#FF6A3D",
     "motion": {
       "pace": "medium",
       "entranceSec": 0.4,
       "transitionSec": 0.55
+    },
+    "tokens": {
+      "colors": {
+        "accentAlt": "#5B8F7D"
+      },
+      "typography": {
+        "monoFamily": "Space Mono"
+      },
+      "texture": {
+        "gridSize": 48,
+        "grainOpacity": 0.075
+      },
+      "motion": {
+        "poseSlideSec": 0.7
+      }
     }
   },
   "scenes": [

@@ -41,14 +41,24 @@ export type CaptionWord = {
   endMs: number;
 };
 
-export type StagePoseName =
-  | 'center'
-  | 'close-left'
-  | 'close-right'
-  | 'wide-left'
-  | 'wide-right'
-  | 'offscreen-left'
-  | 'offscreen-right';
+export type StagePoseName = string;
+
+export type StagePoseTarget = {
+  scale?: number;
+  tx?: number;
+  ty?: number;
+  insetT?: number;
+  insetR?: number;
+  insetB?: number;
+  insetL?: number;
+  radius?: number;
+  border?: number;
+  shadow?: number;
+  background?: number;
+  gradL?: number;
+  gradR?: number;
+  opacity?: number;
+};
 
 export type StagePose = {
   atSec: number;
@@ -57,11 +67,57 @@ export type StagePose = {
 };
 
 export type StageSubject = {
-  type?: 'card' | 'image';
+  type?: 'card' | 'image' | 'video';
   src?: string;
+  proxySrc?: string;
+  masterSrc?: string;
+  objectFit?: 'cover' | 'contain';
+  objectPosition?: string;
+  audioMode?: 'muted' | 'media';
+  volume?: number;
   label?: string;
   subtitle?: string;
   background?: string;
+};
+
+export type ThemeTokens = {
+  colors?: Partial<{
+    canvas: string;
+    canvasAlt: string;
+    cream: string;
+    creamAlt: string;
+    ink: string;
+    text: string;
+    muted: string;
+    surface: string;
+    surfaceStrong: string;
+    accent: string;
+    accentAlt: string;
+    grid: string;
+  }>;
+  typography?: Partial<{
+    bodyFamily: string;
+    monoFamily: string;
+    hero: number;
+    title: number;
+    body: number;
+    label: number;
+    caption: number;
+  }>;
+  spacing?: Partial<{
+    safeX: number;
+    safeTop: number;
+    safeBottom: number;
+    xs: number;
+    sm: number;
+    md: number;
+    lg: number;
+    xl: number;
+  }>;
+  radius?: Partial<{card: number; media: number; pill: number}>;
+  shadow?: Partial<{card: string; media: string}>;
+  texture?: Partial<{gridSize: number; grainOpacity: number}>;
+  motion?: Partial<{entranceSec: number; transitionSec: number; poseSlideSec: number}>;
 };
 
 export type VideoPlan = {
@@ -79,6 +135,7 @@ export type VideoPlan = {
     theme: string;
     fontFamily: string;
     accent: string;
+    tokens?: ThemeTokens;
     motion?: {
       pace?: 'slow' | 'medium' | 'fast';
       entranceSec?: number;
@@ -92,6 +149,8 @@ export type VideoPlan = {
   scenes: ScenePlan[];
   stage?: {
     subject: StageSubject;
+    poses?: Record<string, StagePoseTarget>;
+    backdrop?: string;
   };
   poses?: StagePose[];
   effects?: EffectPlan[];

@@ -178,11 +178,51 @@ provides a schedule keyframe at the scene start.
 }
 ```
 
-Supported poses are `center`, `close-left`, `close-right`, `wide-left`,
-`wide-right`, `offscreen-left`, and `offscreen-right`. Explicit `poses`
-override same-time scene-derived poses. The stage is a global master layer, so
-adjacent opted-in scenes keep one continuous subject while scene-local
-animation still uses local `Sequence` time.
+Built-in poses are `full`, `center`, `close-left`, `close-right`, `wide-left`,
+`wide-right`, `card-left`, `card-right`, `offscreen-left`, and
+`offscreen-right`. Explicit `poses` override same-time scene-derived poses.
+The stage is a global master layer, so adjacent opted-in scenes keep one
+continuous subject while scene-local animation still uses local `Sequence`
+time.
+
+Add project-specific numeric poses under `stage.poses` instead of changing the
+Stage renderer. All values remain frame-interpolated:
+
+```json
+{
+  "stage": {
+    "subject": {
+      "type": "video",
+      "proxySrc": "media/speaker-720p.mp4",
+      "masterSrc": "media/speaker-master.mp4",
+      "objectPosition": "50% 42%",
+      "audioMode": "muted"
+    },
+    "poses": {
+      "evidence-right": {
+        "scale": 1.08,
+        "insetT": 12,
+        "insetR": 4,
+        "insetB": 12,
+        "insetL": 54,
+        "radius": 28,
+        "border": 1,
+        "shadow": 1,
+        "background": 1
+      }
+    }
+  }
+}
+```
+
+Studio preview selects `proxySrc`; rendering selects `masterSrc`. The subject
+is muted unless `audioMode` is explicitly `media`, so narration remains the
+default audio owner. Subjects may also use `type: image` or `type: card`.
+
+Override shared visual tokens under `style.tokens` (`colors`, `typography`,
+`spacing`, `radius`, `shadow`, `texture`, and `motion`). Keep the bundled
+`Noto Sans SC` and `Space Mono` families unless the project also bundles and
+loads its replacement fonts.
 
 ## Asset paths
 

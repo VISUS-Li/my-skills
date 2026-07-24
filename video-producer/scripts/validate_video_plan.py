@@ -11,13 +11,32 @@ from video_plan_utils import load_json, media_path, resolve_project_and_plan, sa
 
 
 POSE_NAMES = {
+    "full",
     "center",
     "close-left",
     "close-right",
     "wide-left",
     "wide-right",
+    "card-left",
+    "card-right",
     "offscreen-left",
     "offscreen-right",
+}
+POSE_FIELDS = {
+    "scale",
+    "tx",
+    "ty",
+    "insetT",
+    "insetR",
+    "insetB",
+    "insetL",
+    "radius",
+    "border",
+    "shadow",
+    "background",
+    "gradL",
+    "gradR",
+    "opacity",
 }
 
 
@@ -46,6 +65,35 @@ def validate(plan: dict[str, Any], project: Path, check_assets: bool) -> list[st
     style = plan.get("style")
     if not isinstance(style, dict):
         errors.append("style must be an object")
+
+    stage = plan.get("stage")
+    subject = stage.get("subject") if isinstance(stage, dict) else None
+    stage_pose_map = stage.get("poses", {}) if isinstance(stage, dict) else {}
+    if not isinstance(stage_pose_map, dict):
+        errors.append("stage.poses must be an object")
+        stage_pose_map = {}
+    for pose_name, target in stage_pose_map.items():
+        label = f"stage.poses.{pose_name}"
+        if not isinstance(pose_name, str) or not pose_name:
+            errors.append("stage.poses keys must be non-empty strings")
+            continue
+        if not isinstance(target, dict):
+            errors.append(f"{label} must be an object")
+            continue
+        for field, value in target.items():
+            if field not in POSE_FIELDS:
+                errors.append(f"{label}.{field} is unsupported")
+            elif not number(value):
+                errors.append(f"{label}.{field} must be numeric")
+            elif field in {"scale", "radius"} and float(value) < 0:
+                errors.append(f"{label}.{field} must be non-negative")
+            elif field in {"border", "shadow", "background", "gradL", "gradR", "opacity"} and not (
+                0 <= float(value) <= 1
+            ):
+                errors.append(f"{label}.{field} must be between 0 and 1")
+            elif field.startswith("inset") and not (0 <= float(value) <= 100):
+                errors.append(f"{label}.{field} must be between 0 and 100")
+    available_pose_names = POSE_NAMES | set(stage_pose_map)
 
     scenes = plan.get("scenes")
     if not isinstance(scenes, list) or not scenes:
@@ -76,15 +124,13 @@ def validate(plan: dict[str, Any], project: Path, check_assets: bool) -> list[st
         if not isinstance(scene.get("props"), dict):
             errors.append(f"{label}.props must be an object")
         pose = scene.get("pose")
-        if pose is not None and pose not in POSE_NAMES:
+        if pose is not None and pose not in available_pose_names:
             errors.append(f"{label}.pose is unsupported: {pose}")
         if "continuousSubject" in scene and not isinstance(scene["continuousSubject"], bool):
             errors.append(f"{label}.continuousSubject must be boolean")
         if pose is not None and scene.get("continuousSubject") is False:
             errors.append(f"{label}.pose conflicts with continuousSubject=false")
 
-    stage = plan.get("stage")
-    subject = stage.get("subject") if isinstance(stage, dict) else None
     poses = plan.get("poses", [])
     has_scene_pose = any(isinstance(scene, dict) and scene.get("pose") for scene in scenes)
     has_subject_scene = any(
@@ -98,14 +144,32 @@ def validate(plan: dict[str, Any], project: Path, check_assets: bool) -> list[st
         errors.append("continuousSubject=true requires poses or scene.pose")
     if isinstance(subject, dict):
         subject_type = subject.get("type", "card")
-        if subject_type not in {"card", "image"}:
-            errors.append("stage.subject.type must be card or image")
+        if subject_type not in {"card", "image", "video"}:
+            errors.append("stage.subject.type must be card, image, or video")
         source = str(subject.get("src") or "")
         if subject_type == "image":
             if not safe_relative_media_path(source):
                 errors.append("stage.subject.src must be a safe relative path for image subjects")
             elif check_assets and not media_path(project, source).exists():
                 errors.append(f"stage.subject.src does not exist: {source}")
+        if subject_type == "video":
+            sources = {
+                key: str(subject.get(key) or "")
+                for key in ("src", "proxySrc", "masterSrc")
+                if subject.get(key)
+            }
+            if not sources:
+                errors.append("stage.subject video requires src, proxySrc, or masterSrc")
+            for source_key, source_value in sources.items():
+                if not safe_relative_media_path(source_value):
+                    errors.append(
+                        f"stage.subject.{source_key} must be a safe relative path for video subjects"
+                    )
+                elif check_assets and not media_path(project, source_value).exists():
+                    errors.append(f"stage.subject.{source_key} does not exist: {source_value}")
+        audio_mode = subject.get("audioMode", "muted")
+        if audio_mode not in {"muted", "media"}:
+            errors.append("stage.subject.audioMode must be muted or media")
 
     if not isinstance(poses, list):
         errors.append("poses must be an array")
@@ -130,7 +194,7 @@ def validate(plan: dict[str, Any], project: Path, check_assets: bool) -> list[st
                 errors.append(f"{label} exceeds video.durationSec")
             previous_pose_at = at_value
             pose_times.add(at_value)
-        if pose.get("pose") not in POSE_NAMES:
+        if pose.get("pose") not in available_pose_names:
             errors.append(f"{label}.pose is unsupported: {pose.get('pose')}")
         transition = pose.get("transitionSec", 0)
         if not number(transition) or float(transition) < 0:

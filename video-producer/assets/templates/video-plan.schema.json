@@ -37,6 +37,49 @@
             "transitionSec": {"type": "number", "minimum": 0}
           },
           "additionalProperties": true
+        },
+        "tokens": {
+          "type": "object",
+          "properties": {
+            "colors": {
+              "type": "object",
+              "additionalProperties": {"type": "string"}
+            },
+            "typography": {
+              "type": "object",
+              "properties": {
+                "bodyFamily": {"type": "string"},
+                "monoFamily": {"type": "string"},
+                "hero": {"type": "number", "exclusiveMinimum": 0},
+                "title": {"type": "number", "exclusiveMinimum": 0},
+                "body": {"type": "number", "exclusiveMinimum": 0},
+                "label": {"type": "number", "exclusiveMinimum": 0},
+                "caption": {"type": "number", "exclusiveMinimum": 0}
+              },
+              "additionalProperties": false
+            },
+            "spacing": {
+              "type": "object",
+              "additionalProperties": {"type": "number", "minimum": 0}
+            },
+            "radius": {
+              "type": "object",
+              "additionalProperties": {"type": "number", "minimum": 0}
+            },
+            "shadow": {
+              "type": "object",
+              "additionalProperties": {"type": "string"}
+            },
+            "texture": {
+              "type": "object",
+              "additionalProperties": {"type": "number", "minimum": 0}
+            },
+            "motion": {
+              "type": "object",
+              "additionalProperties": {"type": "number", "minimum": 0}
+            }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": true
@@ -92,17 +135,7 @@
             "type": "array",
             "items": {"type": "string"}
           },
-          "pose": {
-            "enum": [
-              "center",
-              "close-left",
-              "close-right",
-              "wide-left",
-              "wide-right",
-              "offscreen-left",
-              "offscreen-right"
-            ]
-          },
+          "pose": {"type": "string", "minLength": 1},
           "continuousSubject": {"type": "boolean"},
           "props": {"type": "object"},
           "effects": {"type": "array"},
@@ -118,14 +151,44 @@
         "subject": {
           "type": "object",
           "properties": {
-            "type": {"enum": ["card", "image"]},
+            "type": {"enum": ["card", "image", "video"]},
             "src": {"type": "string"},
+            "proxySrc": {"type": "string"},
+            "masterSrc": {"type": "string"},
+            "objectFit": {"enum": ["cover", "contain"]},
+            "objectPosition": {"type": "string"},
+            "audioMode": {"enum": ["muted", "media"]},
+            "volume": {"type": "number", "minimum": 0},
             "label": {"type": "string"},
             "subtitle": {"type": "string"},
             "background": {"type": "string"}
           },
           "additionalProperties": true
-        }
+        },
+        "poses": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "scale": {"type": "number", "minimum": 0},
+              "tx": {"type": "number"},
+              "ty": {"type": "number"},
+              "insetT": {"type": "number", "minimum": 0, "maximum": 100},
+              "insetR": {"type": "number", "minimum": 0, "maximum": 100},
+              "insetB": {"type": "number", "minimum": 0, "maximum": 100},
+              "insetL": {"type": "number", "minimum": 0, "maximum": 100},
+              "radius": {"type": "number", "minimum": 0},
+              "border": {"type": "number", "minimum": 0, "maximum": 1},
+              "shadow": {"type": "number", "minimum": 0, "maximum": 1},
+              "background": {"type": "number", "minimum": 0, "maximum": 1},
+              "gradL": {"type": "number", "minimum": 0, "maximum": 1},
+              "gradR": {"type": "number", "minimum": 0, "maximum": 1},
+              "opacity": {"type": "number", "minimum": 0, "maximum": 1}
+            },
+            "additionalProperties": false
+          }
+        },
+        "backdrop": {"type": "string"}
       },
       "additionalProperties": true
     },
@@ -136,17 +199,7 @@
         "required": ["atSec", "pose"],
         "properties": {
           "atSec": {"type": "number", "minimum": 0},
-          "pose": {
-            "enum": [
-              "center",
-              "close-left",
-              "close-right",
-              "wide-left",
-              "wide-right",
-              "offscreen-left",
-              "offscreen-right"
-            ]
-          },
+          "pose": {"type": "string", "minLength": 1},
           "transitionSec": {"type": "number", "minimum": 0}
         },
         "additionalProperties": true

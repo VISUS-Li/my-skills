@@ -28,8 +28,8 @@ const SceneTrack: React.FC<{plan: VideoPlan}> = ({plan}) => {
 
 export const MasterVideo: React.FC<VideoPlan> = (plan) => (
   <AbsoluteFill style={{backgroundColor: plan.video.background ?? '#171A22'}}>
-    <SceneTrack plan={plan} />
     <ContinuousSubject plan={plan} />
+    <SceneTrack plan={plan} />
     <GlobalEffectTrack plan={plan} />
     <CaptionTrack plan={plan} />
     <VoiceTrack plan={plan} />

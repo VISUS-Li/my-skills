@@ -12,17 +12,7 @@ const sceneSchema = z
     startSec: z.number().nonnegative(),
     durationSec: z.number().positive(),
     beatIds: z.array(z.string()).optional(),
-    pose: z
-      .enum([
-        'center',
-        'close-left',
-        'close-right',
-        'wide-left',
-        'wide-right',
-        'offscreen-left',
-        'offscreen-right',
-      ])
-      .optional(),
+    pose: z.string().optional(),
     continuousSubject: z.boolean().optional(),
     props: z.record(z.string(), z.any()),
   })

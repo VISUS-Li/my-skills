@@ -2,3 +2,10 @@ node_modules/
 renders/
 out/
 .cache/
+
+# Local project media dropped into the template during Studio/QA
+# (bundled fonts under public/fonts/ are part of the skill and stay tracked)
+public/media/
+*.mp4
+*.wav
+*.mov

@@ -41,6 +41,37 @@ class VideoPlanTest(unittest.TestCase):
         errors = validate(plan, VIDEO_PRODUCER, check_assets=False)
         self.assertIn("continuousSubject=true requires poses or scene.pose", errors)
 
+    def test_custom_numeric_stage_pose_is_supported(self) -> None:
+        plan = self.plan()
+        plan["stage"]["poses"] = {
+            "evidence-card": {
+                "scale": 1.08,
+                "insetT": 12,
+                "insetR": 4,
+                "insetB": 12,
+                "insetL": 54,
+                "radius": 28,
+                "border": 1,
+                "shadow": 1,
+                "background": 1,
+            }
+        }
+        plan["scenes"][0]["pose"] = "evidence-card"
+        plan["poses"][0]["pose"] = "evidence-card"
+        self.assertEqual(validate(plan, VIDEO_PRODUCER, check_assets=False), [])
+
+    def test_invalid_stage_pose_field_is_rejected(self) -> None:
+        plan = self.plan()
+        plan["stage"]["poses"] = {"bad": {"breathing": 1}}
+        errors = validate(plan, VIDEO_PRODUCER, check_assets=False)
+        self.assertIn("stage.poses.bad.breathing is unsupported", errors)
+
+    def test_video_subject_requires_preview_or_master_source(self) -> None:
+        plan = self.plan()
+        plan["stage"]["subject"] = {"type": "video"}
+        errors = validate(plan, VIDEO_PRODUCER, check_assets=False)
+        self.assertIn("stage.subject video requires src, proxySrc, or masterSrc", errors)
+
     def test_overlapping_caption_words_are_rejected(self) -> None:
         plan = self.plan()
         words = plan["captions"]["cues"][0]["words"]
