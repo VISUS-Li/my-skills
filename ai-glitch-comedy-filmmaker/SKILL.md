@@ -3,7 +3,7 @@ name: ai-glitch-comedy-filmmaker
 description: 为粗糙 3D 原型设计“AI 把正常游戏需求做歪”的可玩喜剧与视频制作方案。用于 Cursor、Claude Code、Codex 等编程 Agent 辅助的 Vibe Coding 游戏实验、第三人称或自由镜头 3D 原型、角色动画/物理/碰撞/NPC/任务/UI 失控、吐槽式旁白、视觉反差、无厘头快速反转、无剧情试玩、开发挑战和带少量剧情的游戏影像。输出必须包含严格 JSON、3D 场景规格、可见笑点单元、逐任务 Agent 提示包、具体约束、反例、验收测试、可复现开关、录制分镜和粗糙原型边界；不得用剧情或文案掩盖缺失的游戏交互和画面效果。
 ---
 
-# AI Glitch Comedy Filmmaker
+# AI 失控喜剧制片（粗糙 3D 游戏）
 
 ## 核心定义
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Green-screen chroma key + optional rembg / near-white cutout → transparent PNG."""
+"""绿幕色键 + 可选 rembg / 近白抠图 → 透明 PNG。"""
 from __future__ import annotations
 
 import argparse

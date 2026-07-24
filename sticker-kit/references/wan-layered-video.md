@@ -1,163 +1,214 @@
-# Wan layered-video production
+# Wan 分层叙事视频
 
-Use this reference for motion jobs when the Wan I2V/FLF2V endpoint is available.
-The production unit is **one isolated element × one state segment × one fixed
-camera**, not one whole scene and not one generated frame.
+多元素叙事动画走 Wan I2V/FLF2V 时读本文。目标是**连续动画表演**，不是一堆 PNG 在时间线上挪动。
 
-## Pipeline
+## 目录
 
-```text
-story beats
-  → shots and interaction contracts
-  → element registry and state timeline
-  → endpoint images for each state
-  → compile Wan jobs
-  → I2V / FLF2V isolated clips
-  → chroma/luma matte to stable RGBA sequences
-  → deterministic global transforms, z-order, and timing
-  → composite MP4 + QA report
+1. [核心契约](#核心契约)
+2. [规划场景](#规划场景)
+3. [选择生成组](#选择生成组)
+4. [分配运动归属](#分配运动归属)
+5. [创建状态与端点](#创建状态与端点)
+6. [指定互动与交接](#指定互动与交接)
+7. [生成、抠图与合成](#生成抠图与合成)
+8. [QA 门槛](#qa-门槛)
+9. [Wan 中断与回退策略](#wan-中断与回退策略)
+
+## 核心契约
+
+以 **一次耦合表演 × 一个状态段 × 一个固定机位** 为生成单元。耦合表演可以是：一个演员、演员+持握道具、发射体+其发射物，或临时多演员接触组。不要把「一个名词」等同于「一层」。
+
+Wan 负责关节表演：迈步、重心转移、后坐力、翅膀拍打、呼吸、面部反应、布料跟随、动作弧线。
+合成器负责镜头时序、z 序、初始摆放、可见性交接，以及有限的残余屏幕位移。
+变换绝不能代替缺失的身体力学。
+
+## 规划场景
+
+生成前先写 `scene_plan.json`：
+
+1. 把故事拆成镜头与单动词状态。
+2. 在每个状态边界列出各演员的屏幕位置、朝向、缩放、姿态、接触状态。
+3. 用下方耦合测试决定生成组。
+4. 声明每个状态的 `motion_space`；位移/混合运动还要写 `body_mechanics`。
+5. 添加可执行的互动/交接字段；散文式 `rule` 仅作说明。
+6. 创建端点图前先编译一次；端点存在后再用 `--strict-assets` 编译。
+
+推荐工程策略：
+
+```json
+{
+  "wan_failure_policy": "stop-and-replan",
+  "continuity": {
+    "max_position_jump": 0.04,
+    "max_scale_change": 0.08
+  }
+}
 ```
 
-## Plan before generating
+状态时间是镜头局部的。真实切镜用新镜头；不要把同镜瞬移伪装成新状态。
 
-Write `scene_plan.json` with:
+## 选择生成组
 
-1. `project`: duration, FPS, output canvas, style lock, Wan defaults.
-2. `shots`: shot-local timeline, one camera rule, background, elements.
-3. `elements`: stable identity, z-order, pivot, matte, states.
-4. `states`: start/end time, I2V/FLF2V/static mode, endpoint images, local
-   motion, playback, and scene transform.
-5. `interaction_contracts`: shared event time, participants, contact rule.
+问：**这些部件是否必须共享移动附着点、受力或接触拓扑，动作才读得通？** 是 → 一起生成。
 
-Keep **local motion** and **global motion** separate:
-
-- Wan: limb motion, breathing, wing flap, slash arc, facial reaction.
-- Compositor: moving across the scene, scale, screen position, z-order, timing.
-
-Tell every Wan actor job: fixed camera, subject centered, no zoom/pan/rotation,
-stable scale, no ground or scene. If the model moves both the subject and camera,
-the layer cannot be placed reliably.
-
-## Element boundaries
-
-Split by independent motion and occlusion, not by noun alone.
-
-| Situation | Layer decision |
-|---|---|
-| Warrior holding sword | One `warrior_sword` actor group |
-| Dragon body and fire | Separate `dragon` and `dragon_fire` layers |
-| Warrior slashes dragon | Separate actors + shared impact time + impact VFX |
-| Warrior hugs/carries princess | One temporary `warrior_princess_pair` contact group |
-| Castle/hills | Static background plate |
-| Trees/clouds/flags | Optional isolated environment loops |
-
-Held props belong to the actor; otherwise attachment drift is likely. Short
-contacts can remain separate if an impact flash hides the exact intersection.
-Sustained contact, intertwined limbs, carrying, wrestling, or hugging must use a
-combined contact group for that state segment.
-
-Do not animate everything. Allocate Wan jobs to foreground actors, expressive
-props, atmospheric loops, and VFX. Keep distant geometry static unless its motion
-is visible at delivery size.
-
-## State routing
-
-- Use **I2V** when identity and pose class remain stable: tied idle, guard idle,
-  defeated breathing, flag waving, tree sway.
-- Use **FLF2V** when both endpoint states matter: windup→slash, standing→fallen,
-  tied→freed, day→night background transition.
-- Split a segment when it contains more than one semantic verb or more than one
-  major pose-class change.
-- For a long action, chain several short states. Do not ask one clip to attack,
-  fall, stand up, walk, and hug.
-
-Make state boundaries visually compatible. End frame of state A should match the
-start frame of state B, or use the same image at the boundary. Hide unavoidable
-cuts behind impact flashes, smoke, foreground wipes, or a shot cut.
-
-## Interaction contract
-
-For each contact event define:
-
-- event time in the shot;
-- participants;
-- screen-space contact point;
-- facing/direction;
-- which layer occludes which;
-- reaction delay (usually 0–3 frames);
-- optional VFX layer used to mask the contact.
-
-Prompts alone cannot synchronize separately generated actors. The compositor
-owns the event time. Phrase each participant prompt relative to the same segment
-progress, for example “impact at 73% of the clip”.
-
-## Matte strategy
-
-Wan returns opaque MP4. Always create transparent intermediates after generation.
-
-| Material | Generation background | Matte |
+| 情境 | 默认决策 | 原因 |
 |---|---|---|
-| Opaque actor/prop | Uniform chroma color absent from subject | Chroma to alpha |
-| Fire/glow/beam | Pure black | Luminance to alpha |
-| Smoke/translucent cloth | Chroma plus manual QA; segmentation fallback if needed | Soft matte |
+| 演员 + 持握/穿戴/骑乘道具 | 同一演员组 | 共享运动链 |
+| 发射体 + 短程、源绑定发射物 | 同一演员组 | 源点、后坐、嘴/喷嘴、时序必须一致 |
+| 演员 + 释放后独立抛体 | 释放前同组；释放后拆开 | 附着在明确事件处结束 |
+| 短冲击前的两名演员 | 独立演员 + 事件契约 | 精确交叉可短暂蒙版 |
+| 拥抱、搬运、扭打、舞姿保持、递交 | 临时接触组 | 持续接触改变拓扑 |
+| 独立烟雾、碎片、闪光、远处光束尾 | 独立特效 | 独立运动/遮挡或 alpha 处理 |
+| 背景建筑 | 静态底板 | 无可读关节运动 |
 
-Default chroma is `#00FF00`, but never use green behind a green subject. Choose
-blue or magenta based on the locked palette. Require no floor, shadow, reflection,
-text, border, or background texture. Preserve a single union crop across the
-whole clip; per-frame autocrop causes position jitter.
+仅当至少一条强理由成立时，才把发射物拆开：释放后独立旅行、需要不同蒙版/混合、超出演员画布、须穿过多层前后、或可复用。
+源点在动则记录跟踪屏幕路径；「对齐嘴巴」这类散文规则不是可执行契约。无法跟踪时与发射体同组。
 
-Use RGBA PNG sequences as the source of truth. Export ProRes 4444 or another
-alpha-capable delivery only when required; MP4/H.264 does not preserve alpha.
+记录非显然选择：
 
-## Pixel-art guardrails
+```json
+"coupling": {
+  "mode": "grouped",
+  "members": ["emitter_body", "emission"],
+  "reason": "moving origin and recoil must be generated together"
+}
+```
 
-Video diffusion tends to soften pixel art. Lock the same low-color palette and
-pixel grid in endpoint images, forbid anti-aliasing and motion blur, and pass
-`cutout_video.py --pixel-grid N` after keying. Use integer-looking compositor
-positions and nearest-neighbor resizing for final pixel delivery. Inspect the
-result at 100% zoom; regenerate clips with melted outlines or changing palette.
+分层服务于自然运动与可合成性。少而准的演员组，好过语义整齐但力学脱节的多层。
 
-## Commands
+## 分配运动归属
+
+每个生成状态声明 `motion_space`：
+
+| 值 | Wan 职责 | 合成器职责 |
+|---|---|---|
+| `in_place` | 呼吸、反应、站定表演 | 固定摆放；无位移 |
+| `locomotion` | 步态/飞行 + 元素画布内根位移 | 把联合画布摆进镜头 |
+| `hybrid` | 完整身体力学 + 有限根位移 | 仅小量残余映射 |
+| `compositor` | 非关节物可选旋转/脉冲 | 刻意变换路径 |
+
+走跑用 FLF2V 端点，把全身放在同一元素画布的不同位置。提示词写抬脚、触地、重心转移、膝髋、躯干反向、加速与制动。
+锁定机位 = 镜头不跟随；**不等于**主体必须居中。
+
+禁止「主体居中稳定、仅局部运动」的提示配大段 `transform_from`→`transform_to`——会产生脚滑。
+编译器对 `in_place` 拒绝该组合，并对 `locomotion` 的过量合成位移告警。
+
+攻击或发射时写身体驱动，不要只写视觉结果：
+
+- 蓄势 → 脚蹬 → 髋/肩旋转 → 臂/工具弧 → 命中 → 跟随；
+- 吸气/扩胸 → 嘴/喷嘴张开 → 后坐/支撑 → 发射 → 回收；
+- 翅膀下拍/上拍 → 身体升降 → 尾与布料跟随。
+
+## 创建状态与端点
+
+稳定姿态类或循环用 I2V。位置、接触、剪影或姿态类须到达受控端点时用 FLF2V。
+多个主要语义动词拆成多个状态。
+
+同一元素的每个端点：
+
+- 同一画布尺寸、身份、色板、视角、地线、预期合成高度；
+- 保留完整运动净空；不要各自裁端点；
+- 位移时在元素画布内移动主体，而不是改合成变换；
+- 尽量把上一接受的结束帧用作下一起始帧；
+- 姿态变化时合成 `height` 恒定——倒下/蹲下的剪影在同画布内变矮，不是缩小整层。
+
+编译提示按 `motion_space` 附加机位条款。动作力学放进 `body_mechanics`；
+`motion_prompt` 聚焦时序、意图与状态端点。
+
+## 指定互动与交接
+
+短暂互动：定义精确 `event_sec`、参与者、屏幕接触点、朝向、遮挡、反应延迟、可选蒙版特效。
+各参与者状态须引用同一 interaction id，并在同一段进度表达该事件。
+
+持续接触：禁止从独立演员硬切到已合体姿态。接触组必须从**匹配离开演员的接触前起始图**生成，再由 FLF2V 表演实际接触。
+
+必需交接形状：
+
+```json
+{
+  "contact": "sustained",
+  "contact_group": "actor_a_actor_b_contact",
+  "handoff": {
+    "from_elements": ["actor_a", "actor_b"],
+    "to_element": "actor_a_actor_b_contact",
+    "window_sec": [3.0, 3.25],
+    "method": "matched_crossfade",
+    "shared_endpoint": true,
+    "max_position_delta": 0.04,
+    "max_scale_delta": 0.08,
+    "min_silhouette_iou": 0.45
+  }
+}
+```
+
+窗口内保持离开层与进入层匹配的屏幕位置、朝向、缩放、地线与联合剪影边界。
+离开状态加 `visibility.fade_out_sec`，进入状态加 `visibility.fade_in_sec`；由 `compose_scene.py` 执行。
+匹配淡化约 2–8 帧。前景擦除/烟/闪/物遮挡时用 `method=occlusion` + 命名 `mask_element`。
+禁止用长淡化掩盖不匹配身体。
+
+同镜边界硬失败：
+
+- 演员消失一帧或多帧；
+- 中心跳动超过工程容差；
+- 层高度变化超过工程容差；
+- 无动作却翻转朝向或地线；
+- 独立演员结束时分开，接触组却在别处开始；
+- 硬切直接换到不同缩放或已完成的接触。
+
+## 生成、抠图与合成
 
 ```bash
-python scripts/init_wan_scene.py --template dragon-rescue --out OUT/dragon-rescue
-# Replace placeholder endpoint images and edit scene_plan.json.
-python scripts/compile_wan_scene.py OUT/dragon-rescue/scene_plan.json --strict-assets
-python scripts/wan_generate.py OUT/dragon-rescue/wan_jobs.json --dry-run
-python scripts/wan_generate.py OUT/dragon-rescue/wan_jobs.json
-
-# Batch uses each planned chroma/luma mode and pixel-grid setting.
-python scripts/key_wan_jobs.py OUT/dragon-rescue/wan_jobs.json
-
-python scripts/compose_scene.py OUT/dragon-rescue/compiled_scene_plan.json \
-  -o OUT/dragon-rescue/renders/final.mp4
+python scripts/init_wan_scene.py --template generic --out OUT/my-story
+# 编辑计划并创建端点图。
+python scripts/compile_wan_scene.py OUT/my-story/scene_plan.json --strict-assets
+python scripts/wan_generate.py OUT/my-story/wan_jobs.json --dry-run
+python scripts/wan_generate.py OUT/my-story/wan_jobs.json
+python scripts/key_wan_jobs.py OUT/my-story/wan_jobs.json
+python scripts/qa_wan_handoffs.py OUT/my-story/compiled_scene_plan.json --save-overlays
+python scripts/compose_scene.py OUT/my-story/compiled_scene_plan.json \
+  -o OUT/my-story/renders/final.mp4
 ```
 
-Read [wan-api.md](wan-api.md) for endpoint fields.
+Wan 返回不透明 MP4。不透明演员/组用色键；独立发光特效用黑底+亮度。
+整段保留同一联合裁切；按帧 autocrop 会抖。RGBA PNG 序列是合成真相源。
 
-## QA and regeneration
+像素风：锁定色板/网格，禁止抗锯齿与运动模糊，用最近邻缩放，100% 检视。
 
-Check each isolated clip before composition:
+## QA 门槛
 
-- identity, colors, topology, and held-prop attachment remain stable;
-- no unexpected camera or subject translation;
-- start/end frames match the requested state;
-- matte has no holes, green/blue spill, opaque background, or clipped motion;
-- interaction action peaks at the contract time;
-- loops do not pop at the boundary;
-- pixel grid/palette do not shimmer.
+合成前审每一段孤立片段。任一硬门槛失败则重生该状态。
 
-Regenerate only the failing state. Do not rebuild the whole scene. If contact
-still fails after two takes, replace that interval with a contact group or hide
-the join behind a designed VFX transition.
+**单层运动门槛**
 
-## Dragon-rescue beat example
+- 身份/拓扑与持握或发射附着保持稳定；
+- 动作含承诺的身体驱动，而非仅层平移；
+- 位移时脚触地/离地；无滑冰；
+- 后坐、预期、命中、跟随顺序正确；
+- 起止姿态、朝向、缩放、画布位置符合计划；
+- 无机位跟踪/回中、肢体/特效裁切、蒙版破洞、溢色或不透明背景；
+- 互动峰值落在契约时间。
 
-1. `0–3s`: warrior guards; dragon recoils; fire VFX extends; princess tied idle.
-2. `3–6s`: warrior FLF slash; dragon FLF hit→defeated; impact VFX at 5.2s.
-3. `6–8s`: defeated dragon loop; warrior approaches; princess tied→freed.
-4. `8–12s`: swap individual warrior/princess layers for one hugging pair layer.
+**合成门槛**
 
-This is intentionally several short, controllable clips. The visible scene feels
-busy because the layers overlap in time, not because one model call invents all
-actions at once.
+- 每个持续接触交换要求 `handoff_qa_report.json` 通过中心、缩放、剪影几何；看保存的 overlay，不要只信数字；
+- 先全速看一遍故事/可读性，再逐帧检每个状态与交接边界；
+- 对比交接前/中/后帧的中心、缩放、地线、朝向、身份；
+- 整段动作核验发射源点与持握道具，而非只看一帧；
+- 确认全局变换只负责摆放，不冒充缺失动作；
+- 拒绝无解释的消失、瞬移、缩/胀、硬切换、或运动叙事节拍中的静态硬停。
+
+只重生失败状态。强耦合动作的独立层连续失败两次 → 重组。持续接触连续失败两次 → 重建匹配的接触前端点，或用显式遮挡/切镜。
+
+## Wan 中断与回退策略
+
+假定服务可能在批前或批中失败。`wan_generate.py` 做健康预检、重试任务、写 `wan_run_report.json`，默认遇失败停止。已完成输出可续跑。
+
+禁止用一张静态 PNG 顶替缺失的演员/接触片段再渲同一时间线。可接受恢复，按序：
+
+1. 恢复 Wan，只重跑缺失任务；
+2. 缩短或简化失败动作，但保留端点与身体驱动；
+3. 重组力学耦合层并重生；
+4. 把过渡挪到有动机的切镜或设计遮挡，两边都渲完整运动状态；
+5. 用足够连续姿态与共享端点的 D-Frames/D-Long **整段重做**受影响节拍。
+
+皆不可行则交付部分/进行中结果并报告失败任务。不要把破坏连续性的静态顶替标为成片。

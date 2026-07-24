@@ -1,0 +1,26 @@
+{
+  "name": "video-producer-remotion-project",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Self-contained Remotion runtime for Video Producer video-plan.json projects.",
+  "scripts": {
+    "dev": "remotion studio",
+    "typecheck": "tsc --noEmit",
+    "qa:still": "node scripts/qa-still.mjs",
+    "qa:contact-sheet": "node scripts/contact-sheet.mjs",
+    "render:preview": "remotion render MasterVideo renders/preview.mp4 --scale=0.5 --crf=30",
+    "render": "remotion render MasterVideo renders/final.mp4"
+  },
+  "dependencies": {
+    "@remotion/captions": "4.0.484",
+    "@remotion/cli": "4.0.484",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.484",
+    "zod": "4.3.6"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "typescript": "5.9.3"
+  }
+}

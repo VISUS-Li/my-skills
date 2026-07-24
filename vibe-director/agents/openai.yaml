@@ -1,7 +1,0 @@
-interface:
-  display_name: "Vibe Director"
-  short_description: "Director workflow for pure-code explainer videos"
-  default_prompt: "Use $vibe-director to plan, storyboard, preview, and QA a pure-code explainer video."
-
-policy:
-  allow_implicit_invocation: true

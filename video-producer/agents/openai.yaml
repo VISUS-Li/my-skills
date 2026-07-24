@@ -1,6 +1,4 @@
 interface:
   display_name: "Video Producer"
-  short_description: "Director dispatcher for proof-rich Chinese short videos."
-  icon: "🎬"
-  color: "#D92D20"
-  default_prompt: "Use $video-producer to plan, render, and review a 20-30s first-slice preview for a proof-rich Chinese short video."
+  short_description: "Complete videos on one Remotion runtime timeline"
+  default_prompt: "Use $video-producer to turn this brief into a timed, reviewable Remotion video and final MP4."

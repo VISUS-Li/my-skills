@@ -1,141 +1,141 @@
-# Shot Grammar
+# 镜头语法
 
-Pick named recipes before coding. Each shot must have a recipe, visual owner, action list, and transition reason.
+写代码前先选命名配方。每个镜头必须有配方、视觉主人、动作列表与转场理由。
 
-## Recipes
+## 配方
 
 ### `dark_grid_intro`
-- Use for: opening hook, tool/world setup, developer mystery.
-- Duration: 2-4 seconds.
-- Elements: dark grid, large keyword actor, small proof thumbnail, pulse line.
-- Motion/SFX: scale-blur keyword, grid pulse, soft pop, short whoosh.
-- Errors: starting with a long subtitle; too many competing words.
-- Renderer: Remotion or HyperFrames.
+- 用途：开场钩子、工具/世界观铺垫、开发者悬念。
+- 时长：2–4 秒。
+- 元素：暗网格、大关键词演员、小证明缩略图、脉冲线。
+- 动效/SFX：关键词缩放模糊、网格脉冲、soft pop、短 whoosh。
+- 错误：以长字幕开场；太多互相抢戏的词。
+- 渲染器：Remotion 或 HyperFrames。
 
 ### `light_grid_concept_board`
-- Use for: definitions, system maps, concept split.
-- Duration: 3-6 seconds.
-- Elements: light grid, cards, arrows, labels, small icons.
-- Motion/SFX: card draw, arrow stroke, click.
-- Errors: static diagram with no build sequence.
-- Renderer: Motion Canvas, SVG/GSAP, HyperFrames.
+- 用途：定义、系统图、概念拆分。
+- 时长：3–6 秒。
+- 元素：亮网格、卡片、箭头、标签、小图标。
+- 动效/SFX：卡片抽出、箭头描边、click。
+- 错误：静态图解无搭建序列。
+- 渲染器：Motion Canvas、SVG/GSAP、HyperFrames。
 
 ### `terminal_proof`
-- Use for: commands, install/run proof, logs, errors.
-- Duration: 3-7 seconds.
-- Elements: terminal window, command line, cursor, output highlights.
-- Motion/SFX: typing ticks, line reveal, redbox/caret focus, click.
-- Errors: tiny unreadable terminal, command pasted all at once.
-- Renderer: Remotion or HyperFrames.
+- 用途：命令、安装/运行证明、日志、错误。
+- 时长：3–7 秒。
+- 元素：终端窗、命令行、光标、输出高亮。
+- 动效/SFX：打字 tick、行揭示、红框/caret 聚焦、click。
+- 错误：终端太小看不清；命令一次性贴完。
+- 渲染器：Remotion 或 HyperFrames。
 
 ### `editor_code_zoom`
-- Use for: code cause/effect, generated file, API call, config.
-- Duration: 3-8 seconds.
-- Elements: editor chrome, file tree, code highlight, minimap hint.
-- Motion/SFX: push-in, line highlight, token glow, keyboard tick.
-- Errors: entire code file on screen; no highlighted line.
-- Renderer: Remotion, Motion Canvas, SVG/GSAP.
+- 用途：代码因果、生成文件、API 调用、配置。
+- 时长：3–8 秒。
+- 元素：编辑器外壳、文件树、代码高亮、minimap 提示。
+- 动效/SFX：推进、行高亮、token 发光、键盘 tick。
+- 错误：整份代码文件上屏；无高亮行。
+- 渲染器：Remotion、Motion Canvas、SVG/GSAP。
 
 ### `screenshot_pushin_redbox`
-- Use for: product proof, UI evidence, web page claims.
-- Duration: 3-6 seconds.
-- Elements: screenshot, browser/device frame, redbox, cursor, label.
-- Motion/SFX: slide/crop in, push-in, redbox draw, click/marker.
-- Errors: raw screenshot centered with no guidance.
-- Renderer: Remotion or HyperFrames.
+- 用途：产品证明、UI 证据、网页主张。
+- 时长：3–6 秒。
+- 元素：截图、浏览器/设备框、红框、光标、标签。
+- 动效/SFX：滑入/裁切入、推进、红框描边、click/marker。
+- 错误：生截图居中无引导。
+- 渲染器：Remotion 或 HyperFrames。
 
 ### `phone_chat_sequence`
-- Use for: user workflow, chat agent interaction, before/after prompt.
-- Duration: 4-8 seconds.
-- Elements: phone mockup, chat bubbles, input cursor, result card.
-- Motion/SFX: bubble pop, typing, send click, small hit on answer.
-- Errors: too many messages at once.
-- Renderer: Remotion, HyperFrames.
+- 用途：用户工作流、聊天 agent 交互、提示前后对比。
+- 时长：4–8 秒。
+- 元素：手机 mockup、聊天气泡、输入光标、结果卡。
+- 动效/SFX：气泡 pop、打字、发送 click、回答上小 hit。
+- 错误：一次太多消息。
+- 渲染器：Remotion、HyperFrames。
 
 ### `git_graph_growth`
-- Use for: branch, merge, version, snapshot, collaboration.
-- Duration: 4-8 seconds.
-- Elements: nodes, branch lines, commit labels, diff cards.
-- Motion/SFX: node pop, line draw, click, light stamp.
-- Errors: graph appears already complete.
-- Renderer: Motion Canvas, SVG/GSAP, Remotion.
+- 用途：分支、合并、版本、快照、协作。
+- 时长：4–8 秒。
+- 元素：节点、分支线、commit 标签、diff 卡。
+- 动效/SFX：node pop、线描、click、轻 stamp。
+- 错误：图一开始就画完。
+- 渲染器：Motion Canvas、SVG/GSAP、Remotion。
 
 ### `timeline_rewind`
-- Use for: rollback, history, cause chain, before/after time jump.
-- Duration: 3-6 seconds.
-- Elements: timeline ruler, playhead, ghost frames, snapshot cards.
-- Motion/SFX: reverse whoosh, tick marks, freeze hit.
-- Errors: no readable before/after state.
-- Renderer: Remotion, Motion Canvas.
+- 用途：回滚、历史、因果链、前后时间跳。
+- 时长：3–6 秒。
+- 元素：时间尺、播放头、幽灵帧、快照卡。
+- 动效/SFX：reverse whoosh、刻度 tick、冻结 hit。
+- 错误：无清晰前后状态。
+- 渲染器：Remotion、Motion Canvas。
 
 ### `dashboard_room`
-- Use for: metrics, product state, system overview.
-- Duration: 4-8 seconds.
-- Elements: dashboard cards, chart, table, status pills, cursor.
-- Motion/SFX: card stack enter, count-up, click, soft whoosh.
-- Errors: fake metrics with no meaning; one-note card wall.
-- Renderer: HyperFrames or Remotion.
+- 用途：指标、产品状态、系统总览。
+- 时长：4–8 秒。
+- 元素：仪表盘卡、图表、表格、状态 pill、光标。
+- 动效/SFX：卡片叠入、count-up、click、soft whoosh。
+- 错误：无意义假指标；千篇一律的卡片墙。
+- 渲染器：HyperFrames 或 Remotion。
 
 ### `critique_wall`
-- Use for: pointing out mismatch, hallucination, weak claim, bad video pattern.
-- Duration: 4-7 seconds.
-- Elements: evidence thumbnails, red labels, compare line, warning badge.
-- Motion/SFX: marker/click, glitch for actual warning, low hit.
-- Errors: harsh decoration without evidence.
-- Renderer: HyperFrames, Remotion.
+- 用途：指出错配、幻觉、弱主张、坏视频模式。
+- 时长：4–7 秒。
+- 元素：证据缩略图、红标签、对比线、警告徽章。
+- 动效/SFX：marker/click、真实警告用 glitch、low hit。
+- 错误：苛刻装饰却无证据。
+- 渲染器：HyperFrames、Remotion。
 
 ### `data_card_compare`
-- Use for: numbers, pricing, speed, capability comparisons.
-- Duration: 3-6 seconds.
-- Elements: two or three cards, number hero, axis labels, source tag.
-- Motion/SFX: count-up, card snap, soft hit.
-- Errors: numbers without source/context.
-- Renderer: Remotion, HyperFrames.
+- 用途：数字、定价、速度、能力对比。
+- 时长：3–6 秒。
+- 元素：两到三张卡、数字英雄、轴标签、来源标签。
+- 动效/SFX：count-up、卡片 snap、soft hit。
+- 错误：数字无来源/语境。
+- 渲染器：Remotion、HyperFrames。
 
 ### `svg_metaphor_scene`
-- Use for: abstract mechanisms, mental models, hidden systems.
-- Duration: 4-8 seconds.
-- Elements: simple metaphor object, SVG path, labels, particles used sparingly.
-- Motion/SFX: path draw, morph, pop, whoosh.
-- Errors: metaphor unrelated to narration.
-- Renderer: Motion Canvas, SVG/GSAP, HyperFrames.
+- 用途：抽象机制、心智模型、隐藏系统。
+- 时长：4–8 秒。
+- 元素：简单隐喻物、SVG 路径、标签、粒子慎用。
+- 动效/SFX：路径描、morph、pop、whoosh。
+- 错误：隐喻与旁白无关。
+- 渲染器：Motion Canvas、SVG/GSAP、HyperFrames。
 
 ### `keyword_actor_pop`
-- Use for: key terms, hook phrase, contrast word, conclusion word.
-- Duration: 1-3 seconds.
-- Elements: one dominant word/phrase, small support symbol.
-- Motion/SFX: scale blur, snap, soft pop.
-- Errors: full sentence as huge text.
-- Renderer: Remotion, HyperFrames, GSAP.
+- 用途：关键词、钩子短语、对比词、结论词。
+- 时长：1–3 秒。
+- 元素：一个主导词/短语、小支撑符号。
+- 动效/SFX：缩放模糊、snap、soft pop。
+- 错误：整句做成巨大文字。
+- 渲染器：Remotion、HyperFrames、GSAP。
 
 ### `before_after_split`
-- Use for: transformation, comparison, bad/good example.
-- Duration: 3-7 seconds.
-- Elements: split screen, wipe divider, labels, synced annotations.
-- Motion/SFX: wipe, click, stamp on winner.
-- Errors: two sides too similar; no visible change.
-- Renderer: Remotion, HyperFrames.
+- 用途：转变、对比、坏/好例子。
+- 时长：3–7 秒。
+- 元素：分屏、wipe 分割线、标签、同步标注。
+- 动效/SFX：wipe、click、胜者 stamp。
+- 错误：两边太像；无可见变化。
+- 渲染器：Remotion、HyperFrames。
 
 ### `workflow_pipeline`
-- Use for: tool chain, agent workflow, input-to-output process.
-- Duration: 5-10 seconds.
-- Elements: nodes, arrows, small screenshots, terminal/code inserts.
-- Motion/SFX: node pop, arrow travel, click, whoosh.
-- Errors: too many nodes; no current-step focus.
-- Renderer: Motion Canvas, SVG/GSAP, Remotion.
+- 用途：工具链、agent 工作流、输入到输出过程。
+- 时长：5–10 秒。
+- 元素：节点、箭头、小截图、终端/代码插入。
+- 动效/SFX：node pop、箭头旅行、click、whoosh。
+- 错误：节点太多；无当前步焦点。
+- 渲染器：Motion Canvas、SVG/GSAP、Remotion。
 
 ### `audio_waveform_sync`
-- Use for: showing voice timing, beat alignment, sound design.
-- Duration: 2-5 seconds.
-- Elements: waveform, beat markers, action ticks, playhead.
-- Motion/SFX: tick, pulse, small hit.
-- Errors: decorative waveform unrelated to actions.
-- Renderer: Remotion, HyperFrames.
+- 用途：展示语音时序、拍点对齐、声音设计。
+- 时长：2–5 秒。
+- 元素：波形、拍点标记、动作 tick、播放头。
+- 动效/SFX：tick、pulse、小 hit。
+- 错误：装饰波形与动作无关。
+- 渲染器：Remotion、HyperFrames。
 
 ### `conclusion_stamp`
-- Use for: final take, warning, verdict, CTA.
-- Duration: 2-4 seconds.
-- Elements: verdict text, proof thumbnail behind it, stamp/seal.
-- Motion/SFX: bass hit, stamp, short tail.
-- Errors: conclusion text with no visual memory of proof.
-- Renderer: Remotion, HyperFrames, GSAP.
+- 用途：最终判断、警告、裁决、CTA。
+- 时长：2–4 秒。
+- 元素：裁决文字、背后证明缩略图、stamp/seal。
+- 动效/SFX：bass hit、stamp、短尾音。
+- 错误：结论文字却无证明的视觉记忆。
+- 渲染器：Remotion、HyperFrames、GSAP。

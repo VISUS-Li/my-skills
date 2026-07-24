@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Scaffold a Wan layered-video project from a reusable scene template."""
+"""从可复用场景模板脚手架 Wan 分层视频工程。"""
 from __future__ import annotations
 
 import argparse

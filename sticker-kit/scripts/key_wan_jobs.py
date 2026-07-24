@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Batch-convert every generated Wan job video to its planned RGBA directory."""
+"""批量把每个已生成 Wan 任务视频转到计划的 RGBA 目录。"""
 from __future__ import annotations
 
 import argparse

@@ -76,3 +76,10 @@ cozy-sticker-ui-output/
 
 # Skill-local runtime outputs (examples live under references/, not here)
 ai-glitch-comedy-filmmaker/outputs/
+
+# Local scratch: implementation planning notes (not part of skill runtime)
+/planning/
+
+# Local Video Producer project instances (init_project output; may contain
+# node_modules, voice WAVs, research dumps, renders — keep out of the skill repo)
+/projects/

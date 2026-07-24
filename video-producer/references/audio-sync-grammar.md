@@ -1,8 +1,8 @@
-# Audio Sync Grammar
+# 音画同步语法
 
-Sound cues must have visual motivation. If there is no visible action, use silence or voice emphasis instead of random SFX.
+音效必须有画面动机。若没有可见动作，用静音或口播重音，不要乱加 SFX。
 
-## Cue Map
+## 提示映射
 
 - `keyword_pop` -> `soft_pop`
 - `redbox_focus` -> `click` or `marker`
@@ -20,24 +20,24 @@ Sound cues must have visual motivation. If there is no visible action, use silen
 - `phone_message_send` -> `send_click`
 - `audio_waveform_marker` -> `tick`
 
-## Timing Rules
+## 时机规则
 
-- Place cue onset within 0.03-0.08 seconds of the visual action.
-- Duck SFX under voice; never cover consonants in Chinese narration.
-- Let major transitions breathe with a 0.15-0.35 second pause before or after the line when possible.
-- Flower text appears on keyword stress, not after the phrase is over.
-- Subtitles may appear slightly before voice, but flower text and proof highlights should hit with the spoken keyword.
-- Use silence for serious turns, human-impact beats, or when the visual already has dense information.
+- 提示起始落在视觉动作前后 0.03–0.08 秒内。
+- SFX 要 duck 在人声之下；绝不要盖住中文口播的辅音。
+- 大转场尽量留 0.15–0.35 秒呼吸空档，放在该句前后。
+- 花字跟关键词重音一起出，不要等整句说完再出。
+- 字幕可以略早于人声；花字与证据高亮应对准说出的关键词。
+- 严肃转折、人情冲击，或画面信息已经很密时，用静音。
 
-## Cue Density
+## 提示密度
 
-- Developer demo: light-medium, many small clicks/ticks, few bass hits.
-- System explainer: medium-high, clicks and card whooshes, glitch only for warnings.
-- Git/technical teaching: precise, node pops and typing ticks, no random cinematic booms.
+- 开发者演示：轻–中；大量小 click/tick，少用 bass hit。
+- 系统讲解：中–高；click 与卡片 whoosh；glitch 只用于警告。
+- Git/技术教学：精确；node pop 与打字 tick，不要随机电影感轰鸣。
 
-## Common Failures
+## 常见翻车
 
-- SFX without visual action: remove it.
-- Big hit on a minor word: downgrade to click or silence.
-- Typing ticks under a dense sentence: lower volume or shorten.
-- Every transition uses the same whoosh: alternate click, snap, wipe, silence, or shared-object motion.
+- 没有视觉动作却有 SFX：删掉。
+- 小词却用大 hit：降级为 click 或静音。
+- 密句底下还在打字 tick：降音量或缩短。
+- 每次转场同一 whoosh：轮换 click、snap、wipe、静音，或共用物体运动。

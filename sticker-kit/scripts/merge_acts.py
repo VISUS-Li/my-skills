@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Merge per-act ordered frames into one global ordered/ sequence."""
+"""将分幕 ordered 帧合并为全局 ordered/ 序列。"""
 from __future__ import annotations
 
 import argparse

@@ -1,0 +1,79 @@
+{
+  "version": 1,
+  "video": {
+    "id": "measured-voice-smoke",
+    "fps": 30,
+    "width": 1080,
+    "height": 1920,
+    "timingMode": "voice",
+    "durationSec": 2.2,
+    "background": "#171A22"
+  },
+  "style": {
+    "theme": "editorial-dark",
+    "fontFamily": "Microsoft YaHei, Noto Sans SC, sans-serif",
+    "accent": "#FF6A3D",
+    "motion": {
+      "pace": "medium",
+      "entranceSec": 0.4,
+      "transitionSec": 0.55
+    }
+  },
+  "voice": {
+    "mode": "per-beat",
+    "tracks": [
+      {
+        "beatId": "b001",
+        "src": "audio/voice/b001.wav",
+        "text": "先说结论。",
+        "startSec": 0,
+        "durationSec": 1,
+        "gapAfterSec": 0.15
+      },
+      {
+        "beatId": "b002",
+        "src": "audio/voice/b002.wav",
+        "text": "时间线只有一个真相源。",
+        "startSec": 1.15,
+        "durationSec": 1,
+        "gapAfterSec": 0
+      }
+    ]
+  },
+  "scenes": [
+    {
+      "id": "s001",
+      "type": "HookScene",
+      "startSec": 0,
+      "durationSec": 1,
+      "beatIds": ["b001"],
+      "props": {
+        "eyebrow": "CONCLUSION",
+        "title": "只有一条时间线"
+      }
+    },
+    {
+      "id": "s002",
+      "type": "TalkScene",
+      "startSec": 1.15,
+      "durationSec": 1,
+      "beatIds": ["b002"],
+      "props": {
+        "label": "SSOT",
+        "title": "video-plan.json",
+        "body": "语音、场景、字幕和音效共享同一时间基准。"
+      }
+    }
+  ],
+  "poses": [],
+  "effects": [],
+  "captions": {
+    "mode": "word-highlight",
+    "style": "bottom-card",
+    "autoFromVoice": true,
+    "cues": []
+  },
+  "audio": {
+    "cues": []
+  }
+}

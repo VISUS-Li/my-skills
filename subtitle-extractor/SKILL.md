@@ -1,91 +1,95 @@
 ---
 name: subtitle-extractor
-description: "Extract timed subtitles/transcripts from YouTube, Bilibili, Douyin/TikTok, Xiaohongshu links, or local video/audio files. Prefer soft/auto captions via yt-dlp, then ASR via hyperframes Whisper. Use when the user pastes a video URL or file and asks for 字幕, transcript, SRT, VTT, 提取字幕, 视频转文字, speech-to-text, or captions from existing media."
+description: >-
+  从 YouTube、Bilibili、抖音/TikTok、小红书链接或本地视频/音频提取带时间轴的字幕/文稿。
+  优先用 yt-dlp 软字幕/自动字幕，再回退 hyperframes Whisper ASR。
+  在用户粘贴视频 URL 或文件并要求字幕、transcript、SRT、VTT、提取字幕、视频转文字、
+  speech-to-text，或从已有媒体取 captions 时使用。
 ---
 
-# Subtitle Extractor
+# 字幕提取器
 
-Turn a **video URL** or **local media file** into timed subtitles.
+把**视频 URL** 或**本地媒体文件**转成带时间轴的字幕。
 
-Default outputs (under `--out-dir`, default `outputs/subtitles/`):
+默认输出（在 `--out-dir` 下，默认 `outputs/subtitles/`）：
 
 ```text
-{title}.srt      # timed SubRip
-{title}.txt      # plain transcript
-{title}.json     # metadata + segments[{start,end,text}]
+{title}.srt      # 带时间的 SubRip
+{title}.txt      # 纯文本文稿
+{title}.json     # 元数据 + segments[{start,end,text}]
 ```
 
-## When To Use
+## 何时使用
 
-- User provides a YouTube / Bilibili / Douyin / TikTok / Xiaohongshu link and wants subtitles or spoken text.
-- User provides a local `.mp4` / `.mkv` / `.mov` / `.webm` / audio file and wants SRT/TXT.
-- `video-producer` or `vibe-director` needs a reference-video transcript before research, style DNA, or beat reconstruction.
+- 用户给出 YouTube / Bilibili / 抖音 / TikTok / 小红书链接，要字幕或口播文字。
+- 用户给出本地 `.mp4` / `.mkv` / `.mov` / `.webm` / 音频，要 SRT/TXT。
+- `video-producer` 或 `vibe-director` 需要参考视频文稿，再做调研、风格 DNA 或节拍重建。
 
-Do **not** use this skill to design flower text / burn captions into a finished edit — that belongs to production skills (`video-producer`, `embedded-captions`, Remotion/HyperFrames).
+**不要**用本 skill 设计花字 / 把字幕烧进成片——那属于制作类 skill（`video-producer`、`embedded-captions`、Remotion/HyperFrames）。
 
-## Dependencies
+## 依赖
 
-Required:
+必需：
 
 ```bash
 pip install -r requirements.txt   # yt-dlp
-# ffmpeg + ffprobe on PATH (already common on this machine)
+# PATH 上要有 ffmpeg + ffprobe（本机通常已有）
 ```
 
-ASR fallback (when soft captions are missing — typical for Douyin / many local recordings):
+ASR 回退（无软字幕时——抖音与多数本地录屏常见）：
 
-1. **Recommended:** Node.js + `npx hyperframes` (uses local Whisper; for Chinese pass `--model small`, never `*.en`)
-2. Optional: `pip install faster-whisper`
-3. Optional: `OPENAI_API_KEY` + `pip install openai`
+1. **推荐：** Node.js + `npx hyperframes`（本地 Whisper；中文用 `--model small`，勿用 `*.en`）
+2. 可选：`pip install faster-whisper`
+3. 可选：`OPENAI_API_KEY` + `pip install openai`
 
-Load platform caveats only when a download fails: `references/platforms.md`.
+仅在下载失败时再加载平台说明：`references/platforms.md`。
 
-## One Command
+## 一条命令
 
-From this skill directory (or pass an absolute script path):
+在本 skill 目录执行（或传脚本绝对路径）：
 
 ```bash
 python scripts/extract_subtitles.py "<url-or-file>" -o outputs/subtitles
 ```
 
-Useful flags:
+常用参数：
 
 ```bash
-# Prefer Chinese tracks when available
+# 有中文轨时优先中文
 python scripts/extract_subtitles.py "URL" --lang zh -o outputs/subtitles
 
-# Force speech recognition even if soft captions exist
+# 即使有软字幕也强制语音识别
 python scripts/extract_subtitles.py "URL" --prefer asr --whisper-model small
 
-# Bilibili / Douyin login walls
+# Bilibili / 抖音登录墙
 python scripts/extract_subtitles.py "URL" --cookies-from-browser chrome
 
-# Choose ASR backend
+# 选择 ASR 后端
 python scripts/extract_subtitles.py "file.mp4" --asr-engine hyperframes --lang zh
 ```
 
-Agent workflow:
+Agent 工作流：
 
-1. Confirm source is a URL or an existing local path.
-2. Create/use the project `outputs/subtitles/` (or the user-requested folder).
-3. Run the script. On missing `yt-dlp`, install from `requirements.txt` then retry.
-4. If the command fails with login / 412 / cookies errors, retry with `--cookies-from-browser chrome` (or ask for `cookies.txt`).
-5. Report: title, method (`soft_sub` | `auto_cc` | `embedded` | `asr_*`), language, segment count, and absolute paths of `.srt` / `.txt` / `.json`.
-6. Preview the first ~5 cue lines from the `.srt` (do not dump a huge transcript unless asked).
+1. 确认来源是 URL 或已有本地路径。
+2. 创建/使用工程 `outputs/subtitles/`（或用户指定目录）。
+3. 跑脚本。缺 `yt-dlp` 时先装 `requirements.txt` 再重试。
+4. 若遇登录 / 412 / cookies 错误，用 `--cookies-from-browser chrome` 重试（或索要 `cookies.txt`）。
+5. 汇报：标题、方法（`soft_sub` | `auto_cc` | `embedded` | `asr_*`）、语言、段数，以及 `.srt` / `.txt` / `.json` 的绝对路径。
+6. 预览 `.srt` 前约 5 条 cue（除非用户要求，否则不要倾倒整篇文稿）。
 
-## Resolution Order
+## 解析顺序
 
-| Source | Pass 1 | Pass 2 |
+| 来源 | 第一轮 | 第二轮 |
 |--------|--------|--------|
-| YouTube / Bilibili URL | yt-dlp manual CC → auto CC | download audio → ASR |
-| Douyin / TikTok / XHS URL | yt-dlp soft sub if any | download audio → ASR (usual path) |
-| Local media | ffmpeg embedded subtitle stream | ASR on file |
+| YouTube / Bilibili URL | yt-dlp 人工 CC → 自动 CC | 下载音频 → ASR |
+| 抖音 / TikTok / 小红书 URL | yt-dlp 软字幕（若有） | 下载音频 → ASR（常见路径） |
+| 本地媒体 | ffmpeg 内嵌字幕流 | 对文件做 ASR |
 
-Hard-burned captions (pixels only, no speech/soft track) are **out of scope** — tell the user OCR is not implemented.
+硬烧字幕（仅像素、无语音/软轨）**不在范围**——告知用户未实现 OCR。
 
-## Integration With Video Producer / Vibe Director
+## 与 Video Producer / Vibe Director 集成
 
-When a director skill receives a reference URL/file and needs spoken content:
+导演 skill 收到参考 URL/文件且需要口播内容时：
 
 ```json
 "delegation": {
@@ -100,14 +104,14 @@ When a director skill receives a reference URL/file and needs spoken content:
 }
 ```
 
-Consumption:
+消费方式：
 
-- `video-producer`: feed `.txt`/segments into research/script; use timings as beat hints (re-time after TTS).
-- `vibe-director`: treat produced `.srt` as the `srt` intake mode in `references/workflow.md`.
+- `video-producer`：把 `.txt`/segments 喂给调研/脚本；时间轴作节拍提示（TTS 后需重测）。
+- `vibe-director`：把产出的 `.srt` 当作 `references/workflow.md` 中的 `srt` 入口模式。
 
-Keep this skill responsible only for **extraction**. Style, flower text, and burn-in stay with the director/renderer.
+本 skill **只负责提取**。风格、花字、烧录仍归导演/渲染器。
 
-## Output JSON Shape
+## 输出 JSON 形状
 
 ```json
 {
@@ -122,10 +126,10 @@ Keep this skill responsible only for **extraction**. Style, flower text, and bur
 }
 ```
 
-## Failure Checklist
+## 失败检查清单
 
 - `ModuleNotFoundError: yt_dlp` → `pip install -r requirements.txt`
-- Empty soft captions on Douyin → expected; script should fall back to ASR
-- Chinese ASR returned English → rerun with `--whisper-model small --lang zh` (never `small.en`)
+- 抖音软字幕为空 → 正常；脚本应回退 ASR
+- 中文 ASR 吐出英文 → 用 `--whisper-model small --lang zh` 重跑（勿用 `small.en`）
 - Bilibili 412 → `--cookies-from-browser chrome`
-- No ffmpeg → install ffmpeg for embedded-sub extract and audio postprocess
+- 无 ffmpeg → 安装 ffmpeg，用于内嵌字幕抽取与音频后处理

@@ -2,19 +2,19 @@
   "skill": "video-producer",
   "evals": [
     {
-      "id": "lite-first-slice-plan",
-      "prompt": "用 video-producer 从话题「AI 视频为什么不像工具演示」做 24 秒竖屏 first slice：产出 outputs/script.md、beat_plan.json、segment_spec.json、audio_cue_sheet.json，并跑 score_preview_plan，不要渲染全片。",
-      "expected_output": "Creates outputs/ contract files, passes validate_segment_spec, writes metrics.json and failed_checks.md."
+      "id": "fixed-timing-smoke",
+      "prompt": "Use video-producer to initialize a 12-second vertical fixed-timing explainer with HookScene, ListScene, and CompareScene. Validate the plan and produce review stills.",
+      "expected_output": "Creates a self-contained Remotion project with one video-plan.json, passes validation and typecheck, and renders scene stills."
     },
     {
-      "id": "lite-beat-edit",
-      "prompt": "Review Studio 里改了 b002 的 voice_text 后，应写回 outputs/beat_plan.json 并标记 preview/metrics stale。",
-      "expected_output": "beat_plan.json updated; review artifacts marked stale; TTS can regenerate from voice_text."
+      "id": "voice-remeasure",
+      "prompt": "In an existing voice-led project, replace b002.wav, remeasure voice, recompile video-plan.json, and verify that the linked scene, captions, and total duration update without editing another timeline.",
+      "expected_output": "Measured timing is compiled into voice tracks, beat-linked scenes, captions, and video.durationSec in the single runtime plan."
     },
     {
-      "id": "deep-research-script",
-      "prompt": "对需要事实核查的财经题，先 deep research：always-tier 产出 source_cards + event_genealogy（人物履历/融资量级等 identity bits 够写出场），写稿前读 storyteller-fan-craft 五问 + 1–2 篇 corpus（学故事债与专名出场，禁止频道壳与你就记/别听成黑话教辅腔），再按 narrative-depth-copy 写 outputs/script.md。先跑 validate_research_lite 与 validate_vo_craft；用户只要口播则停在 script-only，勿强开 shot-grammar。",
-      "expected_output": "Always-tier research locks plus story-coherent outputs/script.md; no teaching-deconstruction anti-patterns; corpus as craft teacher; picture files only after script gate or when user asks to render."
+      "id": "mixed-media-fallback",
+      "prompt": "Plan a short video that combines editorial UI, an MP4 B-roll scene, and a transparent PNG sequence. If the sequence is unavailable, preserve the schedule with a simpler native Remotion scene.",
+      "expected_output": "Uses bounded media wrappers, keeps Remotion as the final timeline, and provides a working local fallback."
     }
   ]
 }

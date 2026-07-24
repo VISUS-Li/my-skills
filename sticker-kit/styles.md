@@ -1,46 +1,47 @@
-# Built-in style presets
+# 内置风格预设
 
-**Default:** `cozy-scrapbook`  
-**Switch:** user names a preset id / alias, or says「换风格 / switch style / use pixel」.  
-**Lock for a job:** write `style_id` into the project brief and paste that preset’s **Master sticker** + **Negatives** into every GenerateImage prompt. Do not mix presets mid-clip unless the user asks for a style change (then regenerate the anchor).
+**默认：** `cozy-scrapbook`  
+**切换：** 用户点名预设 id / 别名，或说「换风格 / switch style / use pixel」。  
+**整单锁定：** 把 `style_id` 写入工程 brief，并把该预设的 **Master sticker** + **Negatives** 贴进每条 GenerateImage 提示。
+片段中途不要混预设，除非用户要求换风格（然后重做锚图）。
 
-Universal (all presets unless a preset overrides):
+通用（所有预设，除非某预设覆盖）：
 
-- Stickers / anchors / frames: prefer solid chroma `#00FF00` (no scene behind subject)
-- Screens (Mode B): use the preset’s **Screen bg**
-- Die-cut silhouette + readable outline at small size
-- Continuity rules in [continuity.md](continuity.md) always apply
-- Never photoreal / glassmorphism / purple-neon UI chrome (unless a preset explicitly allows a controlled glow)
+- 贴纸 / 锚图 / 帧：优先纯色色键 `#00FF00`（主体后无场景）
+- 界面屏（Mode B）：用该预设的 **Screen bg**
+- 模切剪影 + 小尺寸下可读描边
+- [continuity.md](continuity.md) 的连续性规则始终适用
+- 禁止写实 / 玻璃拟态 / 紫霓虹 UI chrome（除非预设明确允许受控高光）
 
 ---
 
-## Preset index
+## 预设索引
 
-| id | Aliases (CN / EN) | One-line vibe |
+| id | 别名（中 / 英） | 一句话气质 |
 |---|---|---|
-| `cozy-scrapbook` | 暖奶油, 手账, scrapbook, cozy | Warm cream hand-drawn scrapbook (**default**) |
-| `pixel-8bit` | 8bit, 像素, pixel art, NES | Chunky 8-bit pixel sprite sticker |
-| `hex-colorful` | 彩色海克斯, hex, honeycomb, hex tile | Bright geometric hex / honeycomb sticker |
-| `flat-vector` | 扁平矢量, flat icon, vector | Clean flat vector icon sticker |
-| `kawaii-pastel` | 卡哇伊, pastel kawaii, chibi | Soft pastel kawaii / chibi sticker |
-| `watercolor` | 水彩, wash painting | Soft watercolor wash sticker |
-| `comic-ink` | 漫画线稿, comic, ink | Bold comic-book ink sticker |
-| `neo-pop` | 新波普, pop sticker, bold pop | High-contrast pop / bold graphic sticker |
-| `clay-soft` | 软陶, clay, claymation soft | Soft matte clay toy sticker (not photoreal) |
-| `risograph` | 孔版, riso, print grain | Grainy risograph print sticker |
-| `chalk-pastel` | 粉笔, chalk, crayon | Chalk / crayon pastel sticker |
-| `marker-copic` | 马克笔, marker, Copic | Alcohol-marker sketch sticker |
-| `line-doodle` | 线稿涂鸦, doodle, ink doodle | Minimal ink doodle sticker |
-| `retro-vintage` | 复古, vintage, 70s | Retro 70s badge / vintage sticker |
+| `cozy-scrapbook` | 暖奶油, 手账, scrapbook, cozy | 暖奶油手绘手账（**默认**） |
+| `pixel-8bit` | 8bit, 像素, pixel art, NES | 块状 8-bit 像素精灵贴纸 |
+| `hex-colorful` | 彩色海克斯, hex, honeycomb, hex tile | 明亮几何六边形 / 蜂窝贴纸 |
+| `flat-vector` | 扁平矢量, flat icon, vector | 干净扁平矢量图标贴纸 |
+| `kawaii-pastel` | 卡哇伊, pastel kawaii, chibi | 柔和粉彩卡哇伊 / Q 版贴纸 |
+| `watercolor` | 水彩, wash painting | 柔和水彩晕染贴纸 |
+| `comic-ink` | 漫画线稿, comic, ink | 粗线条漫画墨水贴纸 |
+| `neo-pop` | 新波普, pop sticker, bold pop | 高对比波普 / 大胆图形贴纸 |
+| `clay-soft` | 软陶, clay, claymation soft | 软哑光黏土玩具贴纸（非写实） |
+| `risograph` | 孔版, riso, print grain | 颗粒孔版印刷贴纸 |
+| `chalk-pastel` | 粉笔, chalk, crayon | 粉笔 / 蜡笔粉彩贴纸 |
+| `marker-copic` | 马克笔, marker, Copic | 酒精马克笔速写贴纸 |
+| `line-doodle` | 线稿涂鸦, doodle, ink doodle | 极简墨线涂鸦贴纸 |
+| `retro-vintage` | 复古, vintage, 70s | 复古 70 年代徽章 / 怀旧贴纸 |
 
-If the user asks for a style not listed: pick the closest preset, say which id you locked, and optionally extend this file with a new id.
+用户要的风格不在表中：选最接近预设，说明锁定了哪个 id，并可选用新 id 扩展本文件。
 
 ---
 
-## `cozy-scrapbook` (default)
+## `cozy-scrapbook`（默认）
 
-**Screen bg:** `#FDF8F0` cream paper  
-**Accent:** sage `#7CB342`–`#8FBC8F`, tomato `#E85D4C`, ink `#3D3429`
+**Screen bg：** `#FDF8F0` 奶油纸  
+**Accent：** 鼠尾草绿 `#7CB342`–`#8FBC8F`，番茄红 `#E85D4C`，墨色 `#3D3429`
 
 **Master — screens**
 ```text
@@ -70,8 +71,8 @@ no cream paper full-bleed scene behind stickers when chroma key is required
 
 ## `pixel-8bit`
 
-**Screen bg:** `#1A1C2C` with soft `#F4F0E6` panels, or cream `#FDF8F0` if user wants light UI  
-**Accent:** limited NES-like palette (max ~8–16 colors)
+**Screen bg：** `#1A1C2C` + 柔和 `#F4F0E6` 面板，或用户要浅色 UI 时用奶油 `#FDF8F0`  
+**Accent：** 有限 NES 风格色板（最多约 8–16 色）
 
 **Master — stickers**
 ```text
@@ -86,14 +87,14 @@ no smooth vector curves, no soft blur, no photoreal, no high-res painterly detai
 no anti-aliased edges, no gradients inside pixels, no 3D render, no cream paper scene behind subject
 ```
 
-**Motion note:** keep pixel scale locked; forbid sub-pixel morph; prefer integer-looking limb steps.
+**动画注意：** 锁定像素比例；禁止亚像素变形；肢体步进优先整数感。
 
 ---
 
 ## `hex-colorful`
 
-**Screen bg:** soft `#F7F4EE` with subtle hex grid watermark  
-**Accent:** saturated candy hex fills (cyan, mango, violet, lime) — lock colors per part
+**Screen bg：** 柔和 `#F7F4EE` + 淡六边形网格水印  
+**Accent：** 高饱和糖果六边形填充（青、芒果、紫、柠）— 按部件锁色
 
 **Master — stickers**
 ```text
@@ -112,8 +113,8 @@ no purple neon glow storm, no multi-character crowd, no full-bleed scene behind 
 
 ## `flat-vector`
 
-**Screen bg:** `#FAFAF7`  
-**Accent:** 3–5 brand-flat colors, high clarity
+**Screen bg：** `#FAFAF7`  
+**Accent：** 3–5 个品牌扁平色，高清晰度
 
 **Master — stickers**
 ```text
@@ -132,8 +133,8 @@ no busy gradients, no cream scrapbook paper behind chroma subject
 
 ## `kawaii-pastel`
 
-**Screen bg:** `#FFF5F7` blush paper  
-**Accent:** pastel pink, mint, butter, lavender (soft)
+**Screen bg：** `#FFF5F7` 腮红纸  
+**Accent：** 粉彩粉、薄荷、黄油、淡紫（柔和）
 
 **Master — stickers**
 ```text
@@ -152,8 +153,8 @@ no 3D metal, no crowded multi-character sheet cells
 
 ## `watercolor`
 
-**Screen bg:** `#FBF7F0` cold-press paper feel  
-**Accent:** transparent wet washes; keep part Color lock as pigment names
+**Screen bg：** `#FBF7F0` 冷压纸触感  
+**Accent：** 透明湿晕；部件色彩锁定用颜料名
 
 **Master — stickers**
 ```text
@@ -168,14 +169,14 @@ no hard vector flat only, no neon, no glassmorphism, no photoreal photo collage,
 no muddy overworked brown sludge, no full scenic wash behind chroma subject
 ```
 
-**Motion note:** watercolor bleed can fake morph — emphasize Topology + Color lock every frame.
+**动画注意：** 水彩晕染会伪装成变形 — 每帧强调拓扑 + 色彩锁定。
 
 ---
 
 ## `comic-ink`
 
-**Screen bg:** `#FFFDF8`  
-**Accent:** CMYK-ish primaries + heavy blacks
+**Screen bg：** `#FFFDF8`  
+**Accent：** 近似 CMYK 原色 + 重黑
 
 **Master — stickers**
 ```text
@@ -194,8 +195,8 @@ no cream scrapbook clutter behind chroma subject
 
 ## `neo-pop`
 
-**Screen bg:** `#F2F0EA` with hard offset blocks  
-**Accent:** one loud accent (e.g. `#D4501F`) + black + cream
+**Screen bg：** `#F2F0EA` + 硬偏移色块  
+**Accent：** 一个响亮强调色（如 `#D4501F`）+ 黑 + 奶油
 
 **Master — stickers**
 ```text
@@ -214,8 +215,8 @@ no illegible clutter, no multi-character crowds
 
 ## `clay-soft`
 
-**Screen bg:** `#F5F1EA`  
-**Accent:** soft toy plastics; matte, rounded
+**Screen bg：** `#F5F1EA`  
+**Accent：** 软玩具塑料感；哑光、圆润
 
 **Master — stickers**
 ```text
@@ -234,8 +235,8 @@ no glassmorphism, no busy diorama background behind chroma subject
 
 ## `risograph`
 
-**Screen bg:** `#F6F1E7`  
-**Accent:** limited duotone/tritone (e.g. soy red + teal)
+**Screen bg：** `#F6F1E7`  
+**Accent：** 有限双色/三色（如豆红 + 青绿）
 
 **Master — stickers**
 ```text
@@ -254,8 +255,8 @@ no neon glow, no full photographic scene behind chroma subject
 
 ## `chalk-pastel`
 
-**Screen bg:** deep board `#2B2B2B` for screens, or cream paper if requested  
-**Accent:** dusty chalk pastels
+**Screen bg：** 深色板 `#2B2B2B`（界面），或用户要求时用奶油纸  
+**Accent：** 粉尘粉笔粉彩
 
 **Master — stickers**
 ```text
@@ -274,8 +275,8 @@ no ultra-smooth vector only
 
 ## `marker-copic`
 
-**Screen bg:** `#FFFCF7` marker paper  
-**Accent:** vibrant marker dyes; keep Color lock strict
+**Screen bg：** `#FFFCF7` 马克笔纸  
+**Accent：** 鲜艳马克笔染料；色彩锁定要严
 
 **Master — stickers**
 ```text
@@ -294,8 +295,8 @@ no messy uncontained scribbles that break die-cut silhouette
 
 ## `line-doodle`
 
-**Screen bg:** `#FDF8F0`  
-**Accent:** mostly ink + 1–2 spot colors
+**Screen bg：** `#FDF8F0`  
+**Accent：** 主要为墨线 + 1–2 点缀色
 
 **Master — stickers**
 ```text
@@ -314,8 +315,8 @@ no neon, no multi-character crowd
 
 ## `retro-vintage`
 
-**Screen bg:** `#F3E6C8` aged paper  
-**Accent:** mustard, avocado, burnt orange, faded teal
+**Screen bg：** `#F3E6C8` 旧纸  
+**Accent：** 芥末、鳄梨绿、焦橙、褪青
 
 **Master — stickers**
 ```text
@@ -332,9 +333,9 @@ no cluttered collage behind chroma subject
 
 ---
 
-## Prompt injection snippet
+## 提示注入片段
 
-Paste at the end of every generation prompt:
+贴在每条生成提示末尾：
 
 ```text
 Style preset: [STYLE_ID]. [MASTER STICKER OR SCREEN BLOCK]. [NEGATIVES].

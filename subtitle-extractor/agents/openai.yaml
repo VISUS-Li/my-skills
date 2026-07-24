@@ -1,6 +1,6 @@
 interface:
-  display_name: "Subtitle Extractor"
-  short_description: "Extract timed subtitles from YouTube, Bilibili, Douyin, or local video."
+  display_name: "字幕提取器"
+  short_description: "从 YouTube、Bilibili、抖音或本地视频提取带时间轴字幕"
   icon: "字幕"
   color: "#0F766E"
-  default_prompt: "Use $subtitle-extractor to extract SRT/TXT subtitles from this video link or local file."
+  default_prompt: "使用 $subtitle-extractor 从这个视频链接或本地文件提取 SRT/TXT 字幕。"

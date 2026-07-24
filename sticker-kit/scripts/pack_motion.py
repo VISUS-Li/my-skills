@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Align RGBA frames to a shared pivot, pack sprite sheet + manifest + preview GIF."""
+"""把 RGBA 帧对齐到共享枢轴，打包精灵表 + manifest + 预览 GIF。"""
 from __future__ import annotations
 
 import argparse

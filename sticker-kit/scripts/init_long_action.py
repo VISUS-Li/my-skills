@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Scaffold an image-only long-action sticker-kit project from a template."""
+"""从模板脚手架纯图像长动作 sticker-kit 工程。"""
 from __future__ import annotations
 
 import argparse
@@ -56,23 +56,23 @@ def main() -> None:
     (out / "motion").mkdir(parents=True, exist_ok=True)
     (out / "shared").mkdir(parents=True, exist_ok=True)
 
-    readme = f"""# {acts.get('project', 'long-action')} (Mode D-Long)
+    readme = f"""# {acts.get('project', 'long-action')}（Mode D-Long）
 
 style_id: `{acts.get('style_id')}`
-target unique frames: {acts.get('target_unique_frames')} (+ bridge reserve {acts.get('bridge_reserve', 0)})
-layers: {', '.join(layers)}
+目标唯一帧: {acts.get('target_unique_frames')}（+ 桥接预留 {acts.get('bridge_reserve', 0)}）
+层: {', '.join(layers)}
 fps: {acts.get('fps', 12)}  hold: {acts.get('hold', 1)}
 
-## Next steps
+## 下一步
 
-1. Write `shared/parts.json` (topology + color lock).
-2. Generate `layers/character/anchors/anchor_greenscreen.png` (+ vfx anchor if layered).
+1. 写 `shared/parts.json`（拓扑 + 色彩锁定）。
+2. 生成 `layers/character/anchors/anchor_greenscreen.png`（分层则加特效锚图）。
 3. `python scripts/expand_stages.py {out.as_posix()}/acts.json`
-4. Per act / layer: GenerateImage micro-stages → cutout → ordered.
-5. `qa_frames.py ... --write-bridges` → bridge gaps → re-QA.
-6. `merge_acts.py` → optional `compose_layers.py` → `pack_motion.py --hold 1`.
+4. 按幕 / 层：GenerateImage 微阶段 → 抠图 → ordered。
+5. `qa_frames.py ... --write-bridges` → 桥接缺口 → 再 QA。
+6. `merge_acts.py` → 可选 `compose_layers.py` → `pack_motion.py --hold 1`。
 
-See skill `long-action.md`.
+详见 skill `long-action.md`。
 """
     (out / "README.md").write_text(readme, encoding="utf-8")
     print(f"OK scaffold → {out.resolve()}")

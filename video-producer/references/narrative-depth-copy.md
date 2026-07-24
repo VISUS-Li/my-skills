@@ -1,9 +1,9 @@
-# Narrative Depth Copy
+# 叙事深度文案
 
-**SSOT for Chinese analytical / news / product / industry VO.**  
-Load with `references/deep-research-and-script.md` when drafting `outputs/script.md`. Other files link here — do not restate these rules.
+**中文分析 / 资讯 / 产品 / 行业口播的 SSOT。**  
+起草 `outputs/script.md` 时与 `references/deep-research-and-script.md` 一起加载。其他文件链到此处——不要复述这些规则。
 
-## Voice default（必须靠齐）
+## 口播默认（必须靠齐）
 
 分析/资讯类口播默认写成**老范讲故事式聊天讲解**：把一件事按**来龙去脉**讲清楚，让听众能复述、能听懂、能带走一句判断。
 
@@ -21,7 +21,7 @@ Load with `references/deep-research-and-script.md` when drafting `outputs/script
 
 ---
 
-## Three Hard Gates（写稿 blocker）
+## 三大硬门槛（写稿 blocker）
 
 ### 1. 故事一条线（连贯优先）
 
@@ -131,7 +131,7 @@ Load with `references/deep-research-and-script.md` when drafting `outputs/script
 
 ---
 
-## Ending
+## 结尾
 
 平常话钉住：发生了什么 + 意味着什么 + 还不确定什么。可钩回听众场景。  
 禁止频道 CTA、空对仗落幕。
@@ -150,6 +150,6 @@ Load with `references/deep-research-and-script.md` when drafting `outputs/script
 
 ---
 
-## One-Line System Prompt
+## 一行系统提示
 
 像老范跟朋友讲热新闻：先把热闹说具体，按来龙去脉往下讲；专名用履历和目标带进出场；数字和卡点落到谁疼、现场怎么拧巴；按 tip 挑 1–2 处最有料的地方细讲并收回；留一点情绪起伏给 TTS；别备课、别拆词、别把 skill 术语写进正片。

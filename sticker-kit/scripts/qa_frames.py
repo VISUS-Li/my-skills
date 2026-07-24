@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Continuity gates: empty frames, scale jitter, consecutive silhouette jump."""
+"""连续性门槛：空帧、缩放抖动、相邻剪影跳跃。"""
 from __future__ import annotations
 
 import argparse

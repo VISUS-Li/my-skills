@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Composite generated RGBA element clips into a shot timeline."""
+"""按确定性摆放与可见性交接合成 RGBA 片段。"""
 from __future__ import annotations
 
 import argparse
@@ -37,6 +37,23 @@ def interpolate_transform(state: dict, progress: float) -> dict:
         key: lerp(float(start.get(key, default)), float(end.get(key, start.get(key, default))), progress)
         for key, default in (("x", 0.5), ("y", 0.85), ("height", 0.5), ("opacity", 1.0))
     }
+
+
+def visibility_opacity(state: dict, local_time: float) -> float:
+    """Return a deterministic state-entry/state-exit fade multiplier."""
+    visibility = state.get("visibility") or {}
+    start = float(state["start_sec"])
+    end = float(state["end_sec"])
+    elapsed = max(0.0, local_time - start)
+    remaining = max(0.0, end - local_time)
+    opacity = 1.0
+    fade_in = float(visibility.get("fade_in_sec", 0.0))
+    fade_out = float(visibility.get("fade_out_sec", 0.0))
+    if fade_in > 0:
+        opacity = min(opacity, elapsed / fade_in)
+    if fade_out > 0:
+        opacity = min(opacity, remaining / fade_out)
+    return max(0.0, min(1.0, opacity))
 
 
 def choose_index(state: dict, local_time: float, count: int, fps: int) -> int:
@@ -140,6 +157,7 @@ def render_frame(plan: dict, root: Path, time_sec: float) -> Image.Image:
         duration = float(state["end_sec"]) - float(state["start_sec"])
         progress = min(1.0, max(0.0, (local_time - float(state["start_sec"])) / max(duration, 1e-6)))
         transform = interpolate_transform(state, progress)
+        transform["opacity"] *= visibility_opacity(state, local_time)
         asset = state_asset(root, state, local_time, fps)
         default_sampling = "nearest" if project.get("style_id") == "pixel-8bit" else "smooth"
         sampling = state.get("sampling", element.get("sampling", default_sampling))

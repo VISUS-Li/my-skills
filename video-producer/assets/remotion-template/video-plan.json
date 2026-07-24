@@ -1,0 +1,143 @@
+{
+  "version": 1,
+  "video": {
+    "id": "unified-video-demo",
+    "fps": 30,
+    "width": 1080,
+    "height": 1920,
+    "timingMode": "fixed",
+    "durationSec": 9,
+    "background": "#171A22"
+  },
+  "style": {
+    "theme": "editorial-dark",
+    "fontFamily": "Microsoft YaHei, Noto Sans SC, sans-serif",
+    "accent": "#FF6A3D",
+    "motion": {
+      "pace": "medium",
+      "entranceSec": 0.4,
+      "transitionSec": 0.55
+    }
+  },
+  "scenes": [
+    {
+      "id": "s001",
+      "type": "HookScene",
+      "startSec": 0,
+      "durationSec": 3,
+      "beatIds": [],
+      "pose": "wide-right",
+      "continuousSubject": true,
+      "props": {
+        "eyebrow": "VIDEO PRODUCER",
+        "title": "一条时间线",
+        "subtitle": "所有场景、字幕和声音都回到 Remotion"
+      }
+    },
+    {
+      "id": "s002",
+      "type": "ListScene",
+      "startSec": 3,
+      "durationSec": 3.5,
+      "beatIds": [],
+      "pose": "close-left",
+      "continuousSubject": true,
+      "props": {
+        "title": "统一运行时",
+        "items": ["实测语音", "场景边界", "字幕与音效"],
+        "staggerSec": 0.45
+      }
+    },
+    {
+      "id": "s003",
+      "type": "CompareScene",
+      "startSec": 6.5,
+      "durationSec": 2.5,
+      "beatIds": [],
+      "pose": "close-right",
+      "continuousSubject": true,
+      "props": {
+        "title": "清晰的所有权",
+        "left": {"label": "外部能力", "text": "生成专业素材"},
+        "right": {"label": "Remotion", "text": "掌管最终成片"}
+      }
+    }
+  ],
+  "stage": {
+    "subject": {
+      "type": "card",
+      "label": "REMOTION",
+      "subtitle": "跨场景连续主体"
+    }
+  },
+  "poses": [
+    {
+      "atSec": 0,
+      "pose": "wide-right",
+      "transitionSec": 0
+    },
+    {
+      "atSec": 3,
+      "pose": "close-left",
+      "transitionSec": 0.55
+    },
+    {
+      "atSec": 6.5,
+      "pose": "close-right",
+      "transitionSec": 0.55
+    }
+  ],
+  "effects": [
+    {
+      "type": "KeywordPunch",
+      "atSec": 1.1,
+      "durationSec": 0.75,
+      "props": {"text": "唯一真相源"}
+    }
+  ],
+  "captions": {
+    "mode": "word-highlight",
+    "style": "bottom-card",
+    "combineTokensWithinMs": 1050,
+    "autoFromVoice": false,
+    "cues": [
+      {
+        "startMs": 0,
+        "endMs": 2800,
+        "text": "一条时间线，统一所有场景、字幕和声音",
+        "words": [
+          {"text": "一条", "startMs": 0, "endMs": 520},
+          {"text": "时间线", "startMs": 520, "endMs": 1050},
+          {"text": "，统一", "startMs": 1050, "endMs": 1540},
+          {"text": "所有场景", "startMs": 1540, "endMs": 2120},
+          {"text": "、字幕和声音", "startMs": 2120, "endMs": 2800}
+        ]
+      },
+      {
+        "startMs": 3000,
+        "endMs": 6250,
+        "text": "实测语音，驱动场景边界和字幕",
+        "words": [
+          {"text": "实测语音", "startMs": 3000, "endMs": 3750},
+          {"text": "，驱动", "startMs": 3750, "endMs": 4300},
+          {"text": "场景边界", "startMs": 4300, "endMs": 5200},
+          {"text": "和字幕", "startMs": 5200, "endMs": 6250}
+        ]
+      },
+      {
+        "startMs": 6500,
+        "endMs": 8900,
+        "text": "外部能力生成素材，母版掌管成片",
+        "words": [
+          {"text": "外部能力", "startMs": 6500, "endMs": 7200},
+          {"text": "生成素材", "startMs": 7200, "endMs": 7800},
+          {"text": "，母版", "startMs": 7800, "endMs": 8300},
+          {"text": "掌管成片", "startMs": 8300, "endMs": 8900}
+        ]
+      }
+    ]
+  },
+  "audio": {
+    "cues": []
+  }
+}

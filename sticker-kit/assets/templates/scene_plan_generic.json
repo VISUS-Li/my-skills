@@ -1,13 +1,18 @@
 {
   "project": {
-    "name": "layered-wan-scene",
+    "name": "layered-wan-narrative",
     "style_id": "cozy-scrapbook",
-    "duration_sec": 4.0,
+    "duration_sec": 6.0,
     "fps": 16,
     "canvas": [960, 540],
     "element_canvas": [640, 640],
-    "visual_lock": "统一的手绘贴纸风，角色比例、轮廓、配色和光向保持一致",
-    "negative_prompt": "写实摄影，复杂背景，镜头晃动，形象漂移，额外肢体，残影",
+    "visual_lock": "统一的手绘贴纸风，角色比例、轮廓、配色、视角和光向保持一致",
+    "negative_prompt": "写实摄影，复杂背景，镜头晃动，形象漂移，额外肢体，残影，脚底滑行，主体自动居中",
+    "wan_failure_policy": "stop-and-replan",
+    "continuity": {
+      "max_position_jump": 0.04,
+      "max_scale_change": 0.08
+    },
     "wan": {
       "base_url": "http://10.0.221.33:8090",
       "width": 640,
@@ -19,34 +24,124 @@
       "seed": -1
     }
   },
-  "interaction_contracts": [],
+  "interaction_contracts": [
+    {
+      "id": "contact_handoff",
+      "shot_id": "shot_01",
+      "participants": ["lead_actor_tool", "counterpart_actor", "lead_counterpart_contact"],
+      "event_sec": 3.125,
+      "contact": "sustained",
+      "contact_group": "lead_counterpart_contact",
+      "screen_contact": {"x": 0.58, "y": 0.78},
+      "facing": "角色 A 与角色 B 面对彼此",
+      "handoff": {
+        "from_elements": ["lead_actor_tool", "counterpart_actor"],
+        "to_element": "lead_counterpart_contact",
+        "window_sec": [3.0, 3.25],
+        "method": "matched_crossfade",
+        "shared_endpoint": true,
+        "max_position_delta": 0.04,
+        "max_scale_delta": 0.08,
+        "min_silhouette_iou": 0.45
+      },
+      "rule": "组合层首帧必须复现两个独立层在接触前的身份、位置、朝向、尺度和轮廓包围盒"
+    }
+  ],
   "shots": [
     {
       "id": "shot_01",
       "start_sec": 0.0,
-      "end_sec": 4.0,
-      "camera": {"mode": "locked", "description": "固定全景"},
+      "end_sec": 6.0,
+      "camera": {"mode": "locked", "description": "固定叙事全景；镜头不跟随角色"},
       "background": {"image": "assets/backgrounds/background.png"},
       "elements": [
         {
-          "id": "actor_with_held_prop",
-          "kind": "actor_group",
-          "z": 30,
+          "id": "counterpart_actor",
+          "kind": "actor",
+          "z": 24,
           "anchor": "bottom-center",
-          "identity_lock": "同一个角色和其手持道具，造型、颜色、部件数量始终一致，道具不脱手",
+          "identity_lock": "同一个角色 B，造型、颜色、比例和部件数量始终一致",
           "matte": {"mode": "chroma", "color": "#00FF00"},
           "states": [
             {
-              "id": "action_a_to_b",
+              "id": "anticipate_contact",
               "start_sec": 0.0,
-              "end_sec": 4.0,
+              "end_sec": 3.25,
+              "mode": "i2v",
+              "motion_space": "in_place",
+              "start_image": "assets/elements/counterpart/anticipate.png",
+              "motion_prompt": "角色 B 看向接近的角色 A，呼吸、眨眼并自然抬手准备接触，脚底不滑动",
+              "interaction": {"id": "contact_handoff"},
+              "visibility": {"fade_out_sec": 0.25},
+              "transform": {"x": 0.68, "y": 0.86, "height": 0.46}
+            }
+          ]
+        },
+        {
+          "id": "lead_actor_tool",
+          "kind": "actor_group",
+          "z": 30,
+          "anchor": "bottom-center",
+          "coupling": {
+            "mode": "grouped",
+            "members": ["lead_actor", "held_tool"],
+            "reason": "手持物与手腕、手臂和身体动作共享运动链"
+          },
+          "identity_lock": "同一个角色 A 与同一件手持物作为一个 actor group，手持物不脱手、不漂移",
+          "matte": {"mode": "chroma", "color": "#00FF00"},
+          "states": [
+            {
+              "id": "approach",
+              "start_sec": 0.0,
+              "end_sec": 3.25,
               "mode": "flf2v",
-              "start_image": "assets/elements/actor/action_a.png",
-              "end_image": "assets/elements/actor/action_b.png",
-              "motion_prompt": "角色从动作 A 平滑完成到动作 B，动作弧线明确，重心连续，没有跳帧",
-              "playback": "stretch",
-              "transform_from": {"x": 0.35, "y": 0.86, "height": 0.5},
-              "transform_to": {"x": 0.55, "y": 0.86, "height": 0.5}
+              "motion_space": "locomotion",
+              "body_mechanics": "至少两个可读步态周期：脚掌交替离地与落地，膝髋屈伸，骨盆和肩部反向摆动，落脚时重心承接；手持物随手臂和躯干自然联动",
+              "start_image": "assets/elements/lead/approach_start.png",
+              "end_image": "assets/elements/lead/precontact.png",
+              "motion_prompt": "角色 A 从画布左侧真实走近角色 B，在接触前减速并伸出空闲手；不要把静态人物整体平移",
+              "interaction": {"id": "contact_handoff"},
+              "visibility": {"fade_out_sec": 0.25},
+              "transform": {"x": 0.45, "y": 0.86, "height": 0.46}
+            }
+          ]
+        },
+        {
+          "id": "lead_counterpart_contact",
+          "kind": "contact_group",
+          "z": 40,
+          "anchor": "bottom-center",
+          "coupling": {
+            "mode": "grouped",
+            "members": ["lead_actor", "held_tool", "counterpart_actor"],
+            "reason": "持续接触改变双人拓扑；角色 A 的持有物仍须保持绑定"
+          },
+          "identity_lock": "角色 A、其同一件手持物与角色 B 作为一个接触组合层；身份、服装、尺度、持有关系和接触拓扑稳定，肢体不穿透",
+          "matte": {"mode": "chroma", "color": "#00FF00"},
+          "states": [
+            {
+              "id": "make_contact",
+              "start_sec": 3.0,
+              "end_sec": 4.5,
+              "mode": "flf2v",
+              "motion_space": "hybrid",
+              "body_mechanics": "两人从匹配的预接触姿势完成接触，手臂、肩部、躯干和重心同步调整，接触点连续且有承重感",
+              "start_image": "assets/elements/contact/precontact_pair.png",
+              "end_image": "assets/elements/contact/sustained_contact.png",
+              "motion_prompt": "从与独立层末帧一致的预接触构图开始，平滑完成故事所需的持续接触动作",
+              "interaction": {"id": "contact_handoff"},
+              "visibility": {"fade_in_sec": 0.25},
+              "transform": {"x": 0.58, "y": 0.86, "height": 0.5}
+            },
+            {
+              "id": "contact_hold",
+              "start_sec": 4.5,
+              "end_sec": 6.0,
+              "mode": "i2v",
+              "motion_space": "in_place",
+              "start_image": "assets/elements/contact/sustained_contact.png",
+              "motion_prompt": "两人在持续接触中轻微呼吸和眨眼，接触位置与身体尺度保持稳定",
+              "transform": {"x": 0.58, "y": 0.86, "height": 0.5}
             }
           ]
         }

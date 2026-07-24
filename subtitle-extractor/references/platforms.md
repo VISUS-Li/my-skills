@@ -1,32 +1,32 @@
-# Platform Notes
+# 平台说明
 
 ## YouTube
 
-- Soft/manual captions and auto-generated CC are usually available via yt-dlp.
-- Prefer `zh-Hans` / `zh` when the video is Chinese; otherwise take the best available track.
-- Cookies are rarely required unless the video is age-restricted or region-locked.
+- 人工软字幕与自动 CC 通常可用 yt-dlp 拉取。
+- 视频为中文时优先 `zh-Hans` / `zh`；否则取可用的最佳轨。
+- 除非年龄限制或区域锁定，否则很少需要 cookies。
 
 ## Bilibili
 
-- Manual CC and AI captions (`ai-zh`) may exist; danmaku is not a subtitle track.
-- If yt-dlp returns HTTP 412 / login required, retry with:
-  - `--cookies-from-browser chrome` (or `edge`, `firefox`)
-  - or `--cookies path/to/cookies.txt`
-- Prefer `zh-CN` → `zh` → `ai-zh`.
+- 可能有人工 CC 与 AI 字幕（`ai-zh`）；弹幕不是字幕轨。
+- 若 yt-dlp 返回 HTTP 412 / 需要登录，用以下方式重试：
+  - `--cookies-from-browser chrome`（或 `edge`、`firefox`）
+  - 或 `--cookies path/to/cookies.txt`
+- 优先 `zh-CN` → `zh` → `ai-zh`。
 
-## Douyin / TikTok
+## 抖音 / TikTok
 
-- Native soft subtitles are uncommon.
-- Default path: download audio → ASR (`hyperframes transcribe` or faster-whisper).
-- Short share links (`v.douyin.com/...`) are fine; yt-dlp expands them.
-- If download fails, ask the user for cookies or a local file export.
+- 原生软字幕不常见。
+- 默认路径：下载音频 → ASR（`hyperframes transcribe` 或 faster-whisper）。
+- 短链（`v.douyin.com/...`）可用；yt-dlp 会展开。
+- 下载失败时，向用户要 cookies 或本地导出文件。
 
-## Local files
+## 本地文件
 
-1. Probe embedded subtitle streams with ffprobe.
-2. Extract the preferred track with ffmpeg → SRT.
-3. If no embedded track, run ASR on the file directly.
+1. 用 ffprobe 探测内嵌字幕流。
+2. 用 ffmpeg 抽出首选轨 → SRT。
+3. 若无内嵌轨，直接对文件做 ASR。
 
-## Burned-in (hard) subtitles
+## 硬烧字幕
 
-This skill does **not** OCR hard-burned captions. If only burned text exists and speech is absent/unusable, report the limitation instead of inventing text.
+本 skill **不做**硬烧字幕 OCR。若只有烧录文字且语音缺失/不可用，报告限制，不要编造文本。

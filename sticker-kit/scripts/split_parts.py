@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Split transparent sticker sheets into individual part_XX.png files."""
+"""把透明贴纸拼版拆成独立 part_XX.png。"""
 from __future__ import annotations
 
 import argparse

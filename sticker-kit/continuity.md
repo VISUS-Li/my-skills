@@ -1,28 +1,29 @@
-# Continuity & anti-morph rules (Mode D)
+# 连续性与防变形规则（Mode D）
 
-These rules exist because image models **merge lookalike parts** across frames (e.g. spatula handle absorbed into wok as a permanent pan handle; limb count changes; wheels appear/disappear). Treat this as a first-class failure mode for **any** subject/action.
+图像模型会跨帧**合并外形相似的部件**（例如锅铲柄被吸进炒锅变成永久锅柄；肢体数量变化；车轮忽有忽无）。
+对**任意**主体/动作，把这当作一等故障模式处理。
 
-## Invariant vs free (critical)
+## 不变项 vs 自由项（关键）
 
-Before generating, split attributes into two lists. Every frame prompt must include both.
+生成前把属性拆成两份列表。每帧提示词都必须包含两者。
 
-| Channel | May change across frames? | Examples |
+| 通道 | 跨帧可变？ | 示例 |
 |---|---|---|
-| **FREE (motion only)** | YES | joint angles, limb pose, jump height, weapon swing arc, squash/stretch of soft action lines |
-| **INVARIANT (identity)** | NO | part colors, outline thickness, costume colors, hair color, number of limbs, which part is which, face placement, materials |
+| **FREE（仅运动）** | 是 | 关节角、肢体姿态、跳跃高度、武器挥弧、软动作线的压扁/拉伸 |
+| **INVARIANT（身份）** | 否 | 部件颜色、描边粗细、服装色、发色、肢体数量、谁是谁、脸部位置、材质 |
 
-**Rule of thumb:** if it is not posed by the action stage, it must not drift.  
-Color flicker (sage handlebars → red handlebars) is a **hard fail** — discard & regen. Same for sudden recolors of hair, shoes, weapon, or vehicle parts.
+**经验法则：** 不是当前动作阶段要求的姿态变化，就不得漂移。  
+颜色闪烁（鼠尾草绿车把 → 红色车把）是**硬失败**——丢弃并重生。头发、鞋、武器、载具部件突然换色同理。
 
-Write Color Lock as hex / plain names and paste into every prompt:
+色彩锁定写成 hex / 常用名，贴进每条提示：
 
 > Color lock (INVARIANT): hair=#3D3429, jacket=#E85D4C, pants=#5B7C99, shoes=#F5F0E6, sword blade=#C0C6D0, sword grip=#8B5A2B — never recolor.
 
-## Mandatory before any motion generation
+## 任何动作生成前的强制项
 
-Lock **`style_id`** from [styles.md](styles.md) (default `cozy-scrapbook`) and keep it identical for the whole clip. Mid-job style changes require a new anchor.
+从 [styles.md](styles.md) 锁定 **`style_id`**（默认 `cozy-scrapbook`），整段片段保持一致。中途换风格必须重做锚图。
 
-Write a **Part Inventory** (save as `SUBJECT/parts.json` and paste into every prompt):
+写一份 **部件清单**（存为 `SUBJECT/parts.json`，并贴进每条提示）：
 
 ```json
 {
@@ -44,149 +45,150 @@ Write a **Part Inventory** (save as `SUBJECT/parts.json` and paste into every pr
 }
 ```
 
-Also invent a one-line **Topology Sentence** reused verbatim in every frame prompt, e.g.:
+再发明一句一字不改复用的 **拓扑句**，例如：
 
 > Topology lock: ONE wok body + ONE small LEFT rim loop only + ONE separate spatula with its OWN wooden handle; spatula is NEVER a wok handle; wok has NO long side handle.
 
-## Anchor rules (stronger)
+## 锚图规则（加强）
 
-1. Neutral pose where **every inventoried part is visible and unambiguously separate**.
-2. If two parts look similar (two wooden sticks, two tubes, antenna vs sword), make them **visually distinct in the anchor** (different color, thickness, end-cap shape) so later frames cannot swap them.
-3. Prefer “disassembled clarity” over cinematic overlap in the anchor.
-4. Reject anchors that already fuse lookalike parts.
+1. 中性姿态，**清单内每个部件可见且明确分离**。
+2. 两部件外形相似时（两根木棍、两根管、天线 vs 剑），在锚图里做成**视觉可区分**（不同颜色/粗细/端帽），避免后续帧互换。
+3. 锚图优先「拆解清晰」，而非电影感重叠。
+4. 已粘连易混淆件的锚图直接拒绝。
 
-## Frame count & timing (avoid fast/jumpy loops)
+## 帧数与时序（避免过快/跳跃循环）
 
-**Default delivery target: ~48–52 frames** (Medium), each a **separately generated single pose**.
+**默认交付目标：约 48–52 帧**（中等），每帧为**单独生成的单一姿态**。
 
-**Long multi-phase moves (image-only):** ~**100–120** uniques via [long-action.md](long-action.md) — do **not** fake duration with large `--hold`.
+**多阶段长动作（纯图像）：** 约 **100–120** 唯一帧，见 [long-action.md](long-action.md)——**禁止**用大 `--hold` 注水时长。
 
-Do **not** reach target length by blending / morphing two poses into one image.
+**禁止**用混合/变形把两个姿态合成一张图来凑长度。
 
-Do **not** generate a monolithic full sprite sheet as the motion source (export-only).
+**禁止**把一整张巨型精灵表当动作源（仅作导出）。
 
-| Difficulty | Generated frames (each = one clean pose) | Preview FPS | Goal duration |
+| 难度 | 生成帧（每帧=一个干净姿态） | 预览 FPS | 目标时长 |
 |---|---|---|---|
-| Light | 24–32 | 10–12 | ≥2.5s |
-| Medium (default short) | **48–52** | 12 | ≥4s |
-| **Long (image-only, no video)** | **100–120** via acts + bridges | 12 | **≥8–10s** |
-| Hard (I2V extract, if available) | extract 48–120 clean frames | 12–15 | ≥4–10s |
+| 轻 | 24–32 | 10–12 | ≥2.5s |
+| 中（默认短片） | **48–52** | 12 | ≥4s |
+| **长（纯图像，无视频）** | **100–120**（幕次+桥接） | 12 | **≥8–10s** |
+| 难（若有 I2V 抽取） | 抽取 48–120 干净帧 | 12–15 | ≥4–10s |
 
-- Prefer **more GenerateImage micro-poses** over raising FPS on sparse keys.
-- List **every micro-stage** before generating; each stage = **tiny delta** from previous (≈5–15% limb travel).
-- **Pose-class lock**: pick one action class per act (`run_cycle` | `slash` | `kamehameha_charge` | …). A frame that switches class mid-act is a **hard fail**.
-- Example bad jump (do not pack): run stride → mid-air leap → three-point crouch → run again.
-- Beam/orb/aura: use **VFX layer split** ([long-action.md](long-action.md)) so energy does not fuse into body parts.
+- 宁可多做 GenerateImage 微姿态，也不要在稀疏关键上抬高 FPS。
+- 生成前列出**每一个微阶段**；每阶段相对上一帧仅**微小增量**（肢体行程约 5–15%）。
+- **姿态类锁定**：每幕选一个动作类（`run_cycle` | `slash` | `kamehameha_charge` | …）。中途换类为**硬失败**。
+- 错误跳跃示例（禁止打包）：跑步跨步 → 半空跳跃 → 三点蹲 → 再跑步。
+- 光束/球体/光环：用**特效层拆分**（[long-action.md](long-action.md)），避免能量融进身体部件。
 
-## One pose per frame (no ghosts) — HARD RULE
+## 一帧一姿态（无残影）——硬规则
 
-Every packed sheet cell must show **exactly one opaque subject pose**.
+打包表中每一格必须是**恰好一个不透明主体姿态**。
 
-**Forbidden in generation prompts and in post-process:**
-- Motion blur / speed lines that duplicate the body
-- Afterimages / ghost trails / multi-exposure / onion-skin look
-- Pairwise RGBA **blend** interpolation
-- ffmpeg/RIFE morph frames used as **sticker sheet** cells
+**生成提示与后期均禁止：**
+- 复制身体的运动模糊 / 速度线
+- 残影 / 鬼影拖尾 / 多重曝光 / 洋葱皮观感
+- 成对 RGBA **混合**插值
+- 把 ffmpeg/RIFE 变形帧当**贴纸表**格子
 
-**Required in every frame prompt:**
+**每帧提示必含：**
 > Single crisp pose only. One body, one silhouette. NO motion blur, NO afterimages, NO ghost trail, NO multi-exposure, NO onion-skin.
 
-If a generated image already shows layered ghosts: **discard & regen** — do not pack.
+若生成图已有分层残影：**丢弃并重生**——不要打包。
 
-### Interpolation — NOT for production sticker sheets
+### 插值 —— 不用于生产贴纸表
 
-| Use | Allowed? |
+| 用途 | 允许？ |
 |---|---|
-| Final `sheet.png` / `frames/` for HyperFrames-Remotion stickers | **No** — only real generated (or I2V-extracted) clean frames |
-| Optional soft video preview the user explicitly asks for | Maybe (label as preview-only; keep separate from `motion/frames`) |
+| 最终 `sheet.png` / `frames/`（HyperFrames/Remotion 贴纸） | **否** — 仅真实生成（或 I2V 抽取）的干净帧 |
+| 用户明确要求的可选软预览视频 | 可以（标明仅预览；与 `motion/frames` 分开） |
 
-To get ~50 frames: **generate clean poses** (or extract from I2V), then optionally **hold-duplicate** for pacing.  
-Never “fake” in-betweens by blending two sticker frames — that creates the ghosting the user rejects.
+要到约 50 帧：先**生成干净姿态**（或从 I2V 抽取），再可选 **hold 重复**调节奏。  
+禁止用混合两张贴纸帧「假造」中间帧——那正是用户反感的残影。
 
-## Pacing with frame holds (slow motion without ghosts)
+## 用 hold 调节奏（无残影的慢放）
 
-If playback feels too fast even with many unique poses, **repeat each accepted frame N times** before advancing (hold).
+唯一姿态已够密但播放仍偏快时，把每张通过帧**重复 N 次**再前进（hold）。
 
-Example: unique poses `A B C` with `--hold 2` → pack order `A A B B C C`.  
-Playback: finish showing A, show A again, then B — slower, still one crisp pose per cell (no ghost).
+例：唯一姿态 `A B C` 配 `--hold 2` → 打包顺序 `A A B B C C`。  
+播放：播完 A，再播一次 A，再进 B——更慢，每格仍是单一清晰姿态（无残影）。
 
-| Goal | Unique clean poses | Hold | Packed frames |
+| 目标 | 唯一干净姿态 | Hold | 打包帧数 |
 |---|---|---|---|
-| ~50 @ slower pace | 17–25 | 2–3 | ≈50 |
-| ~50 denser motion | 48–52 | 1 | ≈50 |
+| ~50 @ 更慢节奏 | 17–25 | 2–3 | ≈50 |
+| ~50 更密动作 | 48–52 | 1 | ≈50 |
 
 ```bash
 python scripts/pack_motion.py OUT/ordered -o OUT/motion --cell 512 --fps 12 --hold 2
-# 25 uniques × hold 2 → 50 packed frames
+# 25 唯一帧 × hold 2 → 50 打包帧
 ```
 
-Prefer hold over blend. Prefer more unique poses when jumps remain; use hold when poses are already continuous but tempo is too fast.
+优先 hold 而非混合。仍有跳跃时优先增加唯一姿态；姿态已连续但节奏过快时再用 hold。
 
-## Derive rules (anti-jump)
+## 派生规则（防跳跃）
 
-1. **Always** `reference_image_paths = [anchor]` at minimum.
-2. From frame 2 onward prefer **`[anchor, previous_accepted_frame]`** (dual ref) so topology drifts less.
-3. Every prompt must include:
-   - Style preset id + Master/Negatives from [styles.md](styles.md)
-   - Topology Sentence (verbatim)
-   - **Color lock (INVARIANT)** — list each part’s color; say “do not recolor”
-   - Part Inventory short form
-   - Explicit FREE list: “ONLY change: [pose channels]”
-   - Explicit: “do not add/remove/merge parts; do not recolor; only FREE channels may change”
-   - Stage micro-diff vs previous (“delta only: spatula rotates +8°, food rises slightly”)
-4. Prefer **medium keyframe set** (one image per stage) over sprite-row when lookalike parts exist.
-5. Sprite-row only for light motion **and** after a strong inventory lock; still QA every cell.
-6. Generate in **small batches** (e.g. 4), QA, then continue — do not fire all 16 blind.
+1. **始终**至少 `reference_image_paths = [anchor]`。
+2. 第 2 帧起优先 **`[anchor, previous_accepted_frame]`**（双参考），减轻拓扑漂移。
+3. 每条提示必须包含：
+   - 风格预设 id + 来自 [styles.md](styles.md) 的 Master/Negatives
+   - 拓扑句（原文照贴）
+   - **色彩锁定（INVARIANT）** — 列出各部件颜色；写明 “do not recolor”
+   - 部件清单简表
+   - 明确 FREE 列表：“ONLY change: [pose channels]”
+   - 明确：“do not add/remove/merge parts; do not recolor; only FREE channels may change”
+   - 相对上一帧的微差（“delta only: spatula rotates +8°, food rises slightly”）
+4. 存在易混淆部件时，优先**中等关键集**（每阶段一图），而非精灵行。
+5. 精灵行仅用于轻动作**且**清单锁定扎实后；仍须逐格 QA。
+6. **小批量**生成（如 4 张），QA 后再继续——不要盲发全部 16 张。
 
-## Post-frame QA (reject & regen)
+## 成帧后 QA（拒绝并重生）
 
-After each frame (or each batch), **read the image** and check:
+每帧（或每批）后**读图**检查：
 
-- [ ] Every `must_always_exist` part is present
-- [ ] No `must_never_appear` part appeared
-- [ ] Lookalike warnings not violated (no merge/swap)
-- [ ] Limb/wheel/handle **counts** match topology_lock
-- [ ] **Colors match Color Lock** (no part recolored — especially lookalike sticks/bars/handles)
-- [ ] Subject scale/camera roughly match previous (±20% bbox height)
-- [ ] **Pose class unchanged** (still the same action; no crouch/leap teleport mid-run)
-- [ ] Motion delta is **small** vs previous (limbs moved a little, not a new stance)
-- [ ] Only FREE channels changed vs previous accepted frame
-- [ ] **No ghosting** — single silhouette, no afterimage / multi-exposure layers
+- [ ] 每个 `must_always_exist` 部件都在
+- [ ] 未出现 `must_never_appear` 部件
+- [ ] 未违反 lookalike 警告（无合并/互换）
+- [ ] 肢体/轮子/把手**数量**符合 topology_lock
+- [ ] **颜色符合色彩锁定**（无部件换色——尤其易混淆棍/条/柄）
+- [ ] 主体比例/机位与上一帧大致一致（包围盒高度 ±20%）
+- [ ] **姿态类未变**（仍是同一动作；跑步中途无蹲/跳瞬移）
+- [ ] 相对上一帧运动增量**很小**（肢体略动，不是新站姿）
+- [ ] 相对上一通过帧仅 FREE 通道变化
+- [ ] **无残影** — 单一剪影，无残影/多重曝光层
 
-If any check fails: **discard**, regenerate with stronger Topology + Color lock + dual refs + “delta only from previous frame” + “single crisp pose, no afterimages”. Do not pack failed frames.
+任一失败：**丢弃**，用更强拓扑 + 色彩锁定 + 双参考 + “delta only from previous frame” + “single crisp pose, no afterimages” 重生。不要打包失败帧。
 
-Automated jump gate (silhouette diff; still requires visual QA):
+自动跳跃门槛（剪影差；仍须目视 QA）：
 
 ```bash
 python scripts/qa_frames.py OUT/ordered --max-scale-jitter 0.25 --max-pair-diff 0.22 --max-ghost 0.35 \
   --write-bridges OUT/bridge_jobs.json
 ```
 
-If `--max-pair-diff` fails between `frame_N` and `frame_N+1`: generate **1–3 bridge frames** with dual ref `[anchor, frame_N]` (see `bridge_jobs.json` prompt stubs) before continuing. **Never** fill gaps with `interpolate_sequence.py` for packed sheets.
+若 `frame_N` 与 `frame_N+1` 触发 `--max-pair-diff`：用双参考 `[anchor, frame_N]` 生成 **1–3 桥接帧**（见 `bridge_jobs.json` 提示草稿）后再继续。
+**禁止**用 `interpolate_sequence.py` 填生产表缺口。
 
-Optional automated size-jitter gate:
+可选自动尺寸抖动门槛：
 
 ```bash
 python scripts/qa_frames.py OUT/ordered --max-scale-jitter 0.25
 ```
 
-Fails loudly if silhouette height jumps too much (weak proxy — never skips visual QA).
+剪影高度跳动过大时大声失败（弱代理——永不跳过目视 QA）。
 
-## Known morph patterns (extend mentally to any subject)
+## 已知变形模式（可类推到任意主体）
 
-| Pattern | Example | Prevention |
+| 模式 | 示例 | 预防 |
 |---|---|---|
-| Tool handle → body handle | Spatula becomes wok handle | Distinct colors; “SEPARATE tool”; forbid long wok handle |
-| Limb merge/split | Arm count 2→1 | Topology “exactly 2 arms” |
-| Wheel gain/loss | Car 4→3 wheels | “exactly 4 wheels every frame” |
-| Prop teleport | Sword disappears | must_always_exist |
-| Style reboot | Colors redefine | Dual ref + “same palette as anchor” |
-| Camera pop | Zoom in mid-loop | “same scale, same framing” |
-| Tool↔body swap | Spatula handle becomes pan handle | Distinct colors; SEPARATE tool; forbid body-mounted long handle |
-| Limb hallucination | Arms/hands appear on vehicles/tools | Explicit “inanimate / NO arms NO person”; reject frame |
-| Face drift | Eyes vanish or relocate | If anchor has a painted face, inventory it and demand every frame |
-| Unexpected anchor traits | Model invents a face on cargo | Lock invented traits into `parts.json` going forward — never ignore them |
+| 工具柄 → 身体柄 | 锅铲变成锅柄 | 区分颜色；“SEPARATE tool”；禁止长锅柄 |
+| 肢体合并/分裂 | 手臂 2→1 | 拓扑写 “exactly 2 arms” |
+| 车轮增减 | 车 4→3 轮 | “exactly 4 wheels every frame” |
+| 道具瞬移 | 剑消失 | must_always_exist |
+| 风格重启 | 颜色被重定义 | 双参考 + “same palette as anchor” |
+| 机位弹出 | 循环中途变焦 | “same scale, same framing” |
+| 工具↔身体互换 | 铲柄变锅柄 | 区分颜色；SEPARATE tool；禁止身体长柄 |
+| 肢体幻觉 | 载具/工具长出手臂 | 明确 “inanimate / NO arms NO person”；拒帧 |
+| 脸部漂移 | 眼睛消失或移位 | 锚图有画脸则列入清单并每帧要求 |
+| 锚图意外特征 | 模型给货物画了脸 | 把发明出的特征锁进 `parts.json` 往后——不可忽略 |
 
-## Delivery
+## 交付
 
-Only pack frames that passed QA. Note regen counts in the handoff so the user knows continuity was enforced.
+只打包通过 QA 的帧。交接时注明重生次数，让用户知道连续性被强制执行过。

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Alpha-composite character + vfx ordered frames by index (same pivot cell)."""
+"""按索引 alpha 合成角色 + 特效 ordered 帧（同一枢轴格）。"""
 from __future__ import annotations
 
 import argparse

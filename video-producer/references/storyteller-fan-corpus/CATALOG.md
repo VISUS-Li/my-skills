@@ -1,25 +1,25 @@
-# StorytellerFan Corpus Catalog
+# StorytellerFan 语料目录
 
-> Analytical VO: read `../storyteller-fan-craft.md`, then open **1–2** transcripts.
-> Learn opening / causal order / instant meaning / dig-and-return — **never** copy intros/outros/CTAs/host branding.
+> 分析类口播：先读 `../storyteller-fan-craft.md`，再打开 **1–2** 篇字幕。
+> 学开场 / 因果顺序 / 当场含义 / 深挖与收回——**绝不**照搬片头片尾 / CTA / 频道品牌。
 
-Transcripts: **47** files under `transcripts/{youtube_id}.txt`.
+字幕：**47** 个文件，位于 `transcripts/{youtube_id}.txt`。
 
-## Recommended first reads (by craft move)
+## 推荐先读（按手艺动作）
 
-| id | why study |
+| id | 为什么学 |
 |---|---|
-| `L31KQ21VGQk` | Multi-layer dig；律师/牧师保密类比 + 收回主线 |
-| `g20t3FKr49k` | Deal terms / GP-LP / 霸王条款；数字对照后谈含义 |
-| `tug90T9FUrE` | Eval vs workbench；跑分追上 ≠ 做事系统 |
+| `L31KQ21VGQk` | 多层深挖；律师/牧师保密类比 + 收回主线 |
+| `g20t3FKr49k` | 交易条款 / GP-LP / 霸王条款；数字对照后谈含义 |
+| `tug90T9FUrE` | 评测 vs 工作台；跑分追上 ≠ 做事系统 |
 | `M8-o9pg2eqU` | 历史/制度隐喻（切尔诺贝利）拉回 AI 监管 |
 | `umFhxczfRr8` | 表面销量 vs 真正商业模式 |
-| `IbVORK8NX2M` | 大数字 + 含义落地；收购案读法 |
+| `IbVORK8NX2M` | 大数字 + 含义落地；融资案读法 |
 | `T9zqRW4GOq4` | 证据边界：刷屏照片哪些能当证据 |
 | `qOFvhTllPhI` | 规则奇葩点（商标/成本）与认知补齐 |
 | `00YVzqruxPc` | 融资叙事下的权力与时间线 |
 
-## Full index
+## 全量索引
 
 | id | tags | title |
 |---|---|---|
@@ -70,4 +70,3 @@ Transcripts: **47** files under `transcripts/{youtube_id}.txt`.
 | `IoGsT9VJYuY` | general_ai_tech | 钉钉内网7万字长文，到底刺痛了谁? |
 | `OHsdqiAcVJE` | general_ai_tech | 马斯克敲钟，桑德斯收税：AI 财富到底该归谁？ |
 | `qOFvhTllPhI` | general_ai_tech | 鹅腿阿姨翻车：清北学生不傻，缺的是社会认知！ |
-

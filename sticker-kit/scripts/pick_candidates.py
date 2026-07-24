@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pick a lower-jump take sequence from take_a / take_b folders."""
+"""从 take_a / take_b 文件夹选出跳跃更小的 take 序列。"""
 from __future__ import annotations
 
 import argparse

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Extract a Wan clip to a stable-canvas RGBA PNG sequence."""
+"""把 Wan 片段抽成稳定画布 RGBA PNG 序列。"""
 from __future__ import annotations
 
 import argparse

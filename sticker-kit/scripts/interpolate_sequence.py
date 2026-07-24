@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-PREVIEW-ONLY morph helper. Do NOT pack output into production sticker sheets.
+仅预览用的变形辅助。禁止把输出打进生产贴纸表。
 
-Blend/ffmpeg frames create ghosting (multi-pose in one cell). For sheet/GIF delivery,
-generate each pose with GenerateImage (or extract I2V frames) instead.
+混合/ffmpeg 帧会产生残影（一格多姿态）。交付精灵表/GIF 时，请用 GenerateImage
+生成每个姿态（或从 I2V 抽帧）。
 
-Optical flow cannot fix pose teleports — run qa_frames --max-pair-diff first.
+光流无法修复姿态瞬移 — 先跑 qa_frames --max-pair-diff。
 """
 from __future__ import annotations
 

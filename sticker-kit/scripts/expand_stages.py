@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Expand acts.json into per-act numbered micro-stage lists (stages.json + .md)."""
+"""把 acts.json 展开为分幕编号微阶段列表（stages.json + .md）。"""
 from __future__ import annotations
 
 import argparse

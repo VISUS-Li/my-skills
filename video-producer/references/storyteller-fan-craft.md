@@ -1,4 +1,4 @@
-# StorytellerFan Craft
+# StorytellerFan 讲解手艺
 
 分析/资讯类写稿时**默认加载**：先读本文件，再从 corpus 开 **1–2** 篇字幕当样板。  
 细则与验收以 `references/narrative-depth-copy.md` 为准；本文件只回答「怎么学字幕」和「研究时多找哪类材料」。

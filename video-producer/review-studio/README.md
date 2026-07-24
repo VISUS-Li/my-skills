@@ -1,46 +1,46 @@
 # Review Studio
 
-Review Studio is the human/agent review surface for Video Producer. It uses the same `outputs/` contract everywhere — static bundle and full local app both read `outputs/beat_plan.json`.
+Review Studio 是 Video Producer 的人/代理评审面。处处使用同一 `outputs/` 契约——静态包与完整本地应用都读 `outputs/beat_plan.json`。
 
-## Static Review
+## 静态评审
 
-From a video project directory:
+在视频项目目录下：
 
 ```bash
 python <skill>/scripts/score_preview_plan.py --outputs outputs
 python <skill>/scripts/build_review_bundle.py --outputs outputs
 ```
 
-Open:
+打开：
 
 ```text
 outputs/review/review-studio/index.html
 ```
 
-## Full Local App
+## 完整本地应用
 
-For interactive beat editing, TTS generation, and timeline inspection:
+用于交互式拍编辑、TTS 生成与时间线检查：
 
 ```bash
 pip install -r review-studio/requirements.txt
 python review-studio/server/main.py --project D:\videos\my-project --port 8787
 ```
 
-Open [http://127.0.0.1:8787](http://127.0.0.1:8787).
+打开 [http://127.0.0.1:8787](http://127.0.0.1:8787)。
 
-## Data Contract
+## 数据契约
 
-| File | Role |
+| 文件 | 角色 |
 |------|------|
-| `outputs/beat_plan.json` | **SSOT** — voice_text, keyword, visual_owner, visual_action |
-| `outputs/segment_spec.json` | Shots, visual_actions, renderer delegation |
-| `outputs/script.md` | Long-form script; voice block synced on beat edit |
-| `segments/{seg}/vo_timing.json` | Measured TTS durations (runtime) |
+| `outputs/beat_plan.json` | **SSOT** — voice_text、keyword、visual_owner、visual_action |
+| `outputs/segment_spec.json` | 镜头、visual_actions、渲染器委派 |
+| `outputs/script.md` | 长稿；拍编辑时同步 voice 块 |
+| `segments/{seg}/vo_timing.json` | 测得的 TTS 时长（运行时） |
 | `audio/stems/voice/beats/{beat_id}.wav` | TTS stems |
-| `outputs/review/preview.mp4` | First-slice preview |
+| `outputs/review/preview.mp4` | 首片预览 |
 
-Beat reads/writes are centralized in `scripts/beat_store.py`. There is no legacy `script/narration_beats.csv` path.
+拍读写集中在 `scripts/beat_store.py`。没有遗留的 `script/narration_beats.csv` 路径。
 
-## Agent Rule
+## Agent 规则
 
-Generate and edit `outputs/beat_plan.json` directly. Run `build_review_bundle.py` after plan changes. Use the full app when the user needs TTS or live beat editing.
+直接生成与编辑 `outputs/beat_plan.json`。计划变更后跑 `build_review_bundle.py`。用户需要 TTS 或实时拍编辑时用完整应用。
